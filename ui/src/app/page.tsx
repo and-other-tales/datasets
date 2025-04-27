@@ -12,6 +12,20 @@ export default function Home() {
   
   // Get agent name from environment variable or use default
   const agentName = process.env.NEXT_PUBLIC_AGENT_NAME || "Dataset Creator Agent";
+  
+  useEffect(() => {
+    // Try to connect to agent when the app loads
+    const connectToAgent = async () => {
+      try {
+        const { connectToServer } = await import("@/lib/agent-integration");
+        await connectToServer();
+      } catch (error) {
+        console.log("Could not connect to agent server:", error);
+      }
+    };
+    
+    connectToAgent();
+  }, []);
 
   useEffect(() => {
     // Add initial welcome message

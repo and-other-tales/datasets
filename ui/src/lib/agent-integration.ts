@@ -12,12 +12,13 @@ interface AgentResponse {
   status: 'success' | 'error';
   message: string;
   data?: any;
+  thread_id?: string;
 }
 
 /**
  * Runs the dataset agent with a message
  */
-export async function runAgent(message: string): Promise<AgentResponse> {
+export async function runAgent(message: string, threadId?: string): Promise<AgentResponse> {
   try {
     const endpoint = process.env.NEXT_PUBLIC_AGENT_API_URL || '/api/agent';
     const response = await fetch(endpoint, {
@@ -25,7 +26,10 @@ export async function runAgent(message: string): Promise<AgentResponse> {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ 
+        message,
+        thread_id: threadId 
+      }),
     });
 
     if (!response.ok) {
@@ -37,6 +41,7 @@ export async function runAgent(message: string): Promise<AgentResponse> {
       status: 'success',
       message: data.message || 'Agent executed successfully',
       data,
+      thread_id: data.thread_id || threadId
     };
   } catch (error) {
     console.error('Error running agent:', error);
@@ -69,6 +74,7 @@ export async function connectToServer(serverUrl?: string): Promise<AgentResponse
       status: 'success',
       message: 'Connected to LangGraph server',
       data,
+      thread_id: data.thread_id
     };
   } catch (error) {
     console.error('Error connecting to server:', error);

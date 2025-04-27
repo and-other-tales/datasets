@@ -37,9 +37,22 @@ if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
     fi
 fi
 
+# Check for PostgreSQL environment variables
+if [ -z "$POSTGRES_URI" ]; then
+    echo "Warning: PostgreSQL connection string not set. Export POSTGRES_URI for persistent conversation state."
+    echo "Example:"
+    echo "export POSTGRES_URI=postgresql://username:password@localhost:5432/datasets"
+    echo ""
+    echo "Continue without PostgreSQL? Agent persistence will be disabled. (y/n)"
+    read -r answer
+    if [ "$answer" != "y" ]; then
+        exit 1
+    fi
+fi
+
 # Install Python dependencies if needed
 echo -e "${GREEN}Checking Python dependencies...${NC}"
-pip install -q langchain-aws langgraph playwright beautifulsoup4 datasets lxml > /dev/null
+pip install -q -r requirements.txt > /dev/null
 
 # Install Playwright browsers if needed
 echo -e "${GREEN}Installing Playwright browsers...${NC}"
@@ -50,6 +63,25 @@ echo -e "${GREEN}Installing UI dependencies...${NC}"
 cd ui || exit
 npm install
 
+# Set environment variables for Next.js UI
+export NEXT_PUBLIC_AGENT_API_URL=/api/agent
+export NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
+export NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
+export NEXT_PUBLIC_AGENT_NAME="Dataset Creator Agent"
+
+# Set environment variables for LangGraph and LangSmith
+export USE_EXPLICIT_GRAPH=true
+export LANGCHAIN_TRACING_V2=true
+export LANGCHAIN_PROJECT="dataset-creator-agent"
+export LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-"https://api.smith.langchain.com"}
+
+# Check if LangSmith API key is available
+if [ -z "$LANGCHAIN_API_KEY" ]; then
+    echo "Warning: LANGCHAIN_API_KEY not set. LangSmith tracing will be limited."
+    echo "For complete tracing, set LANGCHAIN_API_KEY environment variable."
+    echo ""
+fi
+
 # Start the UI in the background
 echo -e "${GREEN}Starting UI server...${NC}"
 npm run dev &
@@ -58,10 +90,16 @@ UI_PID=$!
 # Go back to root directory
 cd ..
 
+# Start the Python agent API server
+echo -e "${GREEN}Starting dataset agent API server...${NC}"
+python dataset_agent.py --api &
+AGENT_PID=$!
+
 echo -e "${BLUE}Dataset Creator Agent Chat UI is running!${NC}"
 echo -e "Open ${GREEN}http://localhost:3000${NC} in your browser"
+echo -e "Dataset Agent API running on ${GREEN}http://localhost:8000${NC}"
 echo "Press Ctrl+C to stop all servers"
 
 # Keep the script running and capture Ctrl+C
-trap "kill $UI_PID; echo -e '\n${BLUE}Shutting down servers...${NC}'; exit" INT
+trap "kill $UI_PID $AGENT_PID; echo -e '\n${BLUE}Shutting down servers...${NC}'; exit" INT
 wait

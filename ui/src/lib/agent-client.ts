@@ -11,11 +11,16 @@ export class AgentClient {
   private messages: Message[] = [];
   private listeners: ((message: Message) => void)[] = [];
   private static instance: AgentClient;
+  private threadId: string | null = null;
 
   constructor() {
     if (AgentClient.instance) {
       return AgentClient.instance;
     }
+    // Generate a unique thread ID for this session
+    this.threadId = localStorage.getItem('agent_thread_id') || uuidv4();
+    localStorage.setItem('agent_thread_id', this.threadId);
+    
     AgentClient.instance = this;
   }
 
@@ -24,6 +29,15 @@ export class AgentClient {
       AgentClient.instance = new AgentClient();
     }
     return AgentClient.instance;
+  }
+
+  getThreadId(): string | null {
+    return this.threadId;
+  }
+
+  setThreadId(threadId: string): void {
+    this.threadId = threadId;
+    localStorage.setItem('agent_thread_id', threadId);
   }
 
   async sendMessage(content: string): Promise<void> {
@@ -38,20 +52,43 @@ export class AgentClient {
       
       this.messages.push(userMessage);
       
-      // Simulate agent response
-      setTimeout(() => {
+      // Import the runAgent function
+      const { runAgent } = await import('./agent-integration');
+      
+      try {
+        // Send to real agent if available with thread ID for state persistence
+        const response = await runAgent(content, this.threadId);
+        
+        // If the response includes a thread_id, store it
+        if (response.thread_id) {
+          this.setThreadId(response.thread_id);
+        }
+        
         const assistantMessage: Message = {
           id: uuidv4(),
           role: 'ai',
-          content: 'This is a placeholder response from the agent.',
+          content: response.status === 'success' 
+            ? response.message 
+            : 'Sorry, there was an error connecting to the agent. Using placeholder response.',
           timestamp: new Date(),
         };
         
         this.messages.push(assistantMessage);
-        
-        // Notify listeners
         this.notifyListeners(assistantMessage);
-      }, 1000);
+      } catch (agentError) {
+        console.error("Failed to connect to agent, using fallback:", agentError);
+        
+        // Fallback to simulation if agent connection fails
+        const assistantMessage: Message = {
+          id: uuidv4(),
+          role: 'ai',
+          content: 'This is a placeholder response. The dataset agent is currently not available.',
+          timestamp: new Date(),
+        };
+        
+        this.messages.push(assistantMessage);
+        this.notifyListeners(assistantMessage);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       throw error;
@@ -75,6 +112,12 @@ export class AgentClient {
 
   clearMessages(): void {
     this.messages = [];
+  }
+  
+  resetThread(): void {
+    this.threadId = uuidv4();
+    localStorage.setItem('agent_thread_id', this.threadId);
+    this.clearMessages();
   }
   
   disconnect(): void {

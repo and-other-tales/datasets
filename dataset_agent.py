@@ -1,7 +1,8 @@
 """
-HuggingFace Dataset Creator Agent
+HuggingFace Dataset Creator Agent using LangGraph
 
 This agent creates HuggingFace datasets from URLs by crawling, downloading, and processing content.
+It uses LangGraph with PostgreSQL persistence for maintaining state across interactions.
 
 Workflow:
 1. User Prompt Task > 
@@ -14,7 +15,7 @@ import os
 import re
 import json
 import asyncio
-from typing import List, Dict, Any, Optional, Union, Literal
+from typing import List, Dict, Any, Optional, Union, Literal, TypedDict
 import hashlib
 import tempfile
 from pathlib import Path
@@ -28,12 +29,21 @@ from playwright.async_api import async_playwright
 import markdown
 
 # LangGraph and LangChain components
-from langgraph.graph import MessageGraph, StateGraph
+from langgraph.graph import StateGraph
 from langgraph.prebuilt import create_react_agent
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.tools import Tool, StructuredTool
 from langchain_core.pydantic_v1 import BaseModel, Field
+
+# PostgreSQL persistence
+try:
+    from psycopg_pool import ConnectionPool
+    from langgraph.checkpoint.postgres import PostgresSaver
+    POSTGRES_AVAILABLE = True
+except ImportError:
+    POSTGRES_AVAILABLE = False
+    print("PostgreSQL dependencies not found. Running without persistence.")
 
 # AWS Bedrock for LLM
 from langchain_aws import ChatBedrockConverse
@@ -51,6 +61,38 @@ TIMEOUT = 30000  # Timeout for page loading in ms
 # Set up directories
 CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "dataset_crawler")
 os.makedirs(CACHE_DIR, exist_ok=True)
+
+# Agent configuration schema
+class AgentConfig(BaseModel):
+    """Configuration for the Dataset Creator Agent."""
+    system_prompt: str = Field(
+        default="You are a specialized Dataset Creator Agent for generating HuggingFace datasets from web content.",
+        description="The system prompt to use for the agent's interactions.",
+        json_schema_extra={
+            "langgraph_nodes": ["call_model"],
+            "langgraph_type": "prompt",
+        },
+    )
+    max_depth: int = Field(
+        default=MAX_DEPTH,
+        description="Maximum crawl depth",
+        json_schema_extra={"langgraph_nodes": ["crawl_url"]}
+    )
+    max_pages: int = Field(
+        default=MAX_PAGES,
+        description="Maximum pages to crawl per domain",
+        json_schema_extra={"langgraph_nodes": ["crawl_url"]}
+    )
+    patterns_to_match: Optional[List[str]] = Field(
+        default=None,
+        description="List of regex patterns to include in crawl",
+        json_schema_extra={"langgraph_nodes": ["crawl_url"]}
+    )
+    patterns_to_exclude: Optional[List[str]] = Field(
+        default=None,
+        description="List of regex patterns to exclude from crawl",
+        json_schema_extra={"langgraph_nodes": ["crawl_url"]}
+    )
 
 class UrlCrawlInput(BaseModel):
     """Input for the URL crawler."""
@@ -73,6 +115,14 @@ class DatasetCreationInput(BaseModel):
         description="HuggingFace Hub username")
     dataset_description: Optional[str] = Field(default=None,
         description="Description of the dataset")
+
+# State management for the LangGraph agent
+class AgentState(TypedDict):
+    """State for the Dataset Creator Agent."""
+    messages: List
+    crawled_urls: Optional[List[Dict[str, Any]]]
+    dataset_info: Optional[Dict[str, Any]]
+    temp_file_path: Optional[str]
 
 def clean_html(html_content: str) -> str:
     """Clean HTML content by removing scripts, styles, and comments."""
@@ -247,10 +297,13 @@ async def process_url(url: str) -> Dict[str, Any]:
         save_to_cache(url, error_content)
         return error_content
 
-async def recursive_crawl(start_url: str, max_depth: int = MAX_DEPTH, 
-                      max_pages: int = MAX_PAGES, 
-                      patterns_to_match: List[str] = None,
-                      patterns_to_exclude: List[str] = None) -> List[Dict[str, Any]]:
+async def recursive_crawl(
+    start_url: str, 
+    max_depth: int = MAX_DEPTH, 
+    max_pages: int = MAX_PAGES, 
+    patterns_to_match: List[str] = None,
+    patterns_to_exclude: List[str] = None
+) -> List[Dict[str, Any]]:
     """Recursively crawl URLs starting from a base URL."""
     visited = set()
     to_visit = [(start_url, 0)]  # (url, depth)
@@ -399,8 +452,261 @@ def create_huggingface_dataset(
     
     return dataset_dict
 
+# LangGraph node functions
+def crawl_url_node(state: AgentState, config: Dict[str, Any]) -> AgentState:
+    """Node for crawling URLs and extracting content."""
+    # Get the most recent message
+    last_message = state["messages"][-1]
+    
+    # Parse input from the message
+    if not isinstance(last_message[1], str):
+        # This is a bit complex because we need to handle different message formats
+        content = last_message[1].content if hasattr(last_message[1], "content") else str(last_message[1])
+    else:
+        content = last_message[1]
+    
+    # Try to parse as JSON
+    try:
+        data = json.loads(content)
+        if not isinstance(data, dict):
+            data = {"url": content}
+    except (json.JSONDecodeError, TypeError):
+        # If not valid JSON, assume it's just the URL
+        data = {"url": content}
+    
+    # Get URL and parameters from the data
+    url = data.get("url", "")
+    if not url:
+        # Try to extract URL from text
+        import re
+        url_match = re.search(r'https?://[^\s]+', content)
+        if url_match:
+            url = url_match.group(0)
+        else:
+            # No URL found
+            return {
+                **state,
+                "messages": state["messages"] + [("ai", "Please provide a valid URL to crawl.")]
+            }
+    
+    # Get parameters, either from data or from config
+    configurable = config.get("configurable", {})
+    max_depth = data.get("max_depth", configurable.get("max_depth", MAX_DEPTH))
+    max_pages = data.get("max_pages", configurable.get("max_pages", MAX_PAGES))
+    patterns_to_match = data.get("patterns_to_match", configurable.get("patterns_to_match"))
+    patterns_to_exclude = data.get("patterns_to_exclude", configurable.get("patterns_to_exclude"))
+    
+    # Run the crawl
+    results = asyncio.run(recursive_crawl(
+        url, 
+        max_depth=max_depth, 
+        max_pages=max_pages,
+        patterns_to_match=patterns_to_match,
+        patterns_to_exclude=patterns_to_exclude
+    ))
+    
+    # Filter results
+    filtered_results = filter_results(results)
+    
+    # Cache the results for dataset creation
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        json.dump(filtered_results, f)
+        temp_path = f.name
+    
+    # Create summary message
+    summary = f"""
+Crawled {url} with depth {max_depth}. 
+Found {len(results)} pages, {len(filtered_results)} with valid content.
+Results stored temporarily for dataset creation.
+
+Sample page titles:
+{', '.join([r['metadata'].get('title', 'No title') for r in filtered_results[:5]])}
+"""
+    
+    # Update state
+    return {
+        **state,
+        "crawled_urls": filtered_results,
+        "temp_file_path": temp_path,
+        "messages": state["messages"] + [("ai", summary)]
+    }
+
+def create_dataset_node(state: AgentState, config: Dict[str, Any]) -> AgentState:
+    """Node for creating a HuggingFace dataset from crawled content."""
+    # Get the most recent message
+    last_message = state["messages"][-1]
+    
+    # Parse input from the message
+    if not isinstance(last_message[1], str):
+        content = last_message[1].content if hasattr(last_message[1], "content") else str(last_message[1])
+    else:
+        content = last_message[1]
+    
+    # Get the crawled URLs from state
+    dataset_files = state.get("crawled_urls", [])
+    temp_file_path = state.get("temp_file_path")
+    
+    if not dataset_files and temp_file_path:
+        # Load from temp file
+        try:
+            with open(temp_file_path, 'r') as f:
+                dataset_files = json.load(f)
+        except Exception as e:
+            return {
+                **state,
+                "messages": state["messages"] + [("ai", f"Error loading dataset files: {str(e)}")]
+            }
+    
+    if not dataset_files:
+        return {
+            **state,
+            "messages": state["messages"] + [("ai", "No crawled URLs available. Please crawl some URLs first.")]
+        }
+    
+    # Try to parse dataset parameters
+    try:
+        # Try to extract dataset name from the message
+        import re
+        dataset_name_match = re.search(r'dataset[_\s]?name[:\s]+([a-zA-Z0-9_-]+)', content, re.IGNORECASE)
+        if dataset_name_match:
+            dataset_name = dataset_name_match.group(1)
+        else:
+            # Use a default name based on the first URL
+            parsed_url = urlparse(dataset_files[0]["url"])
+            dataset_name = f"{parsed_url.netloc.replace('.', '_')}_dataset"
+        
+        # See if we should push to hub
+        push_to_hub = "push" in content.lower() and "hub" in content.lower()
+        hub_username = None
+        
+        if push_to_hub:
+            # Try to extract hub username
+            username_match = re.search(r'username[:\s]+([a-zA-Z0-9_-]+)', content, re.IGNORECASE)
+            if username_match:
+                hub_username = username_match.group(1)
+            else:
+                # No username provided
+                return {
+                    **state,
+                    "messages": state["messages"] + [("ai", "To push to HuggingFace Hub, please provide a username.")]
+                }
+        
+        # Extract description if available
+        description_match = re.search(r'description[:\s]+(.*?)(?:$|\.|,|\n)', content, re.IGNORECASE)
+        dataset_description = description_match.group(1).strip() if description_match else None
+        
+        # Create the dataset
+        dataset = create_huggingface_dataset(
+            dataset_name=dataset_name,
+            dataset_files=dataset_files,
+            push_to_hub=push_to_hub,
+            hub_username=hub_username,
+            dataset_description=dataset_description
+        )
+        
+        # Create a summary message
+        summary = f"""
+Successfully created dataset '{dataset_name}' with {len(dataset_files)} documents.
+Dataset contains {len(dataset['train'])} entries.
+Columns: {list(dataset['train'].features)}
+
+"""
+        if push_to_hub:
+            summary += f"Dataset pushed to HuggingFace Hub at {hub_username}/{dataset_name}"
+        
+        # Update state
+        return {
+            **state,
+            "dataset_info": {
+                "name": dataset_name,
+                "num_entries": len(dataset['train']),
+                "columns": list(dataset['train'].features),
+                "pushed_to_hub": push_to_hub,
+                "hub_path": f"{hub_username}/{dataset_name}" if push_to_hub else None
+            },
+            "messages": state["messages"] + [("ai", summary)]
+        }
+        
+    except Exception as e:
+        return {
+            **state,
+            "messages": state["messages"] + [("ai", f"Error creating dataset: {str(e)}")]
+        }
+
+def verify_dataset_node(state: AgentState, config: Dict[str, Any]) -> AgentState:
+    """Node for verifying a dataset exists and checking its properties."""
+    # Get the most recent message
+    last_message = state["messages"][-1]
+    
+    # Parse input from the message
+    if not isinstance(last_message[1], str):
+        content = last_message[1].content if hasattr(last_message[1], "content") else str(last_message[1])
+    else:
+        content = last_message[1]
+    
+    # Try to get dataset name
+    dataset_name = None
+    
+    # If we have dataset info in state, use that
+    if state.get("dataset_info") and state["dataset_info"].get("name"):
+        dataset_name = state["dataset_info"]["name"]
+    else:
+        # Try to extract dataset name from the message
+        import re
+        dataset_match = re.search(r'dataset[:\s]+([a-zA-Z0-9_/-]+)', content, re.IGNORECASE)
+        if dataset_match:
+            dataset_name = dataset_match.group(1)
+    
+    if not dataset_name:
+        return {
+            **state,
+            "messages": state["messages"] + [("ai", "Please specify a dataset name to verify.")]
+        }
+    
+    try:
+        # Try to load the dataset
+        if "/" in dataset_name:  # Looks like a hub dataset
+            dataset = datasets.load_dataset(dataset_name)
+        else:
+            # Try to load from local path
+            dataset = datasets.load_from_disk(dataset_name)
+        
+        # Get info
+        info = {
+            "name": dataset_name,
+            "splits": list(dataset.keys()),
+            "num_rows": {split: len(dataset[split]) for split in dataset},
+            "features": str(dataset[list(dataset.keys())[0]].features),
+        }
+        
+        # Create summary message
+        summary = f"""
+Dataset verification successful:
+- Name: {info['name']}
+- Splits: {', '.join(info['splits'])}
+- Number of rows: {info['num_rows']}
+- Features: {info['features']}
+"""
+        
+        # Update state
+        return {
+            **state,
+            "dataset_info": {
+                **state.get("dataset_info", {}),
+                "verified": True,
+                "verification_info": info
+            },
+            "messages": state["messages"] + [("ai", summary)]
+        }
+        
+    except Exception as e:
+        return {
+            **state,
+            "messages": state["messages"] + [("ai", f"Error verifying dataset '{dataset_name}': {str(e)}")]
+        }
+
 # Tool definitions for the agent
-async def crawl_url_tool(input_data: Union[str, Dict]) -> str:
+def crawl_url_tool(input_data: Union[str, Dict]) -> str:
     """Tool to crawl URLs and extract content."""
     if isinstance(input_data, str):
         # Parse as JSON if it's a string
@@ -418,13 +724,13 @@ async def crawl_url_tool(input_data: Union[str, Dict]) -> str:
     patterns_to_match = data.get("patterns_to_match", None)
     patterns_to_exclude = data.get("patterns_to_exclude", None)
     
-    results = await recursive_crawl(
+    results = asyncio.run(recursive_crawl(
         url, 
         max_depth=max_depth, 
         max_pages=max_pages,
         patterns_to_match=patterns_to_match,
         patterns_to_exclude=patterns_to_exclude
-    )
+    ))
     
     # Filter results and return summary
     filtered_results = filter_results(results)
@@ -529,7 +835,7 @@ Dataset verification successful:
 tools = [
     Tool(
         name="crawl_url",
-        func=lambda x: asyncio.run(crawl_url_tool(x)),
+        func=crawl_url_tool,
         description="Crawl a URL and extract content. Input should be a JSON object with 'url', optional 'max_depth', 'max_pages', 'patterns_to_match' (list of regex), 'patterns_to_exclude' (list of regex)"
     ),
     Tool(
@@ -544,15 +850,62 @@ tools = [
     )
 ]
 
-# Create the LLM using AWS Bedrock
+# Configure LangSmith tracing for node visibility
+import os
+from langsmith import traceable
+import langsmith
+from langchain_core.tracers import ConsoleCallbackHandler
+
+# Set up LangSmith for tracing
+os.environ["LANGCHAIN_TRACING_V2"] = "true"
+os.environ["LANGCHAIN_ENDPOINT"] = os.environ.get("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+os.environ["LANGCHAIN_API_KEY"] = os.environ.get("LANGCHAIN_API_KEY", "")
+os.environ["LANGCHAIN_PROJECT"] = os.environ.get("LANGCHAIN_PROJECT", "dataset-creator-agent")
+
+# Create the LLM using AWS Bedrock with tracing
 llm = ChatBedrockConverse(
     model_id=MODEL_ID,
     temperature=0.2,
     max_tokens=2000,
+    callbacks=[ConsoleCallbackHandler()],
 )
 
+# Setup PostgreSQL connection if available
+def setup_postgres_connection():
+    """Setup PostgreSQL connection for persistence."""
+    if not POSTGRES_AVAILABLE:
+        return None
+    
+    # Get database connection details from environment variables
+    db_uri = os.environ.get("POSTGRES_URI")
+    if not db_uri:
+        print("PostgreSQL URI not found in environment variables. Running without persistence.")
+        return None
+    
+    try:
+        # Create connection pool
+        connection_kwargs = {
+            "autocommit": True,
+            "prepare_threshold": 0,
+        }
+        
+        pool = ConnectionPool(
+            conninfo=db_uri,
+            max_size=20,
+            kwargs=connection_kwargs,
+        )
+        
+        # Create and setup the checkpointer
+        checkpointer = PostgresSaver(pool)
+        checkpointer.setup()  # Initialize schema
+        
+        return checkpointer
+    except Exception as e:
+        print(f"Error setting up PostgreSQL connection: {str(e)}")
+        return None
+
 # Create the agent using LangGraph
-def build_agent():
+def build_agent(use_postgres=False, use_tracing=True):
     """Build the dataset creation agent."""
     # Custom system prompt
     system_prompt = """
@@ -591,17 +944,96 @@ def build_agent():
     - Verify the dataset structure after creation
     """
     
-    # Create the agent
+    # Initialize the checkpointer if PostgreSQL is available
+    checkpointer = setup_postgres_connection() if use_postgres else None
+    
+    # Configure callbacks for LangSmith tracing
+    callbacks = []
+    runnable_config = {}
+    
+    if use_tracing:
+        from langchain_core.callbacks import CallbackManager
+        from langchain_core.tracers import LangChainTracer
+        
+        tracer = LangChainTracer(project_name=os.environ.get("LANGCHAIN_PROJECT", "dataset-creator-agent"))
+        callback_manager = CallbackManager([tracer, ConsoleCallbackHandler()])
+        callbacks = [callback_manager]
+        
+        # Add metadata for visualization
+        runnable_config = {
+            "tags": ["dataset-agent", "langgraph", "react-agent"],
+            "metadata": {
+                "agent_type": "dataset-creator",
+                "version": "1.0.0",
+                "description": "Dataset Creator Agent with LangGraph",
+            },
+        }
+    
+    # Create the agent with proper tracing for LangSmith
     agent = create_react_agent(
         llm=llm,
         tools=tools,
-        system_prompt=system_prompt
+        system_prompt=system_prompt,
+        checkpointer=checkpointer,
+        callbacks=callbacks,
+        tool_choice_transition=True,  # Enables observation of tool choices in LangSmith
+        name="Dataset Creator Agent"   # Name displayed in LangSmith
     )
+    
+    # Add runnable config to enhance visualization
+    if use_tracing and hasattr(agent, "with_config"):
+        agent = agent.with_config(runnable_config)
     
     return agent
 
-from fastapi import FastAPI, Request, HTTPException
+# Apply tracing to node functions
+@traceable(name="crawl_url_node")
+def traced_crawl_url_node(state, config):
+    return crawl_url_node(state, config)
+
+@traceable(name="create_dataset_node")
+def traced_create_dataset_node(state, config):
+    return create_dataset_node(state, config)
+
+@traceable(name="verify_dataset_node")
+def traced_verify_dataset_node(state, config):
+    return verify_dataset_node(state, config)
+
+# Build the graph explicitly (optional, can use the prebuilt agent instead)
+def build_graph(include_tracing=True):
+    """Build an explicit LangGraph for the dataset creator agent."""
+    # Define the state graph
+    builder = StateGraph(AgentState)
+    
+    # Add nodes with or without tracing
+    if include_tracing:
+        builder.add_node("crawl_url", traced_crawl_url_node, display_name="Crawl URL")
+        builder.add_node("create_dataset", traced_create_dataset_node, display_name="Create Dataset")
+        builder.add_node("verify_dataset", traced_verify_dataset_node, display_name="Verify Dataset")
+        builder.add_node("llm", llm, display_name="LLM")
+    else:
+        builder.add_node("crawl_url", crawl_url_node)
+        builder.add_node("create_dataset", create_dataset_node)
+        builder.add_node("verify_dataset", verify_dataset_node)
+        builder.add_node("llm", llm)
+    
+    # Add edges with metadata for LangSmith visualization
+    builder.add_edge("llm", "crawl_url", edge_metadata={"description": "Process URL crawling"})
+    builder.add_edge("crawl_url", "create_dataset", edge_metadata={"description": "Generate dataset from crawled content"})
+    builder.add_edge("create_dataset", "verify_dataset", edge_metadata={"description": "Verify dataset structure"})
+    builder.add_edge("verify_dataset", "llm", edge_metadata={"description": "Generate response"})
+    
+    # Set entry and exit points
+    builder.set_entry_point("llm")
+    
+    # Compile the graph with tracing annotations
+    graph = builder.compile(name="Dataset Creator Workflow", checkpointer=setup_postgres_connection())
+    
+    return graph
+
+from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import uvicorn
 
 app = FastAPI(title="Dataset Creator Agent API")
@@ -614,6 +1046,87 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Global agent instance
+_agent = None
+
+def get_agent():
+    global _agent
+    if _agent is None:
+        # Use either the explicit graph or the prebuilt agent
+        use_explicit_graph = os.environ.get("USE_EXPLICIT_GRAPH", "false").lower() == "true"
+        use_postgres = os.environ.get("POSTGRES_URI") is not None
+        
+        if use_explicit_graph:
+            _agent = build_graph(include_tracing=True)
+        else:
+            _agent = build_agent(use_postgres=use_postgres, use_tracing=True)
+    return _agent
+
+@app.post("/agent")
+async def run_agent_api(request: Request):
+    try:
+        body = await request.json()
+        message = body.get("message")
+        thread_id = body.get("thread_id")
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        agent = get_agent()
+        
+        # Configure thread_id for persistence if available
+        config = {}
+        if thread_id:
+            config["configurable"] = {"thread_id": thread_id}
+        
+        messages = [("user", message)]
+        result = agent.invoke({"messages": messages}, config=config)
+        
+        # Extract AI response
+        ai_response = ""
+        for msg in result["messages"]:
+            if msg[0] == "ai":
+                ai_response = msg[1]
+                break
+        
+        return {
+            "message": ai_response,
+            "status": "success",
+            "thread_id": thread_id
+        }
+    except Exception as e:
+        print(f"Error in agent API: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"status": "error", "message": str(e)}
+        )
+
+@app.get("/status")
+async def get_status():
+    return {
+        "status": "running",
+        "model": MODEL_ID,
+        "timestamp": time.time(),
+        "persistence": POSTGRES_AVAILABLE
+    }
+
+@app.post("/config")
+async def update_config(request: Request):
+    try:
+        config = await request.json()
+        # In a real implementation, we would update agent configuration here
+        return {
+            "message": "Configuration updated",
+            "config": config
+        }
+    except Exception as e:
+        print(f"Error in config API: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def start_server(host="0.0.0.0", port=8000, reload=True):
+    """Start the FastAPI server."""
+    uvicorn.run("dataset_agent:app", host=host, port=port, reload=reload)
 
 def main():
     """Run the agent CLI."""
@@ -635,68 +1148,6 @@ def main():
         for message in result["messages"]:
             if message[0] == "ai":
                 print(f"\nAgent: {message[1]}")
-
-# Global agent instance
-_agent = None
-
-def get_agent():
-    global _agent
-    if _agent is None:
-        _agent = build_agent()
-    return _agent
-
-@app.post("/agent")
-async def run_agent_api(request: Request):
-    try:
-        body = await request.json()
-        message = body.get("message")
-        
-        if not message:
-            raise HTTPException(status_code=400, detail="Message is required")
-        
-        agent = get_agent()
-        messages = [("user", message)]
-        result = agent.invoke({"messages": messages})
-        
-        # Extract AI response
-        ai_response = ""
-        for message in result["messages"]:
-            if message[0] == "ai":
-                ai_response = message[1]
-                break
-        
-        return {
-            "message": ai_response,
-            "status": "success"
-        }
-    except Exception as e:
-        print(f"Error in agent API: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/status")
-async def get_status():
-    return {
-        "status": "running",
-        "model": MODEL_ID,
-        "timestamp": time.time()
-    }
-
-@app.post("/config")
-async def update_config(request: Request):
-    try:
-        config = await request.json()
-        # In a real implementation, we would update agent configuration here
-        return {
-            "message": "Configuration updated",
-            "config": config
-        }
-    except Exception as e:
-        print(f"Error in config API: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-def start_server():
-    """Start the FastAPI server."""
-    uvicorn.run("datasets:app", host="0.0.0.0", port=8000, reload=True)
 
 if __name__ == "__main__":
     import sys

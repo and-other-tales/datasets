@@ -1,0 +1,43 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "dataset_agent": "./dataset_agent.py:build_agent",
+    "dataset_workflow": "./dataset_agent.py:build_graph"
+  },
+  "store": {
+    "index": {
+      "embed": "openai:text-embedding-3-small",
+      "dims": 1536,
+      "fields": ["$"]
+    },
+    "ttl": {
+      "refresh_on_read": true,
+      "sweep_interval_minutes": 60,
+      "default_ttl": 10080
+    }
+  },
+  "checkpointer": {
+    "ttl": {
+      "strategy": "delete",
+      "sweep_interval_minutes": 60,
+      "default_ttl": 43200
+    }
+  },
+  "http": {
+    "port": 8000,
+    "host": "0.0.0.0",
+    "cors": {
+      "allow_origins": ["*"],
+      "allow_credentials": true,
+      "allow_methods": ["*"],
+      "allow_headers": ["*"]
+    }
+  },
+  "langsmith": {
+    "visualization": {
+      "display_edge_metadata": true,
+      "display_node_types": true,
+      "display_graph_annotations": true
+    }
+  }
+}
