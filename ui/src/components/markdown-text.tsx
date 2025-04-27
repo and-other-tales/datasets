@@ -17,46 +17,48 @@ interface MarkdownTextProps {
 const MarkdownText: React.FC<MarkdownTextProps> = ({ content, className }) => {
   const formattedContent = formatMarkdown(content);
 
+  // In react-markdown v10, className is passed to wrapper div instead
   return (
-    <ReactMarkdown
-      className={`markdown ${className || ""}`}
-      remarkPlugins={[remarkGfm]}
-      rehypePlugins={[rehypeRaw, rehypeSanitize]}
-      components={{
-        code({ className, children, ...props }: any) {
-          const match = /language-(\w+)/.exec(className || "");
-          const isInline = !match;
-          
-          if (isInline) {
-            return (
-              <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded" {...props}>
-                {children}
-              </code>
-            );
-          }
-
-          return (
-            <div className="relative">
-              <pre className={`${match ? `language-${match[1]}` : ""} rounded-md`}>
-                <code className={match ? `language-${match[1]}` : ""} {...props}>
+    <div className={`markdown ${className || ""}`}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        components={{
+          code({ className, children, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || "");
+            const isInline = !match;
+            
+            if (isInline) {
+              return (
+                <code style={{backgroundColor: '#f3f4f6', padding: '0 0.25rem', borderRadius: '0.25rem'}} {...props}>
                   {children}
                 </code>
-              </pre>
-            </div>
-          );
-        },
-        table({ children }: any) {
-          return (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">{children}</table>
-            </div>
-          );
-        },
-        // Other custom components can be added here
-      }}
-    >
-      {formattedContent}
-    </ReactMarkdown>
+              );
+            }
+
+            return (
+              <div className="relative">
+                <pre style={{borderRadius: '0.375rem'}}>
+                  <code className={match ? `language-${match[1]}` : ""} {...props}>
+                    {children}
+                  </code>
+                </pre>
+              </div>
+            );
+          },
+          table({ children }: any) {
+            return (
+              <div style={{overflowX: 'auto'}}>
+                <table style={{width: '100%', borderCollapse: 'collapse'}}>{children}</table>
+              </div>
+            );
+          },
+          // Other custom components can be added here
+        }}
+      >
+        {formattedContent}
+      </ReactMarkdown>
+    </div>
   );
 };
 

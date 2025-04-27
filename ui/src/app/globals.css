@@ -68,10 +68,11 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
@@ -82,58 +83,105 @@
 }
 
 .markdown pre {
-  @apply bg-gray-100 dark:bg-gray-800 p-4 rounded-lg my-4 overflow-auto;
+  background-color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  overflow: auto;
+}
+
+.dark .markdown pre {
+  background-color: #1f2937;
 }
 
 .markdown code {
-  @apply font-mono text-sm;
+  font-family: monospace;
+  font-size: 0.875rem;
 }
 
 .markdown p {
-  @apply mb-4;
+  margin-bottom: 1rem;
 }
 
 .markdown h1 {
-  @apply text-3xl font-bold mb-4 mt-6;
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  margin-top: 1.5rem;
 }
 
 .markdown h2 {
-  @apply text-2xl font-bold mb-3 mt-5;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  margin-top: 1.25rem;
 }
 
 .markdown h3 {
-  @apply text-xl font-bold mb-3 mt-4;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  margin-top: 1rem;
 }
 
 .markdown h4 {
-  @apply text-lg font-bold mb-2 mt-3;
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .markdown ul {
-  @apply list-disc pl-6 mb-4;
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .markdown ol {
-  @apply list-decimal pl-6 mb-4;
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .markdown li {
-  @apply mb-1;
+  margin-bottom: 0.25rem;
 }
 
 .markdown table {
-  @apply w-full border-collapse mb-4;
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
 }
 
 .markdown th,
 .markdown td {
-  @apply border border-gray-300 dark:border-gray-700 p-2;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+}
+
+.dark .markdown th,
+.dark .markdown td {
+  border-color: #374151;
 }
 
 .markdown th {
-  @apply bg-gray-100 dark:bg-gray-800;
+  background-color: #f3f4f6;
+}
+
+.dark .markdown th {
+  background-color: #1f2937;
 }
 
 .markdown blockquote {
-  @apply border-l-4 border-gray-300 dark:border-gray-700 pl-4 italic my-4;
+  border-left-width: 4px;
+  border-left-color: #d1d5db;
+  padding-left: 1rem;
+  font-style: italic;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dark .markdown blockquote {
+  border-left-color: #374151;
 }
