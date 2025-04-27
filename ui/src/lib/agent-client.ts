@@ -17,9 +17,16 @@ export class AgentClient {
     if (AgentClient.instance) {
       return AgentClient.instance;
     }
-    // Generate a unique thread ID for this session
-    this.threadId = localStorage.getItem('agent_thread_id') || uuidv4();
-    localStorage.setItem('agent_thread_id', this.threadId);
+    
+    // Only access localStorage in browser environment
+    if (typeof window !== 'undefined') {
+      // Generate a unique thread ID for this session
+      this.threadId = localStorage.getItem('agent_thread_id') || uuidv4();
+      localStorage.setItem('agent_thread_id', this.threadId);
+    } else {
+      // For SSR, just create a new ID but don't save it
+      this.threadId = uuidv4();
+    }
     
     AgentClient.instance = this;
   }
@@ -37,7 +44,9 @@ export class AgentClient {
 
   setThreadId(threadId: string): void {
     this.threadId = threadId;
-    localStorage.setItem('agent_thread_id', threadId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('agent_thread_id', threadId);
+    }
   }
 
   async sendMessage(content: string): Promise<void> {
@@ -57,7 +66,7 @@ export class AgentClient {
       
       try {
         // Send to real agent if available with thread ID for state persistence
-        const response = await runAgent(content, this.threadId);
+        const response = await runAgent(content, this.threadId || undefined);
         
         // If the response includes a thread_id, store it
         if (response.thread_id) {
@@ -116,7 +125,9 @@ export class AgentClient {
   
   resetThread(): void {
     this.threadId = uuidv4();
-    localStorage.setItem('agent_thread_id', this.threadId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('agent_thread_id', this.threadId);
+    }
     this.clearMessages();
   }
   
