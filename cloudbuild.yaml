@@ -1,0 +1,38 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/dataset-creator-chat:$COMMIT_SHA', '.']
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/dataset-creator-chat:$COMMIT_SHA']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'dataset-creator-chat'
+      - '--image=gcr.io/$PROJECT_ID/dataset-creator-chat:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'  # Remove this if you want authentication
+      - '--port=8080'
+      - '--cpu=1'
+      - '--memory=1Gi'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--set-env-vars=NODE_ENV=production'
+      # Add any environment variables needed for your app
+      # - '--set-env-vars=KEY1=VALUE1,KEY2=VALUE2'
+      # Mount the Cloud Storage bucket
+      - '--volume=name=gcs,mount-path=/gcs'
+      - '--volume-type=gcs'
+      - '--service-account=dataset-creator-sa@$PROJECT_ID.iam.gserviceaccount.com'  # Replace with your service account
+
+images:
+  - 'gcr.io/$PROJECT_ID/dataset-creator-chat:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

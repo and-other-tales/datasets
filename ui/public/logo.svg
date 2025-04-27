@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="92px" height="92px" viewBox="0 0 92 92" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <title>Dataset Creator Logo</title>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <circle fill="#0669EF" cx="46" cy="46" r="46"></circle>
+        <g transform="translate(16.000000, 16.000000)" fill="#FFFFFF" fill-rule="nonzero">
+            <path d="M30,0 C13.4315,0 0,13.4315 0,30 C0,46.5685 13.4315,60 30,60 C46.5685,60 60,46.5685 60,30 C60,13.4315 46.5685,0 30,0 Z M30,6 C43.2548,6 54,16.7452 54,30 C54,43.2548 43.2548,54 30,54 C16.7452,54 6,43.2548 6,30 C6,16.7452 16.7452,6 30,6 Z"></path>
+            <rect x="18" y="18" width="24" height="6" rx="1"></rect>
+            <rect x="18" y="28" width="24" height="6" rx="1"></rect>
+            <rect x="18" y="38" width="24" height="6" rx="1"></rect>
+        </g>
+    </g>
+</svg>
