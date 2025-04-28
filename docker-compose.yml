@@ -1,0 +1,36 @@
+version: '3'
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    depends_on:
+      - web-redirect
+      - langgraph-server
+  
+  web-redirect:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    environment:
+      - PORT=8080
+      - NEXT_PUBLIC_AGENT_NAME=OtherTales Datasets Agent
+    networks:
+      - app-network
+  
+  langgraph-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PORT=8251
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -5,8 +5,8 @@ import { Metadata } from "next";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Dataset Creator Chat",
-  description: "Chat interface for the HuggingFace Dataset Creator Agent",
+  title: "OtherTales Datasets",
+  description: "Chat interface for the OtherTales Datasets Agent",
 };
 
 export default function RootLayout({

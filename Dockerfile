@@ -43,7 +43,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_AGENT_API_URL=/api/agent
 ENV NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
 ENV NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
-ENV NEXT_PUBLIC_AGENT_NAME="Dataset Creator Agent"
+ENV NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent"
 ENV DATASET_AGENT_URL=http://localhost:8080/agent
 ENV USE_EXPLICIT_GRAPH=true
 
@@ -92,7 +92,7 @@ ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 ENV AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
 ENV LANGCHAIN_API_KEY=$LANGCHAIN_API_KEY
 ENV LANGCHAIN_ENDPOINT=$LANGCHAIN_ENDPOINT
-ENV LANGCHAIN_PROJECT=dataset-creator-agent
+ENV LANGCHAIN_PROJECT=othertales-datasets
 ENV LANGCHAIN_TRACING_V2=true
 
 # Create a new startup script
@@ -109,7 +109,7 @@ function shutdown() {\n\
 trap shutdown SIGTERM SIGINT\n\
 \n\
 # Start the dataset agent API server\n\
-echo "Starting Dataset Creator Agent API on port 8080..."\n\
+echo "Starting OtherTales Datasets API on port 8080..."\n\
 python datasets.py --api &\n\
 AGENT_PID=$!\n\
 \n\

@@ -1,5 +1,5 @@
 """
-HuggingFace Dataset Creator Agent using LangGraph
+OtherTales Datasets Agent using LangGraph
 
 This agent creates HuggingFace datasets from URLs by crawling, downloading, and processing content.
 It uses LangGraph with PostgreSQL persistence for maintaining state across interactions.
@@ -59,14 +59,14 @@ MAX_PAGES = 100  # Maximum number of pages to crawl per domain
 TIMEOUT = 30000  # Timeout for page loading in ms
 
 # Set up directories
-CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "dataset_crawler")
+CACHE_DIR = os.path.join(os.path.expanduser("~"), ".cache", "othertales.datasets")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 # Agent configuration schema
 class AgentConfig(BaseModel):
-    """Configuration for the Dataset Creator Agent."""
+    """Configuration for the OtherTales Datasets Agent."""
     system_prompt: str = Field(
-        default="You are a specialized Dataset Creator Agent for generating HuggingFace datasets from web content.",
+        default="You are a specialized OtherTales Datasets Agent for generating datasets from web content.",
         description="The system prompt to use for the agent's interactions.",
         json_schema_extra={
             "langgraph_nodes": ["call_model"],
@@ -860,7 +860,7 @@ from langchain_core.tracers import ConsoleCallbackHandler
 os.environ["LANGCHAIN_TRACING_V2"] = "true"
 os.environ["LANGCHAIN_ENDPOINT"] = os.environ.get("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
 os.environ["LANGCHAIN_API_KEY"] = os.environ.get("LANGCHAIN_API_KEY", "")
-os.environ["LANGCHAIN_PROJECT"] = os.environ.get("LANGCHAIN_PROJECT", "dataset-creator-agent")
+os.environ["LANGCHAIN_PROJECT"] = os.environ.get("LANGCHAIN_PROJECT", "othertales-datasets")
 
 # Create the LLM using AWS Bedrock with tracing
 llm = ChatBedrockConverse(
@@ -909,9 +909,9 @@ def build_agent(use_postgres=False, use_tracing=True):
     """Build the dataset creation agent."""
     # Custom system prompt
     system_prompt = """
-    You are a specialized Dataset Creator Agent for generating HuggingFace datasets from web content. 
+    You are a specialized OtherTales Datasets Agent for generating datasets from web content. 
     You help users create high-quality datasets by crawling websites, extracting content, converting HTML to markdown, 
-    and generating datasets in the HuggingFace format.
+    and generating structured datasets.
 
     Your capabilities include:
     1. Crawling websites with customizable depth and URL patterns
@@ -977,7 +977,7 @@ def build_agent(use_postgres=False, use_tracing=True):
         checkpointer=checkpointer,
         callbacks=callbacks,
         tool_choice_transition=True,  # Enables observation of tool choices in LangSmith
-        name="Dataset Creator Agent"   # Name displayed in LangSmith
+        name="OtherTales Datasets Agent"   # Name displayed in LangSmith
     )
     
     # Add runnable config to enhance visualization
@@ -1036,7 +1036,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-app = FastAPI(title="Dataset Creator Agent API")
+app = FastAPI(title="OtherTales Datasets API")
 
 # Configure CORS
 app.add_middleware(

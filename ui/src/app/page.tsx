@@ -11,7 +11,7 @@ export default function Home() {
   const agentClient = AgentClient.getInstance();
   
   // Get agent name from environment variable or use default
-  const agentName = process.env.NEXT_PUBLIC_AGENT_NAME || "Dataset Creator Agent";
+  const agentName = process.env.NEXT_PUBLIC_AGENT_NAME || "OtherTales Datasets Agent";
   
   useEffect(() => {
     // Try to connect to agent when the app loads
@@ -33,14 +33,14 @@ export default function Home() {
       {
         id: uuidv4(),
         role: "ai",
-        content: `# Welcome to the ${agentName}
+        content: `# Welcome to ${agentName}
 
 I'm an AI assistant specialized in helping you create high-quality datasets from web content.
 
 I can help you:
 - Crawl websites with configurable depth and filters
 - Convert HTML to markdown text
-- Create structured HuggingFace datasets
+- Create structured datasets
 - Push datasets to the HuggingFace Hub
 
 To get started, tell me which website you'd like to crawl or what kind of dataset you want to create.`,
@@ -99,7 +99,7 @@ To get started, tell me which website you'd like to crawl or what kind of datase
       <header className="border-b border-border p-4 shadow-sm">
         <h1 className="font-bold text-xl">{agentName}</h1>
         <p className="text-sm text-muted-foreground">
-          Create HuggingFace datasets from web content
+          Create datasets from web content
         </p>
       </header>
       

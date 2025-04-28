@@ -8,7 +8,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}Starting Dataset Creator Agent Chat UI...${NC}"
+echo -e "${BLUE}Starting OtherTales Datasets UI...${NC}"
 
 # Check if Python is installed
 if ! command -v python &> /dev/null; then
@@ -67,12 +67,12 @@ npm install
 export NEXT_PUBLIC_AGENT_API_URL=/api/agent
 export NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
 export NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
-export NEXT_PUBLIC_AGENT_NAME="Dataset Creator Agent"
+export NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent"
 
 # Set environment variables for LangGraph and LangSmith
 export USE_EXPLICIT_GRAPH=true
 export LANGCHAIN_TRACING_V2=true
-export LANGCHAIN_PROJECT="dataset-creator-agent"
+export LANGCHAIN_PROJECT="othertales-datasets"
 export LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-"https://api.smith.langchain.com"}
 
 # Check if LangSmith API key is available
@@ -91,13 +91,13 @@ UI_PID=$!
 cd ..
 
 # Start the Python agent API server
-echo -e "${GREEN}Starting dataset agent API server...${NC}"
+echo -e "${GREEN}Starting OtherTales Datasets API server...${NC}"
 python datasets.py --api &
 AGENT_PID=$!
 
-echo -e "${BLUE}Dataset Creator Agent Chat UI is running!${NC}"
+echo -e "${BLUE}OtherTales Datasets UI is running!${NC}"
 echo -e "Open ${GREEN}http://localhost:3000${NC} in your browser"
-echo -e "Dataset Agent API running on ${GREEN}http://localhost:8080${NC}"
+echo -e "OtherTales Datasets API running on ${GREEN}http://localhost:8080${NC}"
 echo "Press Ctrl+C to stop all servers"
 
 # Keep the script running and capture Ctrl+C
