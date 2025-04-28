@@ -10,8 +10,8 @@ export async function POST(request: NextRequest) {
     // Parse the request body
     const config = await request.json();
     
-    // Try to connect to the Python agent on localhost
-    const configUrl = process.env.DATASET_AGENT_CONFIG_URL || 'http://localhost:8000/config';
+    // Try to connect to the Python agent
+    const configUrl = process.env.DATASET_AGENT_CONFIG_URL || 'http://localhost:8080/config';
     
     try {
       // Forward the config to the Python agent

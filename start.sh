@@ -92,12 +92,12 @@ cd ..
 
 # Start the Python agent API server
 echo -e "${GREEN}Starting dataset agent API server...${NC}"
-python dataset_agent.py --api &
+python datasets.py --api &
 AGENT_PID=$!
 
 echo -e "${BLUE}Dataset Creator Agent Chat UI is running!${NC}"
 echo -e "Open ${GREEN}http://localhost:3000${NC} in your browser"
-echo -e "Dataset Agent API running on ${GREEN}http://localhost:8000${NC}"
+echo -e "Dataset Agent API running on ${GREEN}http://localhost:8080${NC}"
 echo "Press Ctrl+C to stop all servers"
 
 # Keep the script running and capture Ctrl+C

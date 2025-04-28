@@ -15,8 +15,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    // Try to connect to the Python agent on localhost
-    const agentUrl = process.env.DATASET_AGENT_URL || 'http://localhost:8000/agent';
+    // Try to connect to the Python agent
+    const agentUrl = process.env.DATASET_AGENT_URL || 'http://localhost:8080/agent';
     
     try {
       // Forward the request to the Python agent with thread_id if available

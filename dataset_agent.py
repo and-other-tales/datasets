@@ -1124,9 +1124,9 @@ async def update_config(request: Request):
         print(f"Error in config API: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def start_server(host="0.0.0.0", port=8000, reload=True):
+def start_server(host="0.0.0.0", port=8080, reload=True):
     """Start the FastAPI server."""
-    uvicorn.run("dataset_agent:app", host=host, port=port, reload=reload)
+    uvicorn.run("datasets:app", host=host, port=port, reload=reload)
 
 def main():
     """Run the agent CLI."""
