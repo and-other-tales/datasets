@@ -12,11 +12,14 @@ export async function POST(request: NextRequest) {
     
     try {
       // Check if the Python agent is running
+      console.log(`Checking agent status at ${agentUrl}`);
       const response = await fetch(agentUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        // Add reasonable timeout to avoid hanging requests
+        signal: AbortSignal.timeout(5000),
       });
 
       if (!response.ok) {

@@ -16,7 +16,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Try to connect to the Python agent
+    // When deployed with Cloud Run, the Python agent will be accessible via localhost:8080
+    // In production builds, the default should work without environment variable
     const agentUrl = process.env.DATASET_AGENT_URL || 'http://localhost:8080/agent';
+    console.log(`Connecting to dataset agent at ${agentUrl}`);
     
     try {
       // Forward the request to the Python agent with thread_id if available
@@ -31,6 +34,8 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
+        // Add reasonable timeout to avoid hanging requests
+        signal: AbortSignal.timeout(15000)
       });
 
       if (!response.ok) {

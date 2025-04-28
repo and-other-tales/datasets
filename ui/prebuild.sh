@@ -136,6 +136,132 @@ export function safeJsonParse<T>(jsonString: string, defaultValue: T): T {
 EOF
 fi
 
+# Make sure agent-integration.ts exists
+if [ ! -f "src/lib/agent-integration.ts" ]; then
+  echo "src/lib/agent-integration.ts not found, creating..."
+  cat > src/lib/agent-integration.ts << 'EOF'
+import { safeJsonParse } from './utils';
+
+interface AgentConfig {
+  crawlDepth?: number;
+  maxPages?: number;
+  allowedDomains?: string[];
+  excludeUrls?: string[];
+  extractionRules?: Record<string, string>;
+}
+
+interface AgentResponse {
+  status: 'success' | 'error';
+  message: string;
+  data?: any;
+  thread_id?: string;
+}
+
+/**
+ * Runs the dataset agent with a message
+ */
+export async function runAgent(message: string, threadId?: string): Promise<AgentResponse> {
+  try {
+    const endpoint = process.env.NEXT_PUBLIC_AGENT_API_URL || '/api/agent';
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        message,
+        thread_id: threadId 
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      status: 'success',
+      message: data.message || 'Agent executed successfully',
+      data,
+      thread_id: data.thread_id || threadId
+    };
+  } catch (error) {
+    console.error('Error running agent:', error);
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
+
+/**
+ * Connects to the LangGraph server
+ */
+export async function connectToServer(serverUrl?: string): Promise<AgentResponse> {
+  try {
+    const url = serverUrl || process.env.NEXT_PUBLIC_LANGGRAPH_URL || '/api/connect';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      status: 'success',
+      message: 'Connected to LangGraph server',
+      data,
+      thread_id: data.thread_id
+    };
+  } catch (error) {
+    console.error('Error connecting to server:', error);
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
+
+/**
+ * Updates the agent configuration
+ */
+export async function updateAgentConfig(config: AgentConfig): Promise<AgentResponse> {
+  try {
+    const endpoint = process.env.NEXT_PUBLIC_AGENT_CONFIG_URL || '/api/config';
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(config),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      status: 'success',
+      message: 'Agent configuration updated',
+      data,
+    };
+  } catch (error) {
+    console.error('Error updating agent config:', error);
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
+EOF
+fi
+
 # Create index.ts for easier imports
 if [ ! -f "src/lib/index.ts" ]; then
   echo "Creating src/lib/index.ts for re-exports..."

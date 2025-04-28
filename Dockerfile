@@ -10,8 +10,12 @@ RUN npm install --legacy-peer-deps
 COPY ui/ .
 
 # Make prebuild.sh executable and run it
-RUN chmod +x prebuild.sh || echo "No prebuild.sh script found, creating directory manually"
-RUN mkdir -p /ui/src/lib/ && ls -la /ui/src/lib/
+RUN chmod +x prebuild.sh
+RUN mkdir -p /ui/src/lib/
+
+# Create agent-integration.ts if it doesn't exist (wrapped in shell command to allow failure)
+RUN mkdir -p /ui/src/lib/
+RUN /bin/sh -c "cp -f ui/src/lib/agent-integration.ts* /ui/src/lib/ 2>/dev/null || echo 'agent-integration.ts not found in source, will be created by prebuild.sh'"
 
 # Run prebuild script for environment setup
 RUN sh -c "./prebuild.sh"
@@ -49,12 +53,12 @@ RUN addgroup --system --gid 1001 nodejs && \
     mkdir -p /app/.next /app/public && \
     chown -R nextjs:nodejs /app/.next /app/public
 
-# Install Node.js
+# Install Node.js and other required packages
 RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y nodejs curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -63,8 +67,9 @@ RUN mkdir -p /gcs && chown nextjs:nodejs /gcs
 
 # Copy Python requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    python -c "from playwright.sync_api import sync_playwright" || playwright install --with-deps chromium
+# Install Python requirements and playwright separately
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install playwright && playwright install --with-deps chromium
 
 # Copy built Next.js app
 COPY --from=ui-builder --chown=nextjs:nodejs /ui/public ./public
@@ -92,11 +97,43 @@ ENV LANGCHAIN_TRACING_V2=true
 
 # Create a new startup script
 RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Trap SIGTERM and SIGINT to properly shutdown both services\n\
+function shutdown() {\n\
+  echo "Shutting down services..."\n\
+  [ -n "${AGENT_PID}" ] && kill -TERM ${AGENT_PID} || true\n\
+  exit 0\n\
+}\n\
+\n\
+trap shutdown SIGTERM SIGINT\n\
+\n\
 # Start the dataset agent API server\n\
+echo "Starting Dataset Creator Agent API on port 8080..."\n\
 python datasets.py --api &\n\
 AGENT_PID=$!\n\
+\n\
+# Wait for the agent to be ready\n\
+echo "Waiting for agent API to be available..."\n\
+attempts=0\n\
+max_attempts=30\n\
+while [ $attempts -lt $max_attempts ]; do\n\
+  if curl -s http://localhost:8080/status > /dev/null; then\n\
+    echo "Agent API is available!"\n\
+    break\n\
+  fi\n\
+  attempts=$((attempts + 1))\n\
+  echo "Waiting for agent API (attempt ${attempts}/${max_attempts})..."\n\
+  sleep 1\n\
+done\n\
+\n\
+if [ $attempts -eq $max_attempts ]; then\n\
+  echo "WARNING: Agent API did not respond in time, but continuing startup..."\n\
+fi\n\
+\n\
 # Start the UI server\n\
-node server.js\n' > /app/docker-start.sh && \
+echo "Starting UI server..."\n\
+exec node server.js\n' > /app/docker-start.sh && \
 chmod +x /app/docker-start.sh
 
 # Start both services

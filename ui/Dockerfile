@@ -9,6 +9,13 @@ RUN npm install --legacy-peer-deps
 # Copy all files
 COPY . .
 
+# Make sure src/lib directory exists
+RUN mkdir -p /app/src/lib/
+
+# Run prebuild script to ensure all files exist
+RUN chmod +x prebuild.sh
+RUN sh -c "./prebuild.sh"
+
 # Debug directories to ensure files exist
 RUN ls -la /app/src/lib/
 

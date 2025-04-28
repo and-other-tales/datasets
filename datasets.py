@@ -1124,9 +1124,16 @@ async def update_config(request: Request):
         print(f"Error in config API: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def start_server(host="0.0.0.0", port=8080, reload=True):
+def start_server(host="0.0.0.0", port=None, reload=True):
     """Start the FastAPI server."""
-    uvicorn.run("datasets:app", host=host, port=port, reload=reload)
+    # Use PORT environment variable (required for Cloud Run) or default to 8080
+    if port is None:
+        port = int(os.environ.get("PORT", 8080))
+    
+    print(f"Starting FastAPI server on {host}:{port}")
+    # Set reload=False in production for better performance
+    is_prod = os.environ.get("NODE_ENV") == "production"
+    uvicorn.run("datasets:app", host=host, port=port, reload=reload and not is_prod)
 
 def main():
     """Run the agent CLI."""
@@ -1152,7 +1159,9 @@ def main():
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "--api":
-        print("Starting Dataset Creator Agent API on http://localhost:8000")
-        start_server()
+        # Get port from environment variable (required for Cloud Run)
+        port = int(os.environ.get("PORT", 8080))
+        print(f"Starting Dataset Creator Agent API on http://0.0.0.0:{port}")
+        start_server(port=port)
     else:
         main()

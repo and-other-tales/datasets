@@ -15,12 +15,15 @@ export async function POST(request: NextRequest) {
     
     try {
       // Forward the config to the Python agent
+      console.log(`Updating agent config at ${configUrl}`, config);
       const response = await fetch(configUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(config),
+        // Add reasonable timeout to avoid hanging requests
+        signal: AbortSignal.timeout(10000),
       });
 
       if (!response.ok) {
