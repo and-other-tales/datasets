@@ -56,22 +56,22 @@ while [ $attempts -lt $max_attempts ]; do
   sleep 1
 done
 
-# Start LangGraph server using the langgraph CLI
-echo -e "${GREEN}Starting LangGraph server on port 2024...${NC}"
-langgraph dev --config langgraph.json &
+# Start the dataset agent API server
+echo -e "${GREEN}Starting Dataset Agent API server on port 2024...${NC}"
+python dataset_agent.py --api &
 LANGGRAPH_PID=$!
 
-# Wait for LangGraph server to be ready
-echo "Waiting for LangGraph server to be available..."
+# Wait for the dataset agent API server to be ready
+echo "Waiting for Dataset Agent API server to be available..."
 attempts=0
 max_attempts=30
 while [ $attempts -lt $max_attempts ]; do
   if curl -s http://localhost:2024/info > /dev/null; then
-    echo "LangGraph server is available!"
+    echo "Dataset Agent API server is available!"
     break
   fi
   attempts=$((attempts + 1))
-  echo "Waiting for LangGraph server (attempt ${attempts}/${max_attempts})..."
+  echo "Waiting for Dataset Agent API server (attempt ${attempts}/${max_attempts})..."
   sleep 1
 done
 
