@@ -31,8 +31,8 @@ steps:
       # Add configuration for the new setup
       - '--set-env-vars=USE_EXPLICIT_GRAPH=true,DATASET_AGENT_URL=/agent'
       # Mount the Cloud Storage bucket
-      - '--volume=name=gcs,mount-path=/gcs'
-      - '--volume-type=gcs'
+      - '--add-volume=name=gcs,mount-path=/gcs'
+      - '--add-volume-type=gcs'
       - '--service-account=othertales-datasets-sa@$PROJECT_ID.iam.gserviceaccount.com'
 
 images:
