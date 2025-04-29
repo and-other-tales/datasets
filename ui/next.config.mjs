@@ -8,7 +8,7 @@ const nextConfig = {
   },
   // Configure server options
   serverRuntimeConfig: {
-    port: parseInt(process.env.PORT, 10) || 8080,
+    port: parseInt(process.env.PORT, 10) || 3000,
   },
   experimental: {
     // Enable for optimized container size

@@ -7,7 +7,7 @@ const nextConfig = {
   },
   // Configure server options
   serverRuntimeConfig: {
-    port: parseInt(process.env.PORT, 10) || 8080,
+    port: parseInt(process.env.PORT, 10) || 3000,
   },
   // Allow env variables to be accessed in the browser when prefixed with NEXT_PUBLIC_
   env: {
