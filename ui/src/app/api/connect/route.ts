@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Try to connect to the Python agent
-    const agentUrl = process.env.DATASET_AGENT_URL || 'http://localhost:8080/status';
+    // Try to connect to the Python agent via nginx reverse proxy
+    const agentUrl = process.env.DATASET_AGENT_URL?.replace('/agent', '/status') || '/status';
     
     try {
       // Check if the Python agent is running

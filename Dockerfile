@@ -44,7 +44,7 @@ ENV NEXT_PUBLIC_AGENT_API_URL=/api/agent
 ENV NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
 ENV NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
 ENV NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent"
-ENV DATASET_AGENT_URL=http://localhost:8080/agent
+ENV DATASET_AGENT_URL=http://localhost:2024/agent
 ENV USE_EXPLICIT_GRAPH=true
 
 # Set up non-root user for Node
@@ -53,10 +53,11 @@ RUN addgroup --system --gid 1001 nodejs && \
     mkdir -p /app/.next /app/public && \
     chown -R nextjs:nodejs /app/.next /app/public
 
-# Install Node.js and other required packages
+# Install Node.js, Nginx, and other required packages
 RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
+    nginx \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs curl \
     && apt-get clean \
@@ -76,11 +77,12 @@ COPY --from=ui-builder --chown=nextjs:nodejs /ui/public ./public
 COPY --from=ui-builder --chown=nextjs:nodejs /ui/.next/standalone ./
 COPY --from=ui-builder --chown=nextjs:nodejs /ui/.next/static ./.next/static
 
-# Copy Python files
-COPY datasets.py start.sh ./
+# Copy Python and configuration files
+COPY dataset_agent.py datasets.py langgraph.json langgraph_docs.json cloudrun-start.sh ./
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Make start.sh executable
-RUN chmod +x start.sh
+# Make scripts executable
+RUN chmod +x cloudrun-start.sh
 
 # Expose port
 EXPOSE 8080
@@ -95,46 +97,5 @@ ENV LANGCHAIN_ENDPOINT=$LANGCHAIN_ENDPOINT
 ENV LANGCHAIN_PROJECT=othertales-datasets
 ENV LANGCHAIN_TRACING_V2=true
 
-# Create a new startup script
-RUN echo '#!/bin/bash\n\
-set -e\n\
-\n\
-# Trap SIGTERM and SIGINT to properly shutdown both services\n\
-function shutdown() {\n\
-  echo "Shutting down services..."\n\
-  [ -n "${AGENT_PID}" ] && kill -TERM ${AGENT_PID} || true\n\
-  exit 0\n\
-}\n\
-\n\
-trap shutdown SIGTERM SIGINT\n\
-\n\
-# Start the dataset agent API server\n\
-echo "Starting OtherTales Datasets API on port 8080..."\n\
-python datasets.py --api &\n\
-AGENT_PID=$!\n\
-\n\
-# Wait for the agent to be ready\n\
-echo "Waiting for agent API to be available..."\n\
-attempts=0\n\
-max_attempts=30\n\
-while [ $attempts -lt $max_attempts ]; do\n\
-  if curl -s http://localhost:8080/status > /dev/null; then\n\
-    echo "Agent API is available!"\n\
-    break\n\
-  fi\n\
-  attempts=$((attempts + 1))\n\
-  echo "Waiting for agent API (attempt ${attempts}/${max_attempts})..."\n\
-  sleep 1\n\
-done\n\
-\n\
-if [ $attempts -eq $max_attempts ]; then\n\
-  echo "WARNING: Agent API did not respond in time, but continuing startup..."\n\
-fi\n\
-\n\
-# Start the UI server\n\
-echo "Starting UI server..."\n\
-exec node server.js\n' > /app/docker-start.sh && \
-chmod +x /app/docker-start.sh
-
-# Start both services
-CMD ["/app/docker-start.sh"]
+# Start the integrated service (NextJS + LangGraph + Nginx)
+CMD ["/app/cloudrun-start.sh"]

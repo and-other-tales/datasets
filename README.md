@@ -39,14 +39,42 @@ playwright install
 
 ## Usage
 
+### Running Locally
+
 ```bash
 # Set your AWS credentials
 export AWS_ACCESS_KEY_ID=your_access_key
 export AWS_SECRET_ACCESS_KEY=your_secret_key
 export AWS_DEFAULT_REGION=your_region
 
-# Run the agent
+# Run the CLI version
 python datasets.py
+
+# OR run the API server
+python datasets.py --api
+
+# OR use the integrated UI and API with the start script
+./start.sh
+```
+
+### Cloud Run Deployment
+
+This application can be deployed to Google Cloud Run using the included Dockerfile and nginx reverse proxy configuration:
+
+1. The application exposes a single port (8080) as required by Cloud Run
+2. Nginx routes requests internally:
+   - UI requests (/) → Next.js on port 3000
+   - API requests (/agent, /status, /assistants, etc.) → LangGraph server on port 2024
+
+The deployment process uses:
+- `langgraph dev` to run the LangGraph server
+- Next.js for the frontend UI
+- nginx as a reverse proxy to route traffic
+
+To deploy:
+```bash
+# Build and deploy using Cloud Build
+gcloud builds submit --config cloudbuild.yaml
 ```
 
 ## Example

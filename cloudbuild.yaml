@@ -28,6 +28,8 @@ steps:
       - '--set-env-vars=API_KEY=${_API_KEY},LOG_LEVEL=${_LOG_LEVEL},DEBUG=${_DEBUG},DB_HOST=${_DB_HOST},DB_PORT=${_DB_PORT},DB_USER=${_DB_USER},DB_PASSWORD=${_DB_PASSWORD},DB_NAME=${_DB_NAME}'
       # Add Python agent environment variables
       - '--set-env-vars=POSTGRES_URI=${_POSTGRES_URI},AWS_ACCESS_KEY_ID=${_AWS_ACCESS_KEY_ID},AWS_SECRET_ACCESS_KEY=${_AWS_SECRET_ACCESS_KEY},AWS_DEFAULT_REGION=${_AWS_DEFAULT_REGION},LANGCHAIN_API_KEY=${_LANGCHAIN_API_KEY},LANGCHAIN_ENDPOINT=${_LANGCHAIN_ENDPOINT}'
+      # Add configuration for the new setup
+      - '--set-env-vars=USE_EXPLICIT_GRAPH=true,DATASET_AGENT_URL=/agent'
       # Mount the Cloud Storage bucket
       - '--volume=name=gcs,mount-path=/gcs'
       - '--volume-type=gcs'

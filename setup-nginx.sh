@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# Setup script for nginx reverse proxy configuration
+# Setup script for nginx reverse proxy configuration (local development)
+# For Cloud Run deployment, nginx is configured automatically in the Docker image
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -34,7 +35,9 @@ if [ $? -eq 0 ]; then
     echo -e "${BLUE}Nginx reverse proxy setup complete!${NC}"
     echo -e "Now you can access:"
     echo -e "  - Web UI: http://localhost:8080/"
-    echo -e "  - API endpoints via http://localhost:8080/assistants/* and other paths"
+    echo -e "  - Next.js API: http://localhost:8080/api/*"
+    echo -e "  - LangGraph API endpoints: http://localhost:8080/agent, http://localhost:8080/status, etc."
+    echo -e "  - LangGraph OpenAI-compatible API: http://localhost:8080/assistants/*, http://localhost:8080/threads/*, etc."
 else
     echo -e "\nNginx configuration test failed. Please check the configuration file."
     echo -e "Restoring backup configuration..."
