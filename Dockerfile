@@ -69,16 +69,16 @@ RUN export GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) && echo "GCSFUSE_REPO=$GCSF
 ENV GCSFUSE_REPO=${GCSFUSE_REPO}
 
 # Add the Google Cloud public key to the sources list
-RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt $GCSFUSE_REPO main" | sudo tee /etc/apt/sources.list.d/gcsfuse.list
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt $GCSFUSE_REPO main" > /etc/apt/sources.list.d/gcsfuse.list
 
 # Download the Google Cloud public key
-RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo tee /usr/share/keyrings/cloud.google.asc
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg > /usr/share/keyrings/cloud.google.asc
 
 # Update the package list
-RUN sudo apt-get update
+RUN apt-get update
 
 # Install GCSFuse
-RUN sudo apt-get install -y gcsfuse
+RUN apt-get install -y gcsfuse
 
 # Create directory for GCS mount and set permissions
 RUN mkdir -p /gcs && chown nextjs:nodejs /gcs
