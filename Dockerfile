@@ -65,7 +65,7 @@ RUN addgroup --system --gid 1001 nodejs && \
     chown -R nextjs:nodejs /app/.next /app/public
 
 # Set the GCSFUSE_REPO environment variable
-RUN export GCSFUSE_REPO=gcsfuse-`lsb_release -c -s`
+ENV GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s)
 
 # Add the Google Cloud public key to the sources list
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt $GCSFUSE_REPO main" | sudo tee /etc/apt/sources.list.d/gcsfuse.list
@@ -84,7 +84,6 @@ RUN mkdir -p /gcs && chown nextjs:nodejs /gcs
 
 # Copy Python requirements and install dependencies
 COPY requirements.txt .
-# Install Python requirements and playwright separately
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install playwright && playwright install --with-deps chromium
 
@@ -94,8 +93,7 @@ COPY --from=ui-builder --chown=nextjs:nodejs /ui/.next/standalone ./
 COPY --from=ui-builder --chown=nextjs:nodejs /ui/.next/static ./.next/static
 
 # Copy Python and configuration files
-COPY dataset_agent.py langgraph.json cloudrun-start.sh ./
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY dataset_agent.py langgraph.json cloudrun-start.sh nginx.conf ./
 
 # Make scripts executable
 RUN chmod +x cloudrun-start.sh
@@ -106,20 +104,10 @@ EXPOSE 8080
 # Set environment variables from Cloud Run env vars
 ENV POSTGRES_URI=$POSTGRES_URI
 ENV OPENAI_API_KEY=$OPENAI_API_KEY
-# ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-# ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-# ENV AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
 ENV LANGSMITH_TRACING=true
 ENV LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
 ENV LANGSMITH_API_KEY=$LANGSMITH_API_KEY
 ENV LANGSMITH_PROJECT="datasets"
-ENV OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Start the integrated service (NextJS + LangGraph + Nginx)
 CMD ["/app/cloudrun-start.sh"]
-ENV LANGSMITH_PROJECT="datasets"
-ENV OPENAI_API_KEY=$OPENAI_API_KEY
-
-# Set up non-root user for Node
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs && \
