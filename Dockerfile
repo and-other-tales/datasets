@@ -47,21 +47,22 @@ ENV NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent"
 ENV DATASET_AGENT_URL=http://localhost:2024/agent
 ENV USE_EXPLICIT_GRAPH=true
 
-# Set up non-root user for Node
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs && \
-    mkdir -p /app/.next /app/public && \
-    chown -R nextjs:nodejs /app/.next /app/public
-
 # Install Node.js, Nginx, and other required packages
 RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     nginx \
+    passwd \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Set up non-root user for Node
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs && \
+    mkdir -p /app/.next /app/public && \
+    chown -R nextjs:nodejs /app/.next /app/public
 
 # Set the GCSFUSE_REPO environment variable
 RUN export GCSFUSE_REPO=gcsfuse-`lsb_release -c -s`
@@ -116,3 +117,9 @@ ENV OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Start the integrated service (NextJS + LangGraph + Nginx)
 CMD ["/app/cloudrun-start.sh"]
+ENV LANGSMITH_PROJECT="datasets"
+ENV OPENAI_API_KEY=$OPENAI_API_KEY
+
+# Set up non-root user for Node
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs && \
