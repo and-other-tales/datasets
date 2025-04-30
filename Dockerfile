@@ -68,17 +68,6 @@ RUN addgroup --system --gid 1001 nodejs && \
     mkdir -p /app/.next /app/public && \
     chown -R nextjs:nodejs /app/.next /app/public
 
-# Install GCSFuse using the official installation method
-RUN curl -O https://packages.cloud.google.com/apt/doc/apt-key.gpg && \
-    apt-key add apt-key.gpg && \
-    echo "deb https://packages.cloud.google.com/apt gcsfuse-jammy main" | \
-    tee /etc/apt/sources.list.d/gcsfuse.list && \
-    apt-get update && \
-    apt-get install -y gcsfuse
-
-# Create directory for GCS mount and set permissions
-RUN mkdir -p /gcs && chown nextjs:nodejs /gcs
-
 # Copy Python requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
