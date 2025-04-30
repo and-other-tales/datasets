@@ -57,6 +57,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     gnupg \
     nginx \
     passwd \
+    python3 \
+    python3-pip \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs curl \
     && apt-get clean \
@@ -70,8 +72,8 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copy Python requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install playwright && playwright install --with-deps chromium
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install playwright && playwright install --with-deps chromium
 
 # Copy built Next.js app
 COPY --from=ui-builder --chown=nextjs:nodejs /ui/public ./public
