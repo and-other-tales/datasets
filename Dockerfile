@@ -32,7 +32,7 @@ ENV NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
 RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
 # Final image
-FROM python:3.10-slim
+FROM ubuntu:24.10
 
 WORKDIR /app
 
