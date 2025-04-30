@@ -64,19 +64,13 @@ RUN addgroup --system --gid 1001 nodejs && \
     mkdir -p /app/.next /app/public && \
     chown -R nextjs:nodejs /app/.next /app/public
 
-# Set the GCSFUSE_REPO environment variable
-RUN echo "deb https://packages.cloud.google.com/apt gcsfuse-$(lsb_release -c -s) main" | \
-    tee /etc/apt/sources.list.d/gcsfuse.list
-
-# Download the Google Cloud public key and set up properly
-RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
-    apt-key add -
-
-# Update the package list
-RUN apt-get update
-
-# Install GCSFuse
-RUN apt-get install -y gcsfuse
+# Install GCSFuse using the official installation method
+RUN curl -O https://packages.cloud.google.com/apt/doc/apt-key.gpg && \
+    apt-key add apt-key.gpg && \
+    echo "deb https://packages.cloud.google.com/apt gcsfuse-jammy main" | \
+    tee /etc/apt/sources.list.d/gcsfuse.list && \
+    apt-get update && \
+    apt-get install -y gcsfuse
 
 # Create directory for GCS mount and set permissions
 RUN mkdir -p /gcs && chown nextjs:nodejs /gcs
