@@ -63,6 +63,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install GCSFuse
+RUN apt-get update && apt-get install -y gcsfuse
+
 # Create directory for GCS mount and set permissions
 RUN mkdir -p /gcs && chown nextjs:nodejs /gcs
 

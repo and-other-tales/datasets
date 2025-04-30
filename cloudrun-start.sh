@@ -36,6 +36,13 @@ export LANGCHAIN_TRACING_V2=true
 export LANGCHAIN_PROJECT="othertales-datasets"
 export LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-"https://api.smith.langchain.com"}
 
+# Mount GCS bucket using GCSFuse
+echo -e "${GREEN}Mounting GCS bucket using GCSFuse...${NC}"
+gcsfuse --debug_gcs --debug_fuse mixture-othertales-co /gcs || {
+  echo -e "${RED}Failed to mount GCS bucket. Exiting...${NC}"
+  exit 1
+}
+
 # Start the Next.js UI
 echo -e "${GREEN}Starting UI server on port 3000...${NC}"
 cd /app

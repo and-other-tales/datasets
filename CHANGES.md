@@ -57,3 +57,51 @@ Deploy using the Cloud Build configuration:
 ```bash
 gcloud builds submit --config cloudbuild.yaml
 ```
+
+## GCSFuse Integration
+
+To enable GCSFuse for mounting Google Cloud Storage buckets, the following changes were made:
+
+1. **Dockerfile**
+   - Added installation of GCSFuse:
+     ```dockerfile
+     # Install GCSFuse
+     RUN apt-get update && apt-get install -y gcsfuse
+     ```
+
+   - Created directory for GCS mount and set permissions:
+     ```dockerfile
+     # Create directory for GCS mount and set permissions
+     RUN mkdir -p /gcs && chown nextjs:nodejs /gcs
+     ```
+
+2. **cloudrun-start.sh**
+   - Added GCSFuse mount command with appropriate options:
+     ```bash
+     # Mount GCS bucket using GCSFuse
+     echo -e "${GREEN}Mounting GCS bucket using GCSFuse...${NC}"
+     gcsfuse --debug_gcs --debug_fuse mixture-othertales-co /gcs || {
+       echo -e "${RED}Failed to mount GCS bucket. Exiting...${NC}"
+       exit 1
+     }
+     ```
+
+   - Added logging to capture detailed GCSFuse mount errors:
+     ```bash
+     # Mount GCS bucket using GCSFuse
+     echo -e "${GREEN}Mounting GCS bucket using GCSFuse...${NC}"
+     gcsfuse --debug_gcs --debug_fuse mixture-othertales-co /gcs || {
+       echo -e "${RED}Failed to mount GCS bucket. Exiting...${NC}"
+       exit 1
+     }
+     ```
+
+3. **cloudbuild.yaml**
+   - Ensured the volume is correctly defined in the Cloud Run configuration:
+     ```yaml
+     --add-volume=name=gcs,type=cloud-storage,bucket=mixture-othertales-co
+     --add-volume-mount=volume=gcs,mount-path=/gcs
+     ```
+
+4. **CHANGES.md**
+   - Updated `CHANGES.md` to include the changes made for GCSFuse.
