@@ -1111,6 +1111,16 @@ async def get_status():
         "persistence": POSTGRES_AVAILABLE
     }
 
+@app.get("/info")
+async def get_info():
+    """Mirror of the status endpoint for health checks."""
+    return {
+        "status": "running",
+        "model": MODEL_ID,
+        "timestamp": time.time(),
+        "persistence": POSTGRES_AVAILABLE
+    }
+
 @app.post("/config")
 async def update_config(request: Request):
     try:
@@ -1126,7 +1136,7 @@ async def update_config(request: Request):
 
 def start_server(host="0.0.0.0", port=8080, reload=True):
     """Start the FastAPI server."""
-    uvicorn.run("datasets:app", host=host, port=port, reload=reload)
+    uvicorn.run("dataset_agent:app", host=host, port=port, reload=reload)
 
 def main():
     """Run the agent CLI."""
@@ -1152,7 +1162,8 @@ def main():
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "--api":
-        print("Starting Dataset Creator Agent API on http://localhost:8000")
-        start_server()
+        port = 8080
+        print(f"Starting Dataset Creator Agent API on http://localhost:{port}")
+        start_server(port=port)
     else:
         main()

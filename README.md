@@ -48,10 +48,10 @@ export AWS_SECRET_ACCESS_KEY=your_secret_key
 export AWS_DEFAULT_REGION=your_region
 
 # Run the CLI version
-python datasets.py
+python dataset_agent.py
 
 # OR run the API server
-python datasets.py --api
+python dataset_agent.py --api
 
 # OR use the integrated UI and API with the start script
 ./start.sh

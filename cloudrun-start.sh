@@ -66,7 +66,7 @@ echo "Waiting for Dataset Agent API server to be available..."
 attempts=0
 max_attempts=30
 while [ $attempts -lt $max_attempts ]; do
-  if curl -s http://localhost:2024/info > /dev/null; then
+  if curl -s http://localhost:2024/status > /dev/null; then
     echo "Dataset Agent API server is available!"
     break
   fi

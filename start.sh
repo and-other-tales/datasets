@@ -92,7 +92,7 @@ cd ..
 
 # Start the Python agent API server
 echo -e "${GREEN}Starting OtherTales Datasets API server...${NC}"
-python datasets.py --api &
+python dataset_agent.py --api &
 AGENT_PID=$!
 
 echo -e "${BLUE}OtherTales Datasets UI is running!${NC}"
