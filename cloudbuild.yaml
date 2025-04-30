@@ -27,8 +27,7 @@ steps:
       - '--set-env-vars=USE_EXPLICIT_GRAPH=true,DATASET_AGENT_URL=/agent'
       - '--add-volume=name=gcs,type=cloud-storage,bucket=mixture-othertales-co'
       - '--add-volume-mount=volume=gcs,mount-path=/gcs'
-      - '--service-account=othertales-datasets-sa@$PROJECT_ID.iam.gserviceaccount.com'
-
+      
 images:
   - 'gcr.io/$PROJECT_ID/othertales-datasets:$COMMIT_SHA'
 
