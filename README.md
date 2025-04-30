@@ -8,12 +8,12 @@ A powerful tool for creating high-quality datasets for LLM training using intell
 - 🔄 **Content Processing**: Advanced HTML to Markdown conversion with content cleaning
 - 📊 **Dataset Creation**: Automatic structuring of crawled content into HuggingFace datasets
 - 🤖 **Multi-Provider AI Support**: Compatible with major LLM providers:
-  - OpenAI (GPT-4, GPT-3.5)
-  - Anthropic (Claude 3)
-  - AWS Bedrock (Claude, Titan)
-  - HuggingFace
+  - OpenAI (GPT-4.1, 4o, o1, o3-mini)
+  - Anthropic (Claude 3.7 & 3.6 & Sonnet)
+  - AWS Bedrock (Amazon Titan & 3rd Party Provider Models - Anthropic / Llama)
+  - HuggingFace (Llama 4, 3, HF Transformer Models)
   - Groq
-  - Google Vertex AI
+  - Google Vertex AI (Gemini)
 - 📈 **Observability**: Built-in tracing with LangSmith for monitoring and debugging
 - 🔍 **Verification**: Tools to verify and validate created datasets
 - ☁️ **HuggingFace Integration**: Direct upload to HuggingFace Hub
