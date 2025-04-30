@@ -1,107 +1,204 @@
-# HuggingFace Dataset Creator Agent
+# OtherTales Dataset Creator
 
-This agent creates HuggingFace datasets from URLs by crawling, downloading, and processing content.
+A powerful tool for creating high-quality datasets for LLM training using intelligent web crawling and content processing. This tool helps developers build custom datasets compatible with HuggingFace Datasets, making it easy to create specialized training data for various domains.
 
 ## Features
 
-- URL crawling with configurable depth and filters using Playwright
-- HTML to Markdown conversion using BeautifulSoup4 and JinaAI/ReaderLM-v2 approach
-- HuggingFace dataset creation with proper metadata
-- Complete workflow: User Prompt → URL Crawl & Download → HTML Conversion → Dataset Generation
-- Chat interface with AWS Bedrock (Claude 3.7 Sonnet)
-
-## Workflow
-
-1. **User Prompt Task**: The user provides a URL or website to crawl for dataset creation
-2. **URL Crawl & Download**: The agent crawls the website using Playwright, respecting depth limits and URL patterns
-3. **HTML Conversion**: HTML is cleaned and converted to high-quality markdown using the ReaderLM approach
-4. **Dataset Generation**: A structured HuggingFace dataset is created, with options to push to the Hub
-
-## Requirements
-
-- Python 3.8+
-- beautifulsoup4
-- playwright
-- langchain
-- langgraph
-- datasets
-- AWS Bedrock credentials
+- 🕷️ **Intelligent Web Crawling**: Recursively crawl websites with configurable depth and pattern matching
+- 🔄 **Content Processing**: Advanced HTML to Markdown conversion with content cleaning
+- 📊 **Dataset Creation**: Automatic structuring of crawled content into HuggingFace datasets
+- 🤖 **Multi-Provider AI Support**: Compatible with major LLM providers:
+  - OpenAI (GPT-4, GPT-3.5)
+  - Anthropic (Claude 3)
+  - AWS Bedrock (Claude, Titan)
+  - HuggingFace
+  - Groq
+  - Google Vertex AI
+- 📈 **Observability**: Built-in tracing with LangSmith for monitoring and debugging
+- 🔍 **Verification**: Tools to verify and validate created datasets
+- ☁️ **HuggingFace Integration**: Direct upload to HuggingFace Hub
 
 ## Installation
 
 ```bash
-# Install dependencies
-pip install langchain-aws langgraph playwright beautifulsoup4 datasets lxml
+git clone https://github.com/and-other-tales/datasets.git
+cd datasets
+pip install -r requirements.txt
+```
 
-# Install Playwright browsers
-playwright install
+## Environment Setup
+
+### Required Environment Variables
+```bash
+# LangChain Configuration
+export LANGCHAIN_API_KEY="your_langchain_api_key"
+
+# Model Provider Configuration (choose one or more)
+export MODEL_PROVIDER="openai"  # Options: openai, anthropic, bedrock, huggingface, groq, vertex
+
+# OpenAI Configuration
+export OPENAI_API_KEY="your_openai_key"
+export OPENAI_MODEL="gpt-4"  # or gpt-3.5-turbo
+
+# Anthropic Configuration
+export ANTHROPIC_API_KEY="your_anthropic_key"
+export ANTHROPIC_MODEL="claude-3-opus"  # or claude-3-sonnet
+
+# AWS Bedrock Configuration
+export AWS_ACCESS_KEY_ID="your_aws_access_key"
+export AWS_SECRET_ACCESS_KEY="your_aws_secret_key"
+export BEDROCK_MODEL="anthropic.claude-v2"  # or amazon.titan-text
+
+# HuggingFace Configuration
+export HUGGINGFACE_TOKEN="your_huggingface_token"
+export HF_MODEL="mistralai/mixtral-8x7b"
+
+# Groq Configuration
+export GROQ_API_KEY="your_groq_key"
+export GROQ_MODEL="mixtral-8x7b"
+
+# Google Vertex AI Configuration
+export VERTEX_PROJECT="your_project_id"
+export VERTEX_LOCATION="your_location"
+export VERTEX_MODEL="gemini-pro"
 ```
 
 ## Usage
 
-### Running Locally
+### Basic Example
 
-```bash
-# Set your AWS credentials
-export AWS_ACCESS_KEY_ID=your_access_key
-export AWS_SECRET_ACCESS_KEY=your_secret_key
-export AWS_DEFAULT_REGION=your_region
+```python
+from datasets import build_agent
 
-# Run the CLI version
-python dataset_agent.py
+# Initialize the agent with default provider (from env)
+agent = build_agent()
 
-# OR run the API server
-python dataset_agent.py --api
+# Or specify provider explicitly
+agent = build_agent(provider="openai", model="gpt-4")
 
-# OR use the integrated UI and API with the start script
-./start.sh
+# Create a dataset from a website
+response = agent.invoke({
+    "input": "Create a dataset from https://example.com/docs"
+})
 ```
 
-### Cloud Run Deployment
+### Advanced Example: Creating a Domain-Specific Dataset
 
-This application can be deployed to Google Cloud Run using the included Dockerfile and nginx reverse proxy configuration:
-
-1. The application exposes a single port (8080) as required by Cloud Run
-2. Nginx routes requests internally:
-   - UI requests (/) → Next.js on port 3000
-   - API requests (/agent, /status, /assistants, etc.) → LangGraph server on port 2024
-
-The deployment process uses:
-- `langgraph dev` to run the LangGraph server
-- Next.js for the frontend UI
-- nginx as a reverse proxy to route traffic
-
-To deploy:
-```bash
-# Build and deploy using Cloud Build
-gcloud builds submit --config cloudbuild.yaml
+```python
+# Example: Creating a UK Tax Advisory Dataset
+response = agent.invoke({
+    "input": """
+    Create a dataset from https://www.gov.uk/government/collections/hmrc-manuals
+    that contains HMRC guidance and manuals for tax advisers.
+    
+    Parameters:
+    - max_depth: 3
+    - patterns_to_match: ["*/manual/*", "*/guidance/*"]
+    - exclude: ["*/archives/*"]
+    """
+})
 ```
 
-## Example
+## Dataset Structure
 
+Created datasets include the following columns:
+- `url`: Source URL of the content
+- `title`: Page title or document heading
+- `text`: Clean, processed text content
+- `html`: Original HTML content (optional)
+- `metadata`: Additional metadata including:
+  - `crawl_timestamp`
+  - `last_modified`
+  - `section_headers`
+  - `categories`
+
+## Advanced Configuration
+
+### Crawling Configuration
+
+```python
+{
+    "url": "https://example.com",
+    "max_depth": 2,
+    "max_pages": 50,
+    "patterns_to_match": ["*/docs/*", "*/guide/*"],
+    "patterns_to_exclude": ["*/archived/*", "*/deprecated/*"]
+}
 ```
-Your request: Create a dataset from https://www.gov.uk/government/collections/hmrc-manuals that contains the entire HMRC Manuals collection.
 
-Agent: I'll help you create a dataset from the HMRC Manuals collection. Let's break this down into steps:
+### Dataset Creation Options
 
-1. First, I'll crawl the website to gather the content
-2. Then create a HuggingFace dataset from the crawled content
-3. Finally, verify the dataset was created successfully
-
-Let me start by crawling the URL...
-
-[Crawling progress shown here]
-
-I've completed crawling the HMRC Manuals collection. I found 87 pages with valid content including various tax manuals.
-
-Now creating the dataset 'hmrc_manuals'...
-
-Successfully created dataset 'hmrc_manuals' with 87 documents.
-Dataset contains 87 entries with columns: ['url', 'title', 'text', 'html', 'metadata']
-
-The dataset has been created successfully and is ready for use. Would you like me to push this to the HuggingFace Hub or make any adjustments to the dataset?
+```python
+{
+    "dataset_name": "my_custom_dataset",
+    "push_to_hub": True,
+    "hub_username": "your_username",
+    "dataset_description": "A custom dataset for..."
+}
 ```
+
+### Model Provider Configuration
+
+```python
+# Configuration via environment variables
+import os
+
+# Set provider and model
+os.environ["MODEL_PROVIDER"] = "anthropic"
+os.environ["ANTHROPIC_MODEL"] = "claude-3-opus"
+
+# Or configure multiple providers for fallback
+providers = {
+    "primary": {
+        "provider": "openai",
+        "model": "gpt-4",
+    },
+    "fallback": {
+        "provider": "anthropic",
+        "model": "claude-3-opus",
+    }
+}
+
+agent = build_agent(providers=providers)
+```
+
+## Use Cases
+
+1. **Regulatory Compliance Training**
+   - Create datasets from government regulatory documents
+   - Train models on specific compliance guidelines
+   - Example: HMRC tax guidance, FSA regulations
+
+2. **Legal Knowledge Bases**
+   - Build datasets from legislation and legal documents
+   - Create specialized legal assistant models
+   - Example: UK legislation, case law databases
+
+3. **Technical Documentation**
+   - Create datasets from software documentation
+   - Train models for technical support
+   - Example: API documentation, user guides
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+- Built with [LangChain](https://github.com/langchain-ai/langchain)
+- Supports multiple LLM providers:
+  - OpenAI
+  - Anthropic
+  - AWS Bedrock
+  - HuggingFace
+  - Groq
+  - Google Vertex AI
+- Uses [HuggingFace Datasets](https://github.com/huggingface/datasets)
+
+## Support
+
+For support, please [open an issue](https://github.com/and-other-tales/datasets/issues) on GitHub.
