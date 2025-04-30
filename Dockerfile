@@ -65,14 +65,12 @@ RUN addgroup --system --gid 1001 nodejs && \
     chown -R nextjs:nodejs /app/.next /app/public
 
 # Set the GCSFUSE_REPO environment variable
-RUN export GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) && echo "GCSFUSE_REPO=$GCSFUSE_REPO" >> /etc/environment
-ENV GCSFUSE_REPO=${GCSFUSE_REPO}
+RUN echo "deb https://packages.cloud.google.com/apt gcsfuse-$(lsb_release -c -s) main" | \
+    tee /etc/apt/sources.list.d/gcsfuse.list
 
-# Add the Google Cloud public key to the sources list
-RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt $GCSFUSE_REPO main" > /etc/apt/sources.list.d/gcsfuse.list
-
-# Download the Google Cloud public key
-RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg > /usr/share/keyrings/cloud.google.asc
+# Download the Google Cloud public key and set up properly
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
+    apt-key add -
 
 # Update the package list
 RUN apt-get update
