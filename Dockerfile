@@ -77,7 +77,7 @@ RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo tee /usr/s
 RUN sudo apt-get update
 
 # Install GCSFuse
-RUN sudo apt-get install gcsfuse
+RUN sudo apt-get install -y gcsfuse
 
 # Create directory for GCS mount and set permissions
 RUN mkdir -p /gcs && chown nextjs:nodejs /gcs
