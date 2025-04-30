@@ -34,6 +34,10 @@ RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
 # Final image
 FROM ubuntu:24.10
 
+# Set non-interactive frontend for apt-get and tzdata
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
 WORKDIR /app
 
 # Set environment variables
@@ -48,7 +52,7 @@ ENV DATASET_AGENT_URL=http://localhost:2024/agent
 ENV USE_EXPLICIT_GRAPH=true
 
 # Install Node.js, Nginx, and other required packages
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     curl \
     gnupg \
     nginx \
