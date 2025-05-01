@@ -36,12 +36,28 @@ export LANGCHAIN_TRACING_V2=true
 export LANGCHAIN_PROJECT="othertales-datasets"
 export LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-"https://api.smith.langchain.com"}
 
+# Define RED color code
+RED='\033[0;31m'
+
 # GCS bucket is automatically mounted by Cloud Run
 echo -e "${GREEN}Using Cloud Run GCS bucket mount at /gcs...${NC}"
 # Ensure the directory is accessible
 if [ ! -d "/gcs" ]; then
   echo -e "${RED}GCS mount directory not found. Creating...${NC}"
   mkdir -p /gcs
+fi
+
+# Check if GCS mount is working by testing if the directory is accessible
+if [ ! -w "/gcs" ]; then
+  echo -e "${RED}Warning: GCS mount at /gcs is not writable.${NC}"
+else
+  # Try to list the contents to confirm the mount is working
+  if ! ls -la /gcs > /dev/null 2>&1; then
+    echo -e "${RED}Warning: Unable to list contents of /gcs. Mount may not be working correctly.${NC}"
+    echo -e "${GREEN}Continuing with startup anyway...${NC}"
+  else
+    echo -e "${GREEN}GCS mount at /gcs is working correctly.${NC}"
+  fi
 fi
 
 # Start the Next.js UI

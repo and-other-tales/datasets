@@ -23,7 +23,7 @@ steps:
       - '--set-env-vars=NODE_ENV=production'
       - '--set-env-vars=POSTGRES_URI=${_POSTGRES_URI},AWS_ACCESS_KEY_ID=${_AWS_ACCESS_KEY_ID},AWS_SECRET_ACCESS_KEY=${_AWS_SECRET_ACCESS_KEY},AWS_DEFAULT_REGION=${_AWS_DEFAULT_REGION},LANGCHAIN_API_KEY=${_LANGCHAIN_API_KEY}'
       - '--set-env-vars=USE_EXPLICIT_GRAPH=true,DATASET_AGENT_URL=/agent'
-      - '--add-volume=name=gcs,type=cloud-storage,bucket=mixture-othertales-co'
+      - '--add-volume=name=gcs,type=cloud-storage,bucket=othertales-mixture'
       - '--add-volume-mount=volume=gcs,mount-path=/gcs'
       
 images:
