@@ -34,7 +34,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_core.tools import Tool, StructuredTool
-from langchain_core.pydantic_v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 # PostgreSQL persistence
 try:
@@ -971,8 +971,7 @@ def build_agent(use_postgres=False, use_tracing=True):
         system_prompt=system_prompt,
         checkpointer=checkpointer,
         callbacks=callbacks,
-        tool_choice_transition=True,  # Enables observation of tool choices in LangSmith
-        name="Dataset Creator Agent"   # Name displayed in LangSmith
+        tool_choice_transition=True  # Enables observation of tool choices in LangSmith
     )
     
     # Add runnable config to enhance visualization
@@ -982,15 +981,15 @@ def build_agent(use_postgres=False, use_tracing=True):
     return agent
 
 # Apply tracing to node functions
-@traceable(name="crawl_url_node")
+@traceable()
 def traced_crawl_url_node(state, config):
     return crawl_url_node(state, config)
 
-@traceable(name="create_dataset_node")
+@traceable()
 def traced_create_dataset_node(state, config):
     return create_dataset_node(state, config)
 
-@traceable(name="verify_dataset_node")
+@traceable()
 def traced_verify_dataset_node(state, config):
     return verify_dataset_node(state, config)
 
@@ -1002,27 +1001,27 @@ def build_graph(include_tracing=True):
     
     # Add nodes with or without tracing
     if include_tracing:
-        builder.add_node("crawl_url", traced_crawl_url_node, display_name="Crawl URL")
-        builder.add_node("create_dataset", traced_create_dataset_node, display_name="Create Dataset")
-        builder.add_node("verify_dataset", traced_verify_dataset_node, display_name="Verify Dataset")
-        builder.add_node("llm", llm, display_name="LLM")
+        builder.add_node("crawl_url", traced_crawl_url_node)
+        builder.add_node("create_dataset", traced_create_dataset_node)
+        builder.add_node("verify_dataset", traced_verify_dataset_node)
+        builder.add_node("llm", llm)
     else:
         builder.add_node("crawl_url", crawl_url_node)
         builder.add_node("create_dataset", create_dataset_node)
         builder.add_node("verify_dataset", verify_dataset_node)
         builder.add_node("llm", llm)
     
-    # Add edges with metadata for LangSmith visualization
-    builder.add_edge("llm", "crawl_url", edge_metadata={"description": "Process URL crawling"})
-    builder.add_edge("crawl_url", "create_dataset", edge_metadata={"description": "Generate dataset from crawled content"})
-    builder.add_edge("create_dataset", "verify_dataset", edge_metadata={"description": "Verify dataset structure"})
-    builder.add_edge("verify_dataset", "llm", edge_metadata={"description": "Generate response"})
+    # Add edges
+    builder.add_edge("llm", "crawl_url")
+    builder.add_edge("crawl_url", "create_dataset")
+    builder.add_edge("create_dataset", "verify_dataset")
+    builder.add_edge("verify_dataset", "llm")
     
     # Set entry and exit points
     builder.set_entry_point("llm")
     
-    # Compile the graph with tracing annotations
-    graph = builder.compile(name="Dataset Creator Workflow", checkpointer=setup_postgres_connection())
+    # Compile the graph
+    graph = builder.compile()
     
     return graph
 

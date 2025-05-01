@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       
       // Return a fallback response when the Python agent is unavailable
       return NextResponse.json({
-        message: "I'm a placeholder response. The real agent is not connected. Please start the Python agent with 'python dataset_agent.py --api'.",
+        message: "I'm a placeholder response. The real agent is not connected. Please start the Python agent with './start.sh' or directly with 'python agent_standalone.py'.",
         status: 'fallback',
         thread_id
       });
