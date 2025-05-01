@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Try to connect to the Python agent
     // When deployed with Cloud Run and nginx reverse proxy, the agent is accessible at /agent
     // For local development, connect to LangGraph server directly
-    const agentUrl = process.env.DATASET_AGENT_URL || '/agent';
+    const agentUrl = process.env.DATASET_AGENT_URL || 'http://localhost:2024/agent';
     console.log(`Connecting to dataset agent at ${agentUrl}`);
     
     try {

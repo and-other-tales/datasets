@@ -194,12 +194,14 @@ echo -e "${GREEN}Using LLM Provider: ${BLUE}$LLM_PROVIDER${NC}"
 
 # Start the Python agent API server
 echo -e "${GREEN}Starting OtherTales Datasets API server...${NC}"
+# Ensure we're using port 2024 for the API server
+export DATASET_AGENT_PORT=2024
 python dataset_agent.py --api &
 AGENT_PID=$!
 
 echo -e "${BLUE}OtherTales Datasets UI is running!${NC}"
 echo -e "Open ${GREEN}http://localhost:3000${NC} in your browser"
-echo -e "OtherTales Datasets API running on ${GREEN}http://localhost:8080${NC}"
+echo -e "OtherTales Datasets API running on ${GREEN}http://localhost:2024${NC}"
 echo "Press Ctrl+C to stop all servers"
 
 # Keep the script running and capture Ctrl+C

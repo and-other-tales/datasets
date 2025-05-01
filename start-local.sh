@@ -300,6 +300,8 @@ fi
 
 # Start the Python agent API server
 echo -e "${GREEN}Starting OtherTales Datasets API server on port 2024...${NC}"
+# Ensure we're using port 2024 for the API server
+export DATASET_AGENT_PORT=2024
 python dataset_agent.py --api &
 AGENT_PID=$!
 
