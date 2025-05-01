@@ -28,12 +28,49 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Add initial welcome message
-    setMessages([
-      {
-        id: uuidv4(),
-        role: "ai",
-        content: `# Welcome to ${agentName}
+    // Fetch current provider info
+    const fetchProviderInfo = async () => {
+      try {
+        const response = await fetch('/api/agent/status');
+        let providerInfo = "AWS Bedrock Claude";
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.provider && data.model) {
+            const providerName = data.provider.charAt(0).toUpperCase() + data.provider.slice(1);
+            providerInfo = `${providerName} (${data.model})`;
+          }
+        }
+        
+        // Add initial welcome message with provider info
+        setMessages([
+          {
+            id: uuidv4(),
+            role: "ai",
+            content: `# Welcome to ${agentName}
+
+I'm an AI assistant specialized in helping you create high-quality datasets from web content.
+Currently using: ${providerInfo}
+
+I can help you:
+- Crawl websites with configurable depth and filters
+- Convert HTML to markdown text
+- Create structured datasets
+- Push datasets to the HuggingFace Hub
+
+To get started, tell me which website you'd like to crawl or what kind of dataset you want to create.
+You can also change the LLM provider using the dropdown in the top right.`,
+            timestamp: new Date(),
+          },
+        ]);
+      } catch (error) {
+        console.error("Error fetching provider info:", error);
+        // Fallback to default message if provider info can't be fetched
+        setMessages([
+          {
+            id: uuidv4(),
+            role: "ai",
+            content: `# Welcome to ${agentName}
 
 I'm an AI assistant specialized in helping you create high-quality datasets from web content.
 
@@ -44,9 +81,13 @@ I can help you:
 - Push datasets to the HuggingFace Hub
 
 To get started, tell me which website you'd like to crawl or what kind of dataset you want to create.`,
-        timestamp: new Date(),
-      },
-    ]);
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    };
+    
+    fetchProviderInfo();
 
     // Set up message listener
     const unsubscribe = agentClient.addMessageListener((message) => {

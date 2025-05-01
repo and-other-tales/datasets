@@ -29,39 +29,52 @@ pip install -r requirements.txt
 ## Environment Setup
 
 ### Required Environment Variables
+
+See the `env.example` file for a complete list of environment variables. The basic configuration is:
+
 ```bash
+# LLM Provider Configuration
+# Set which LLM provider to use
+export LLM_PROVIDER="bedrock"  # Options: openai, anthropic, bedrock, azure, google, groq, huggingface
+
 # LangChain Configuration
 export LANGCHAIN_API_KEY="your_langchain_api_key"
 
-# Model Provider Configuration (choose one or more)
-export MODEL_PROVIDER="openai"  # Options: openai, anthropic, bedrock, huggingface, groq, vertex
+# Provider-specific variables (depending on which provider you chose)
 
-# OpenAI Configuration
-export OPENAI_API_KEY="your_openai_key"
-export OPENAI_MODEL="gpt-4"  # or gpt-3.5-turbo
-
-# Anthropic Configuration
-export ANTHROPIC_API_KEY="your_anthropic_key"
-export ANTHROPIC_MODEL="claude-3-opus"  # or claude-3-sonnet
-
-# AWS Bedrock Configuration
+# 1. AWS Bedrock Configuration (default)
 export AWS_ACCESS_KEY_ID="your_aws_access_key"
 export AWS_SECRET_ACCESS_KEY="your_aws_secret_key"
-export BEDROCK_MODEL="anthropic.claude-v2"  # or amazon.titan-text
+export AWS_REGION="us-west-2"
+export BEDROCK_MODEL_ID="anthropic.claude-3-7-sonnet-20250219-v1:0"
 
-# HuggingFace Configuration
-export HUGGINGFACE_TOKEN="your_huggingface_token"
-export HF_MODEL="mistralai/mixtral-8x7b"
+# 2. OpenAI Configuration
+# export OPENAI_API_KEY="your_openai_key"
+# export OPENAI_MODEL="gpt-4o"  # or gpt-3.5-turbo
 
-# Groq Configuration
-export GROQ_API_KEY="your_groq_key"
-export GROQ_MODEL="mixtral-8x7b"
+# 3. Anthropic Configuration
+# export ANTHROPIC_API_KEY="your_anthropic_key"
+# export ANTHROPIC_MODEL="claude-3-7-sonnet-latest"
 
-# Google Vertex AI Configuration
-export VERTEX_PROJECT="your_project_id"
-export VERTEX_LOCATION="your_location"
-export VERTEX_MODEL="gemini-pro"
+# 4. Azure OpenAI Configuration
+# export AZURE_OPENAI_API_KEY="your_azure_openai_key_here"
+# export AZURE_OPENAI_ENDPOINT="https://your-endpoint.openai.azure.com"
+# export AZURE_OPENAI_DEPLOYMENT_NAME="your-deployment-name"
+
+# 5. Google Generative AI Configuration
+# export GOOGLE_API_KEY="your_google_api_key_here"
+# export GOOGLE_MODEL="gemini-1.5-pro"
+
+# 6. Groq Configuration
+# export GROQ_API_KEY="your_groq_api_key_here"
+# export GROQ_MODEL="llama3-70b-8192"
+
+# 7. HuggingFace Configuration
+# export HUGGINGFACE_API_KEY="your_huggingface_api_key_here"
+# export HUGGINGFACE_MODEL_ID="mistralai/Mixtral-8x7B-Instruct-v0.1"
 ```
+
+You can find a more detailed list of available environment variables in the `env.example` file.
 
 ## Usage
 
@@ -139,28 +152,52 @@ Created datasets include the following columns:
 
 ### Model Provider Configuration
 
+You can configure the LLM provider in several ways:
+
+#### 1. Using Environment Variables
+
 ```python
 # Configuration via environment variables
 import os
 
 # Set provider and model
-os.environ["MODEL_PROVIDER"] = "anthropic"
-os.environ["ANTHROPIC_MODEL"] = "claude-3-opus"
-
-# Or configure multiple providers for fallback
-providers = {
-    "primary": {
-        "provider": "openai",
-        "model": "gpt-4",
-    },
-    "fallback": {
-        "provider": "anthropic",
-        "model": "claude-3-opus",
-    }
-}
-
-agent = build_agent(providers=providers)
+os.environ["LLM_PROVIDER"] = "anthropic"
+os.environ["ANTHROPIC_MODEL"] = "claude-3-7-sonnet-latest"
+os.environ["ANTHROPIC_TEMPERATURE"] = "0.2"
 ```
+
+#### 2. Using the API Config Endpoint
+
+You can change the LLM provider at runtime using the `/config` API endpoint:
+
+```python
+import requests
+
+# Change to OpenAI
+requests.post("http://localhost:8080/config", json={
+    "llm_provider": "openai",
+    "model": "gpt-4o",
+    "temperature": 0.2
+})
+
+# Change to Anthropic
+requests.post("http://localhost:8080/config", json={
+    "llm_provider": "anthropic",
+    "model": "claude-3-7-sonnet-latest",
+    "temperature": 0.2
+})
+
+# Change to AWS Bedrock
+requests.post("http://localhost:8080/config", json={
+    "llm_provider": "bedrock",
+    "model": "anthropic.claude-3-7-sonnet-20250219-v1:0",
+    "temperature": 0.2
+})
+```
+
+#### 3. From the Web UI (Coming Soon)
+
+A provider selection dropdown will be available in the web UI in future releases.
 
 ## Use Cases
 

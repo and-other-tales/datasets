@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import MarkdownText from "@/components/markdown-text";
+import ProviderSelector from "@/components/provider-selector";
+import AgentStatus from "@/components/agent-status";
 import { getInitials } from "@/lib";
 
 type MessageRole = "human" | "ai" | "system" | "tool";
@@ -64,8 +66,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [input]);
 
+  // Handle provider change
+  const handleProviderChange = (provider: string, model: string) => {
+    console.log(`Changed provider to ${provider} with model ${model}`);
+  };
+
   return (
     <div className="flex flex-col h-full">
+      <div className="p-2 border-b border-border flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {getInitials(agentName)}
+            </AvatarFallback>
+          </Avatar>
+          <span className="font-medium">{agentName}</span>
+          <AgentStatus className="ml-2" />
+        </div>
+        <ProviderSelector 
+          onProviderChange={handleProviderChange}
+          className="w-64"
+        />
+      </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div

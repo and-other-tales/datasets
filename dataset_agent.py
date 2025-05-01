@@ -45,15 +45,15 @@ except ImportError:
     POSTGRES_AVAILABLE = False
     print("PostgreSQL dependencies not found. Running without persistence.")
 
-# AWS Bedrock for LLM
-from langchain_aws import ChatBedrockConverse
+# Multi-LLM provider support
+from llm_utils import get_llm
 
 # For dataset creation
 from datasets import Dataset, DatasetDict, Features, Value, Sequence
 import datasets
 
 # Configuration 
-MODEL_ID = "anthropic.claude-3-7-sonnet-20250219-v1:0"
+DEFAULT_MODEL_ID = "anthropic.claude-3-7-sonnet-20250219-v1:0"  # Default for Bedrock
 MAX_DEPTH = 3  # Maximum crawling depth
 MAX_PAGES = 100  # Maximum number of pages to crawl per domain
 TIMEOUT = 30000  # Timeout for page loading in ms
@@ -862,13 +862,8 @@ os.environ["LANGCHAIN_ENDPOINT"] = os.environ.get("LANGCHAIN_ENDPOINT", "https:/
 os.environ["LANGCHAIN_API_KEY"] = os.environ.get("LANGCHAIN_API_KEY", "")
 os.environ["LANGCHAIN_PROJECT"] = os.environ.get("LANGCHAIN_PROJECT", "dataset-creator-agent")
 
-# Create the LLM using AWS Bedrock with tracing
-llm = ChatBedrockConverse(
-    model_id=MODEL_ID,
-    temperature=0.2,
-    max_tokens=2000,
-    callbacks=[ConsoleCallbackHandler()],
-)
+# Create the LLM with tracing
+llm = get_llm(callbacks=[ConsoleCallbackHandler()])
 
 # Setup PostgreSQL connection if available
 def setup_postgres_connection():
@@ -1104,9 +1099,30 @@ async def run_agent_api(request: Request):
 
 @app.get("/status")
 async def get_status():
+    provider = os.environ.get("LLM_PROVIDER", "bedrock").lower()
+    
+    # Get the model ID based on the provider
+    if provider == "openai":
+        model = os.environ.get("OPENAI_MODEL", "gpt-4o")
+    elif provider == "anthropic":
+        model = os.environ.get("ANTHROPIC_MODEL", "claude-3-7-sonnet-latest")
+    elif provider == "bedrock":
+        model = os.environ.get("BEDROCK_MODEL_ID", DEFAULT_MODEL_ID)
+    elif provider == "azure":
+        model = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4")
+    elif provider == "google":
+        model = os.environ.get("GOOGLE_MODEL", "gemini-1.5-pro")
+    elif provider == "groq":
+        model = os.environ.get("GROQ_MODEL", "llama3-70b-8192")
+    elif provider == "huggingface":
+        model = os.environ.get("HUGGINGFACE_MODEL_ID", "mistralai/Mixtral-8x7B-Instruct-v0.1")
+    else:
+        model = DEFAULT_MODEL_ID
+    
     return {
         "status": "running",
-        "model": MODEL_ID,
+        "provider": provider,
+        "model": model,
         "timestamp": time.time(),
         "persistence": POSTGRES_AVAILABLE
     }
@@ -1114,22 +1130,85 @@ async def get_status():
 @app.get("/info")
 async def get_info():
     """Mirror of the status endpoint for health checks."""
-    return {
-        "status": "running",
-        "model": MODEL_ID,
-        "timestamp": time.time(),
-        "persistence": POSTGRES_AVAILABLE
-    }
+    return await get_status()
 
 @app.post("/config")
 async def update_config(request: Request):
     try:
         config = await request.json()
-        # In a real implementation, we would update agent configuration here
+        
+        # Handle LLM provider configuration
+        if "llm_provider" in config:
+            provider = config["llm_provider"].lower()
+            valid_providers = [
+                "openai", "anthropic", "bedrock", "azure", 
+                "google", "groq", "huggingface"
+            ]
+            
+            if provider not in valid_providers:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Invalid LLM provider. Must be one of: {', '.join(valid_providers)}"
+                )
+            
+            # Update environment variable
+            os.environ["LLM_PROVIDER"] = provider
+            
+            # Handle provider-specific configuration
+            if provider == "openai" and "model" in config:
+                os.environ["OPENAI_MODEL"] = config["model"]
+            elif provider == "anthropic" and "model" in config:
+                os.environ["ANTHROPIC_MODEL"] = config["model"]
+            elif provider == "bedrock" and "model" in config:
+                os.environ["BEDROCK_MODEL_ID"] = config["model"]
+            elif provider == "azure" and "deployment" in config:
+                os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"] = config["deployment"]
+            elif provider == "google" and "model" in config:
+                os.environ["GOOGLE_MODEL"] = config["model"]
+            elif provider == "groq" and "model" in config:
+                os.environ["GROQ_MODEL"] = config["model"]
+            elif provider == "huggingface" and "model" in config:
+                os.environ["HUGGINGFACE_MODEL_ID"] = config["model"]
+                
+            # Handle temperature if provided
+            if "temperature" in config:
+                try:
+                    temp = float(config["temperature"])
+                    if 0 <= temp <= 1:
+                        if provider == "openai":
+                            os.environ["OPENAI_TEMPERATURE"] = str(temp)
+                        elif provider == "anthropic":
+                            os.environ["ANTHROPIC_TEMPERATURE"] = str(temp)
+                        elif provider == "bedrock":
+                            os.environ["BEDROCK_TEMPERATURE"] = str(temp)
+                        elif provider == "azure":
+                            os.environ["AZURE_OPENAI_TEMPERATURE"] = str(temp)
+                        elif provider == "google":
+                            os.environ["GOOGLE_TEMPERATURE"] = str(temp)
+                        elif provider == "groq":
+                            os.environ["GROQ_TEMPERATURE"] = str(temp)
+                        elif provider == "huggingface":
+                            os.environ["HUGGINGFACE_TEMPERATURE"] = str(temp)
+                except:
+                    pass
+            
+            # Recreate the global LLM instance
+            global llm
+            llm = get_llm(callbacks=[ConsoleCallbackHandler()])
+            
+            # Rebuild the agent in real-time
+            global _agent
+            _agent = None  # Force recreation on next request
+        
+        # Handle other configuration updates here...
+        # (e.g., crawler settings)
+        
         return {
-            "message": "Configuration updated",
+            "message": "Configuration updated successfully",
             "config": config
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
         print(f"Error in config API: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
