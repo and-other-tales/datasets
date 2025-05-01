@@ -6,83 +6,76 @@ WORKDIR /ui
 COPY ui/package*.json ./
 RUN npm install --legacy-peer-deps
 
-# Copy all UI files
+# Copy UI files
 COPY ui/ .
 
 # Make prebuild.sh executable and run it
-RUN chmod +x prebuild.sh
-RUN mkdir -p /ui/src/lib/
-
-# Create agent-integration.ts if it doesn't exist (wrapped in shell command to allow failure)
-RUN mkdir -p /ui/src/lib/
-RUN /bin/sh -c "cp -f ui/src/lib/agent-integration.ts* /ui/src/lib/ 2>/dev/null || echo 'agent-integration.ts not found in source, will be created by prebuild.sh'"
-
-# Run prebuild script for environment setup
-RUN sh -c "./prebuild.sh"
-
-# Log the contents of the lib directory
-RUN echo "Contents of /ui/src/lib after prebuild:" && ls -la /ui/src/lib/
+RUN chmod +x prebuild.sh && \
+    mkdir -p /ui/src/lib/ && \
+    sh -c "cp -f ui/src/lib/agent-integration.ts* /ui/src/lib/ 2>/dev/null || echo 'agent-integration.ts not found in source, will be created by prebuild.sh'" && \
+    sh -c "./prebuild.sh"
 
 # Set environment variables for build
-ENV NEXT_PUBLIC_AGENT_API_URL=/api/agent
-ENV NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
-ENV NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
+ENV NEXT_PUBLIC_AGENT_API_URL=/api/agent \
+    NEXT_PUBLIC_LANGGRAPH_URL=/api/connect \
+    NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
 
-# Build the Next.js app with increased memory
+# Build the Next.js app
 RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
-# Final image
-FROM ubuntu:24.10
-
-# Set non-interactive frontend for apt-get and tzdata
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=Etc/UTC
+# Python dependencies builder stage
+FROM python:3.11-slim AS python-builder
 
 WORKDIR /app
 
-# Set environment variables
-ENV NODE_ENV=production
-ENV PORT=8080
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_AGENT_API_URL=/api/agent
-ENV NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
-ENV NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
-ENV NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent"
-ENV DATASET_AGENT_URL=http://localhost:2024/agent
-ENV USE_EXPLICIT_GRAPH=true
+# Copy Python requirements
+COPY requirements.txt .
 
-# Install Node.js, Nginx, and other required packages
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+# Install dependencies into a virtual environment
+RUN python -m venv /app/venv && \
+    /app/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /app/venv/bin/pip install --no-cache-dir -r requirements.txt && \
+    /app/venv/bin/pip install --no-cache-dir playwright && \
+    /app/venv/bin/playwright install --with-deps chromium
+
+# Final image
+FROM python:3.11-slim
+
+# Set non-interactive frontend and timezone
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=Etc/UTC \
+    NODE_ENV=production \
+    PORT=8080 \
+    NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_AGENT_API_URL=/api/agent \
+    NEXT_PUBLIC_LANGGRAPH_URL=/api/connect \
+    NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config \
+    NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent" \
+    DATASET_AGENT_URL=http://localhost:2024/agent \
+    USE_EXPLICIT_GRAPH=true \
+    PATH="/app/venv/bin:$PATH"
+
+WORKDIR /app
+
+# Install Node.js and Nginx
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     curl \
     gnupg \
     nginx \
-    passwd \
-    python3 \
-    python3-pip \
-    python3-venv \
-    python3-full \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs curl \
+    && apt-get install -y --no-install-recommends nodejs \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /app/.next /app/public /gcs
 
-# Set up non-root user for Node
+# Set up non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
-    mkdir -p /app/.next /app/public && \
-    chown -R nextjs:nodejs /app/.next /app/public && \
-    mkdir -p /gcs && \
-    chown -R nextjs:nodejs /gcs
+    chown -R nextjs:nodejs /app/.next /app/public /gcs
 
-# Create and activate Python virtual environment
-RUN python3 -m venv /app/venv
-ENV PATH="/app/venv/bin:$PATH"
-
-# Copy Python requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-RUN pip install playwright && playwright install --with-deps chromium
+# Copy Python virtual environment from builder
+COPY --from=python-builder /app/venv /app/venv
 
 # Copy built Next.js app
 COPY --from=ui-builder --chown=nextjs:nodejs /ui/public ./public
@@ -98,13 +91,5 @@ RUN chmod +x cloudrun-start.sh
 # Expose port
 EXPOSE 8080
 
-# Set environment variables from Cloud Run env vars
-ENV POSTGRES_URI=$POSTGRES_URI
-ENV OPENAI_API_KEY=$OPENAI_API_KEY
-ENV LANGSMITH_TRACING=true
-ENV LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
-ENV LANGSMITH_API_KEY=$LANGSMITH_API_KEY
-ENV LANGSMITH_PROJECT="datasets"
-
-# Start the integrated service (NextJS + LangGraph + Nginx)
+# Start the integrated service
 CMD ["/app/cloudrun-start.sh"]
