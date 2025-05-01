@@ -8,7 +8,15 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     // Try to connect to the Python agent via nginx reverse proxy
-    const agentUrl = process.env.DATASET_AGENT_URL?.replace('/agent', '/status') || '/status';
+    // If DATASET_AGENT_URL is a relative path, make it absolute with localhost:2024
+    let agentUrl = process.env.DATASET_AGENT_URL || 'http://localhost:2024/agent';
+    // Replace /agent with /status for status checks
+    agentUrl = agentUrl.replace('/agent', '/status');
+    
+    // If agentUrl doesn't start with http:// or https://, assume it's a relative path and prepend http://localhost:2024
+    if (!agentUrl.startsWith('http://') && !agentUrl.startsWith('https://')) {
+      agentUrl = `http://localhost:2024${agentUrl.startsWith('/') ? agentUrl : '/' + agentUrl}`;
+    }
     
     try {
       // Check if the Python agent is running

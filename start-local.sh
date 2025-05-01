@@ -245,6 +245,8 @@ export NEXT_PUBLIC_AGENT_API_URL=/api/agent
 export NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
 export NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
 export NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent"
+# When using nginx, make sure DATASET_AGENT_URL is an absolute URL for the proxy
+export DATASET_AGENT_URL=http://localhost:2024/agent
 
 # Set environment variables for LangGraph and LangSmith
 export USE_EXPLICIT_GRAPH=true
