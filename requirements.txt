@@ -1,5 +1,3 @@
-
-# Web scraping
 beautifulsoup4==4.13.4
 datasets==3.5.1
 fastapi==0.115.12
