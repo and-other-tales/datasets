@@ -10,6 +10,38 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Function to check if a port is in use
+check_port() {
+    local port=$1
+    if lsof -i:$port -t >/dev/null 2>&1; then
+        return 0  # Port is in use
+    else
+        return 1  # Port is free
+    fi
+}
+
+# Function to kill process using a specific port
+kill_port_process() {
+    local port=$1
+    local pid=$(lsof -i:$port -t)
+    if [ -n "$pid" ]; then
+        echo -e "${YELLOW}Port $port is in use by PID $pid. Attempting to terminate...${NC}"
+        kill -15 $pid
+        sleep 1
+        if check_port $port; then
+            echo -e "${RED}Failed to terminate process on port $port with SIGTERM. Using SIGKILL...${NC}"
+            kill -9 $pid
+            sleep 1
+            if check_port $port; then
+                echo -e "${RED}Failed to free up port $port. Please terminate the process manually.${NC}"
+                return 1
+            fi
+        fi
+        echo -e "${GREEN}Successfully freed port $port${NC}"
+    fi
+    return 0
+}
+
 echo -e "${BLUE}Starting OtherTales Datasets UI with Nginx proxy...${NC}"
 
 # Check if Python is installed
@@ -165,6 +197,20 @@ pip install -q -r requirements.txt > /dev/null
 echo -e "${GREEN}Installing Playwright browsers...${NC}"
 python -c "from playwright.sync_api import sync_playwright; print('Playwright already installed')" || playwright install
 
+# Check if port 8080 is in use and free it if necessary
+if check_port 8080; then
+    echo -e "${YELLOW}Port 8080 is already in use. Attempting to free it...${NC}"
+    if ! kill_port_process 8080; then
+        echo -e "${RED}Failed to free port 8080. Nginx might not start properly.${NC}"
+        echo "You can manually kill the process with: sudo kill -9 \$(lsof -i:8080 -t)"
+        read -p "Do you want to continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+fi
+
 # Set up nginx configuration
 echo -e "${GREEN}Setting up nginx reverse proxy...${NC}"
 # Check if the user has sudo privileges
@@ -213,6 +259,20 @@ if [ -z "$LANGCHAIN_API_KEY" ]; then
     echo ""
 fi
 
+# Check if port 3000 is in use and free it if necessary
+if check_port 3000; then
+    echo -e "${YELLOW}Port 3000 is already in use. Attempting to free it...${NC}"
+    if ! kill_port_process 3000; then
+        echo -e "${RED}Failed to free port 3000. UI server might not start properly.${NC}"
+        echo "You can manually kill the process with: sudo kill -9 \$(lsof -i:3000 -t)"
+        read -p "Do you want to continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+fi
+
 # Start the UI in the background
 echo -e "${GREEN}Starting UI server on port 3000...${NC}"
 npm run dev &
@@ -223,6 +283,20 @@ cd ..
 
 # Print currently active LLM provider
 echo -e "${GREEN}Using LLM Provider: ${BLUE}$LLM_PROVIDER${NC}"
+
+# Check if port 2024 is in use and free it if necessary
+if check_port 2024; then
+    echo -e "${YELLOW}Port 2024 is already in use. Attempting to free it...${NC}"
+    if ! kill_port_process 2024; then
+        echo -e "${RED}Failed to free port 2024. API server might not start properly.${NC}"
+        echo "You can manually kill the process with: sudo kill -9 \$(lsof -i:2024 -t)"
+        read -p "Do you want to continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+fi
 
 # Start the Python agent API server
 echo -e "${GREEN}Starting OtherTales Datasets API server on port 2024...${NC}"
@@ -235,8 +309,8 @@ echo -e "Direct UI access: ${GREEN}http://localhost:3000${NC}"
 echo -e "Direct API access: ${GREEN}http://localhost:2024${NC}"
 echo "Press Ctrl+C to stop all servers"
 
-# Make the script executable
-chmod +x start-local.sh
+# The script is already executable at this point
+# (This line was previously used to make the script executable)
 
 # Keep the script running and capture Ctrl+C
 trap "kill $UI_PID $AGENT_PID; echo -e '\n${BLUE}Shutting down servers...${NC}'; exit" INT
