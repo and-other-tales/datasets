@@ -36,12 +36,13 @@ export LANGCHAIN_TRACING_V2=true
 export LANGCHAIN_PROJECT="othertales-datasets"
 export LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-"https://api.smith.langchain.com"}
 
-# Mount GCS bucket using GCSFuse
-echo -e "${GREEN}Mounting GCS bucket using GCSFuse...${NC}"
-gcsfuse --debug_gcs --debug_fuse mixture-othertales-co /gcs || {
-  echo -e "${RED}Failed to mount GCS bucket. Exiting...${NC}"
-  exit 1
-}
+# GCS bucket is automatically mounted by Cloud Run
+echo -e "${GREEN}Using Cloud Run GCS bucket mount at /gcs...${NC}"
+# Ensure the directory is accessible
+if [ ! -d "/gcs" ]; then
+  echo -e "${RED}GCS mount directory not found. Creating...${NC}"
+  mkdir -p /gcs
+fi
 
 # Start the Next.js UI
 echo -e "${GREEN}Starting UI server on port 3000...${NC}"

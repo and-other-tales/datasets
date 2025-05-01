@@ -70,7 +70,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
     mkdir -p /app/.next /app/public && \
-    chown -R nextjs:nodejs /app/.next /app/public
+    chown -R nextjs:nodejs /app/.next /app/public && \
+    mkdir -p /gcs && \
+    chown -R nextjs:nodejs /gcs
 
 # Create and activate Python virtual environment
 RUN python3 -m venv /app/venv
