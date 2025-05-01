@@ -65,7 +65,7 @@ done
 
 # Start the dataset agent API server
 echo -e "${GREEN}Starting Dataset Agent API server on port 2024...${NC}"
-python dataset_agent.py --api &
+/app/venv/bin/python dataset_agent.py --api &
 LANGGRAPH_PID=$!
 
 # Wait for the dataset agent API server to be ready
