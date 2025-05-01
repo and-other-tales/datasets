@@ -137,3 +137,5 @@ dist
 .pnp.*
 REFERENCE/
 CLAUDE.md
+
+**/.claude/settings.local.json
