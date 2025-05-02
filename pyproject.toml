@@ -18,7 +18,7 @@ dependencies = [
     "langchain_groq==0.3.2",
     "langchain_huggingface==0.1.2",
     "langchain_openai==0.3.15",
-    "langchain-cli[inmem]",
+    "langgraph-cli[inmem]",
     "langgraph==0.4.1",
     "langsmith==0.3.39",
     "Markdown==3.8",
