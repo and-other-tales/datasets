@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build",
+    "build": "NODE_OPTIONS=--max-old-space-size=8192 next build",
     "start": "next start -p ${PORT:-8080}",
     "lint": "next lint",
     "clean": "rm -rf .next out"
@@ -32,6 +32,7 @@
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.2.0",
     "tailwindcss": "^4.1.4",
+    "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",
     "zustand": "^5.0.3"
   },

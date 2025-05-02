@@ -21,7 +21,7 @@ ENV NEXT_PUBLIC_AGENT_API_URL=/api/agent \
     NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
 
 # Build the Next.js app
-RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
+RUN NODE_OPTIONS=--max-old-space-size=8192 npm run build
 
 # Python dependencies builder stage
 FROM python:3.11-slim AS python-builder
