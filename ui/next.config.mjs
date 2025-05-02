@@ -2,22 +2,24 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone', // Important for containerized environments
-  images: {
-    domains: [],
+  webpack: (config) => {
+    // Handle web worker files
+    config.resolve.fallback = { fs: false, net: false, tls: false };
+    return config;
   },
-  // Configure server options
-  serverRuntimeConfig: {
-    port: parseInt(process.env.PORT, 10) || 3000,
+  // Handle LangGraph API forwarding
+  async rewrites() {
+    return [
+      {
+        source: '/api/connect',
+        destination: '/api/agent/connect',
+      },
+      {
+        source: '/api/agent/status',
+        destination: '/api/agent/status',
+      },
+    ];
   },
-  experimental: {
-    // Enable for optimized container size
-    outputFileTracingRoot: process.env.NODE_ENV === 'production' ? undefined : process.cwd(),
-  },
-  // Allow env variables to be accessed in the browser when prefixed with NEXT_PUBLIC_
-  env: {
-    // You can add env vars here if needed
-  },
-}
+};
 
 export default nextConfig;

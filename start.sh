@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Start Dataset Creator Agent Chat UI
-# This script starts both the Python agent and the Next.js UI
+# This script starts both the LangGraph server and the Next.js UI
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -162,14 +162,6 @@ echo -e "${GREEN}Installing UI dependencies...${NC}"
 cd ui || exit
 npm install
 
-# Set environment variables for Next.js UI
-export NEXT_PUBLIC_AGENT_API_URL=/api/agent
-export NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
-export NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
-export NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent"
-# Set absolute URL for the agent endpoint for development (direct access without proxy)
-export DATASET_AGENT_URL=http://localhost:2024/agent
-
 # Set environment variables for LangGraph and LangSmith
 export USE_EXPLICIT_GRAPH=true
 export LANGCHAIN_TRACING_V2=true
@@ -183,42 +175,68 @@ if [ -z "$LANGCHAIN_API_KEY" ]; then
     echo ""
 fi
 
-# Start the UI in the background
+# Start the LangGraph server in the background
+echo -e "${GREEN}Starting LangGraph server...${NC}"
+cd ..
+npx langgraph dev --config langgraph.json > /tmp/langgraph_output.log 2>&1 &
+LANGGRAPH_PID=$!
+
+# Give LangGraph a moment to start
+echo -e "${GREEN}Waiting for LangGraph to initialize...${NC}"
+sleep 5
+
+# Check if LangGraph started successfully
+if ! kill -0 $LANGGRAPH_PID > /dev/null 2>&1; then
+    echo -e "${YELLOW}LangGraph failed to start. Check /tmp/langgraph_output.log for details.${NC}"
+    exit 1
+fi
+
+# Extract Assistant ID from LangGraph logs
+ASSISTANT_ID=""
+for i in {1..10}; do
+    if [ -f "/tmp/langgraph_output.log" ]; then
+        ASSISTANT_ID=$(grep -o "Created assistant with ID: \w\+-\w\+-\w\+-\w\+-\w\+" /tmp/langgraph_output.log | grep -o "\w\+-\w\+-\w\+-\w\+-\w\+$" | head -1)
+        if [ -n "$ASSISTANT_ID" ]; then
+            echo -e "${GREEN}Found Assistant ID: ${ASSISTANT_ID}${NC}"
+            break
+        fi
+    fi
+    echo "Waiting for Assistant ID... (attempt $i)"
+    sleep 2
+done
+
+if [ -z "$ASSISTANT_ID" ]; then
+    echo -e "${YELLOW}Warning: Could not find Assistant ID in log file. UI may have limited functionality.${NC}"
+fi
+
+# Generate the URL with assistant ID
+if [ -n "$ASSISTANT_ID" ]; then
+    UI_URL="http://localhost:8080/?apiUrl=http://localhost:2024&assistantId=${ASSISTANT_ID}&chatHistoryOpen=true"
+else
+    UI_URL="http://localhost:8080"
+fi
+
+# Start Nginx proxy
+echo -e "${GREEN}Starting Nginx proxy server...${NC}"
+nginx -c "$(pwd)/nginx.conf" -g "daemon off;" &
+NGINX_PID=$!
+
+# Wait a moment for Nginx to start
+sleep 2
+
+# Start the UI
 echo -e "${GREEN}Starting UI server...${NC}"
+cd ui
 npm run dev &
 UI_PID=$!
 
-# Go back to root directory
-cd ..
-
-# Print currently active LLM provider
-echo -e "${GREEN}Using LLM Provider: ${BLUE}$LLM_PROVIDER${NC}"
-
-# Start the Python agent API server
-echo -e "${GREEN}Starting OtherTales Datasets API server...${NC}"
-# Try to use port 2024 by default, but agent will find a free port if needed
-export DATASET_AGENT_PORT=2024
-python agent_standalone.py > /tmp/agent_output.log 2>&1 &
-AGENT_PID=$!
-
-# Give the agent a moment to start up and find a port
-sleep 2
-
-# Read the actual port from the log file
-if [ -f /tmp/agent_output.log ]; then
-    ACTUAL_PORT=$(grep -o "Starting standalone agent on http://localhost:[0-9]\+" /tmp/agent_output.log | grep -o "[0-9]\+$")
-    if [ -n "$ACTUAL_PORT" ]; then
-        export DATASET_AGENT_PORT=$ACTUAL_PORT
-        export DATASET_AGENT_URL=http://localhost:$ACTUAL_PORT/agent
-        echo -e "Dataset agent using port: ${GREEN}$ACTUAL_PORT${NC}"
-    fi
-fi
-
+# Display information to the user
 echo -e "${BLUE}OtherTales Datasets UI is running!${NC}"
-echo -e "Open ${GREEN}http://localhost:3000${NC} in your browser"
-echo -e "OtherTales Datasets API running on ${GREEN}http://localhost:${DATASET_AGENT_PORT}${NC}"
+echo -e "Open ${GREEN}${UI_URL}${NC} in your browser"
+echo -e "LangGraph server running at ${GREEN}http://localhost:2024${NC}"
+echo -e "Assistant ID: ${GREEN}${ASSISTANT_ID}${NC}"
 echo "Press Ctrl+C to stop all servers"
 
 # Keep the script running and capture Ctrl+C
-trap "kill $UI_PID $AGENT_PID; echo -e '\n${BLUE}Shutting down servers...${NC}'; exit" INT
+trap "kill $UI_PID $LANGGRAPH_PID $NGINX_PID; echo -e '\n${BLUE}Shutting down servers...${NC}'; exit" INT
 wait

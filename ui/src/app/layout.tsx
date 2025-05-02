@@ -1,13 +1,11 @@
-import "./globals.css";
+"use client";
+
 import { Inter } from "next/font/google";
-import { Metadata } from "next";
+import "./globals.css";
+import { Toaster } from "sonner";
+import { ThemeProvider } from "next-themes";
 
 const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "OtherTales Datasets",
-  description: "Chat interface for the OtherTales Datasets Agent",
-};
 
 export default function RootLayout({
   children,
@@ -15,9 +13,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${inter.className} h-full`}>
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>OtherTales Datasets Agent</title>
+        <meta
+          name="description"
+          content="OtherTales Datasets Agent - A chat interface for creating and managing datasets"
+        />
+      </head>
+      <body className={`${inter.className} min-h-screen bg-background antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Toaster position="bottom-right" />
+          <main className="flex flex-col min-h-screen bg-background">
+            {children}
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   );
