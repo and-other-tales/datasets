@@ -28,7 +28,10 @@ export NEXT_PUBLIC_AGENT_API_URL=/api/agent
 export NEXT_PUBLIC_LANGGRAPH_URL=/api/connect
 export NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config
 export NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent"
-export DATASET_AGENT_URL=http://localhost:2024/agent
+# Use relative paths for Cloud Run compatibility
+export DATASET_AGENT_URL=/agent
+export DATASET_AGENT_STATUS_URL=/status
+export DATASET_AGENT_CONFIG_URL=/config
 
 # Set environment variables for LangGraph and LangSmith
 export USE_EXPLICIT_GRAPH=true

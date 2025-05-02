@@ -8,20 +8,19 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     // Try to connect to the Python agent via nginx reverse proxy
-    // If DATASET_AGENT_URL is a relative path, make it absolute with localhost:2024
-    let agentUrl = process.env.DATASET_AGENT_URL || 'http://localhost:2024/agent';
-    // Replace /agent with /status for status checks
-    agentUrl = agentUrl.replace('/agent', '/status');
+    // Get the agent URL from environment variable
+    let agentUrl = process.env.DATASET_AGENT_URL || '/agent';
+    // Replace /agent with /status for status checks if needed
+    let statusUrl = process.env.DATASET_AGENT_STATUS_URL || agentUrl.replace('/agent', '/status');
     
-    // If agentUrl doesn't start with http:// or https://, assume it's a relative path and prepend http://localhost:2024
-    if (!agentUrl.startsWith('http://') && !agentUrl.startsWith('https://')) {
-      agentUrl = `http://localhost:2024${agentUrl.startsWith('/') ? agentUrl : '/' + agentUrl}`;
-    }
+    // Convert relative URLs to absolute URLs for server-side API calls
+    const apiUrl = statusUrl.startsWith('/') && !statusUrl.startsWith('//') ? 
+      `http://localhost:${process.env.PORT || 8080}${statusUrl}` : statusUrl;
     
     try {
       // Check if the Python agent is running
-      console.log(`Checking agent status at ${agentUrl}`);
-      const response = await fetch(agentUrl, {
+      console.log(`Checking agent status at ${apiUrl}`);
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

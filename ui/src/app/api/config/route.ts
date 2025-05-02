@@ -65,12 +65,16 @@ export async function POST(request: NextRequest) {
     };
     
     // Try to connect to the Python agent
-    const configUrl = process.env.DATASET_AGENT_CONFIG_URL || 'http://localhost:8080/config';
+    const configUrl = process.env.DATASET_AGENT_CONFIG_URL || '/config';
+    
+    // Convert relative URLs to absolute URLs for server-side API calls
+    const apiUrl = configUrl.startsWith('/') && !configUrl.startsWith('//') ? 
+      `http://localhost:${process.env.PORT || 8080}${configUrl}` : configUrl;
     
     try {
       // Forward the config to the Python agent
-      console.log(`Updating agent config at ${configUrl}`, configToSend);
-      const response = await fetch(configUrl, {
+      console.log(`Updating agent config at ${apiUrl}`, configToSend);
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

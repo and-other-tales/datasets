@@ -8,11 +8,15 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // Get the status endpoint URL from environment variable
-    const statusUrl = process.env.DATASET_AGENT_STATUS_URL || 'http://localhost:8080/status';
+    const statusUrl = process.env.DATASET_AGENT_STATUS_URL || '/status';
+    
+    // Convert relative URLs to absolute URLs for server-side API calls
+    const apiUrl = statusUrl.startsWith('/') && !statusUrl.startsWith('//') ? 
+      `http://localhost:${process.env.PORT || 8080}${statusUrl}` : statusUrl;
     
     try {
       // Query the Python agent status
-      const response = await fetch(statusUrl, {
+      const response = await fetch(apiUrl, {
         method: 'GET',
         // Add reasonable timeout to avoid hanging requests
         signal: AbortSignal.timeout(5000),

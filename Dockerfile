@@ -51,7 +51,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     NEXT_PUBLIC_LANGGRAPH_URL=/api/connect \
     NEXT_PUBLIC_AGENT_CONFIG_URL=/api/config \
     NEXT_PUBLIC_AGENT_NAME="OtherTales Datasets Agent" \
-    DATASET_AGENT_URL=http://localhost:2024/agent \
+    DATASET_AGENT_URL=/agent \
+    DATASET_AGENT_STATUS_URL=/status \
+    DATASET_AGENT_CONFIG_URL=/config \
     USE_EXPLICIT_GRAPH=true \
     PATH="/app/venv/bin:$PATH"
 
@@ -83,7 +85,7 @@ COPY --from=ui-builder --chown=nextjs:nodejs /ui/.next/standalone ./
 COPY --from=ui-builder --chown=nextjs:nodejs /ui/.next/static ./.next/static
 
 # Copy Python and configuration files
-COPY dataset_agent.py langgraph.json cloudrun-start.sh nginx.conf ./
+COPY dataset_agent.py llm_utils.py simple_agent.py fixed_agent.py agent_standalone.py langgraph.json cloudrun-start.sh nginx.conf env.example ./
 
 # Make scripts executable
 RUN chmod +x cloudrun-start.sh
