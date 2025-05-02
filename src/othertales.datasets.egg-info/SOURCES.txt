@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+src/othertales/__init__.py
+src/othertales.datasets.egg-info/PKG-INFO
+src/othertales.datasets.egg-info/SOURCES.txt
+src/othertales.datasets.egg-info/dependency_links.txt
+src/othertales.datasets.egg-info/requires.txt
+src/othertales.datasets.egg-info/top_level.txt
+src/othertales/datasets/__init__.py
+src/othertales/datasets/dataset_agent.py
+src/othertales/datasets/llm_utils.py
