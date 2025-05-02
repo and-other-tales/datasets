@@ -12,22 +12,24 @@ ENV LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    gcc \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy application files
-COPY requirements.txt pyproject.toml ./
-COPY dataset_agent.py langgraph.json llm_utils.py ./
+# Create and set up the package structure
+RUN mkdir -p /app/src/datasets
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy package files
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+COPY langgraph.json ./
+
+# Install Python dependencies and local package
+RUN pip install --no-cache-dir -e .
 RUN pip install --no-cache-dir playwright && playwright install --with-deps chromium
-
-# Install the local package
-RUN pip install -e .
 
 # Expose port
 EXPOSE 2024
 
 # Start LangGraph in dev mode
-#CMD ["python", "dataset_agent.py", "--api"]
-CMD ["langgraph", "dev"]
+CMD ["python", "-m", "datasets.dataset_agent", "--api"]
