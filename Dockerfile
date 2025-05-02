@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and set up the package structure
-RUN mkdir -p /app/src/datasets
+RUN mkdir -p /app/src/othertales/datasets
 
 # Copy package files
 COPY pyproject.toml README.md ./
@@ -32,4 +32,4 @@ RUN pip install --no-cache-dir playwright && playwright install --with-deps chro
 EXPOSE 2024
 
 # Start LangGraph in dev mode
-CMD ["python", "-m", "langgraph", "dev"]
+CMD ["langgraph", "dev"]

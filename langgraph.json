@@ -7,11 +7,9 @@
   "http": {
     "port": 2024,
     "host": "0.0.0.0",
-    "cors": {
-      "allow_origins": ["*"],
-      "allow_credentials": true,
-      "allow_methods": ["*"],
-      "allow_headers": ["*"]
-    }
+    "cors_allow_origins": ["*"],
+    "cors_allow_credentials": true,
+    "cors_allow_methods": ["*"],
+    "cors_allow_headers": ["*"]
   }
 }
