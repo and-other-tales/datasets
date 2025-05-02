@@ -9,11 +9,9 @@ RUN npm install --legacy-peer-deps
 # Copy UI files
 COPY ui/ .
 
-# Make prebuild.sh executable and run it
-RUN chmod +x prebuild.sh && \
-    mkdir -p /ui/src/lib/ && \
-    sh -c "cp -f ui/src/lib/agent-integration.ts* /ui/src/lib/ 2>/dev/null || echo 'agent-integration.ts not found in source, will be created by prebuild.sh'" && \
-    sh -c "./prebuild.sh"
+# Create necessary directories for build
+RUN mkdir -p /ui/src/lib/ && \
+    sh -c "cp -f ui/src/lib/agent-integration.ts* /ui/src/lib/ 2>/dev/null || echo 'agent-integration.ts not found in source'"
 
 # Set environment variables for build
 ENV NEXT_PUBLIC_AGENT_API_URL=/api/agent \
