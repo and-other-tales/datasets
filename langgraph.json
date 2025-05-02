@@ -1,8 +1,8 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "dataset_agent": "./fixed_agent.py:app",
-    "dataset_workflow": "./fixed_agent.py:app"
+    "dataset_agent": "./dataset_agent.py:app",
+    "dataset_workflow": "./dataset_agent.py:app"
   },
   "http": {
     "port": 2024,

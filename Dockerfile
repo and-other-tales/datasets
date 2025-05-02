@@ -1,47 +1,25 @@
-# Python dependencies builder stage
-FROM python:3.12-slim AS python-builder
+FROM langchain/langgraph-api:3.11
 
-WORKDIR /app
 
-# Copy Python requirements
-COPY requirements.txt .
 
-# Install dependencies into a virtual environment
-RUN python -m venv /app/venv && \
-    /app/venv/bin/pip install --no-cache-dir --upgrade pip && \
-    /app/venv/bin/pip install --no-cache-dir -r requirements.txt && \
-    /app/venv/bin/pip install --no-cache-dir playwright && \
-    /app/venv/bin/playwright install --with-deps chromium
+# -- Adding local package . --
+ADD . /deps/datasets
+# -- End of local package . --
 
-# Final image
-FROM python:3.12-slim
+# -- Installing all local dependencies --
+RUN PYTHONDONTWRITEBYTECODE=1 pip install --no-cache-dir -c /api/constraints.txt -e /deps/*
+# -- End of local dependencies install --
+ENV LANGGRAPH_HTTP='{"port": 2024, "host": "0.0.0.0", "cors": {"allow_origins": ["*"], "allow_credentials": true, "allow_methods": ["*"], "allow_headers": ["*"]}}'
+ENV LANGSERVE_GRAPHS='{"dataset_agent": "/deps/datasets/dataset_agent.py:app", "dataset_workflow": "/deps/datasets/dataset_agent.py:app"}'
 
-# Set non-interactive frontend and timezone
-ENV DEBIAN_FRONTEND=noninteractive \
-    TZ=Etc/UTC \
-    PORT=8080 \
-    USE_EXPLICIT_GRAPH=true \
-    PATH="/app/venv/bin:$PATH"
 
-WORKDIR /app
 
-# Install necessary packages
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# -- Ensure user deps didn't inadvertently overwrite langgraph-api
+RUN mkdir -p /api/langgraph_api /api/langgraph_runtime /api/langgraph_license &&     touch /api/langgraph_api/__init__.py /api/langgraph_runtime/__init__.py /api/langgraph_license/__init__.py
+RUN PYTHONDONTWRITEBYTECODE=1 pip install --no-cache-dir --no-deps -e /api
+# -- End of ensuring user deps didn't inadvertently overwrite langgraph-api --
+# -- Removing pip from the final image ~<:===~~~ --
+RUN pip uninstall -y pip setuptools wheel &&     rm -rf /usr/local/lib/python*/site-packages/pip* /usr/local/lib/python*/site-packages/setuptools* /usr/local/lib/python*/site-packages/wheel* &&     find /usr/local/bin -name "pip*" -delete
+# -- End of pip removal --
 
-# Copy Python virtual environment from builder
-COPY --from=python-builder /app/venv /app/venv
-
-# Copy Python and configuration files
-COPY dataset_agent.py llm_utils.py langgraph.json ./ 
-
-# No scripts to make executable
-
-# Expose port
-EXPOSE 8080
-
-# Start with langgraph dev
-CMD ["langgraph", "dev"]
+WORKDIR /deps/datasets
