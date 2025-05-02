@@ -6,6 +6,9 @@ interface AgentConfig {
   allowedDomains?: string[];
   excludeUrls?: string[];
   extractionRules?: Record<string, string>;
+  provider?: string;
+  model?: string;
+  temperature?: number;
 }
 
 interface AgentResponse {
