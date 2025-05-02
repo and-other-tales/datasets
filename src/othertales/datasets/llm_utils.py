@@ -12,7 +12,7 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 # Multiple LLM providers
 from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
-from langchain_community.chat_models.bedrock import ChatBedrock
+from langchain_aws import ChatBedrock
 from langchain_groq import ChatGroq
 try:
     from langchain_google_genai import ChatGoogleGenerativeAI

@@ -153,54 +153,91 @@ def clean_html(html_content: str) -> str:
 def html_to_markdown(html_content: str) -> str:
     """
     Convert HTML content to markdown using ReaderLM pattern.
-    This implementation follows the ReaderLM method described in REFERENCE/MD.txt
+    Uses the jinaai/ReaderLM-v2 model for high-quality HTML to markdown conversion.
+    Falls back to BeautifulSoup-based conversion if transformers is not available.
     """
     # Clean the HTML first
     html_content = clean_html(html_content)
     
-    # Use BeautifulSoup to parse the HTML
-    soup = BeautifulSoup(html_content, 'lxml')
+    try:
+        # Try to use the ReaderLM-v2 model from HuggingFace
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        import torch
+        
+        # Initialize model and tokenizer (with caching)
+        model_name = "jinaai/ReaderLM-v2"
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+        
+        # Prepare input for HTML to Markdown conversion
+        prompt = f"<|html2md|>\n{html_content}\n<|output|>"
+        inputs = tokenizer(prompt, return_tensors="pt", truncation=True).to(device)
+        
+        # Generate markdown with recommended parameters
+        outputs = model.generate(
+            **inputs, 
+            max_new_tokens=4096, 
+            temperature=0,
+            do_sample=False,
+            repetition_penalty=1.08
+        )
+        
+        # Decode the output and extract just the markdown part
+        markdown_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        # Remove the prompt part if it appears in the output
+        if "<|output|>" in markdown_text:
+            markdown_text = markdown_text.split("<|output|>")[1].strip()
+        
+        return markdown_text.strip()
     
-    # Create a more structured version for processing
-    # Process headings properly
-    for i in range(1, 7):
-        for heading in soup.find_all(f'h{i}'):
-            heading.insert_before(BeautifulSoup(f'\n\n{"#" * i} ', 'lxml'))
-    
-    # Process lists properly
-    for ul in soup.find_all('ul'):
-        for li in ul.find_all('li'):
-            li.insert_before(BeautifulSoup('\n* ', 'lxml'))
-    
-    for ol in soup.find_all('ol'):
-        for i, li in enumerate(ol.find_all('li')):
-            li.insert_before(BeautifulSoup(f'\n{i+1}. ', 'lxml'))
-    
-    # Process paragraphs
-    for p in soup.find_all('p'):
-        p.insert_before(BeautifulSoup('\n\n', 'lxml'))
-        p.append(BeautifulSoup('\n', 'lxml'))
-    
-    # Process links
-    for a in soup.find_all('a', href=True):
-        text = a.get_text()
-        href = a['href']
-        a.replace_with(BeautifulSoup(f'[{text}]({href})', 'lxml'))
-    
-    # Process images
-    for img in soup.find_all('img', src=True):
-        alt = img.get('alt', '')
-        src = img['src']
-        img.replace_with(BeautifulSoup(f'![{alt}]({src})', 'lxml'))
-    
-    # Get the text and clean it up
-    text = soup.get_text()
-    
-    # Clean up extra newlines and whitespace
-    text = re.sub(r'\n\s*\n\s*\n', '\n\n', text)
-    text = re.sub(r'[ \t]+', ' ', text)
-    
-    return text.strip()
+    except (ImportError, Exception) as e:
+        print(f"ReaderLM-v2 model error: {str(e)}. Using fallback conversion method.")
+        # Fallback to BeautifulSoup-based conversion
+        
+        # Use BeautifulSoup to parse the HTML
+        soup = BeautifulSoup(html_content, 'lxml')
+        
+        # Create a more structured version for processing
+        # Process headings properly
+        for i in range(1, 7):
+            for heading in soup.find_all(f'h{i}'):
+                heading.insert_before(BeautifulSoup(f'\n\n{"#" * i} ', 'lxml'))
+        
+        # Process lists properly
+        for ul in soup.find_all('ul'):
+            for li in ul.find_all('li'):
+                li.insert_before(BeautifulSoup('\n* ', 'lxml'))
+        
+        for ol in soup.find_all('ol'):
+            for i, li in enumerate(ol.find_all('li')):
+                li.insert_before(BeautifulSoup(f'\n{i+1}. ', 'lxml'))
+        
+        # Process paragraphs
+        for p in soup.find_all('p'):
+            p.insert_before(BeautifulSoup('\n\n', 'lxml'))
+            p.append(BeautifulSoup('\n', 'lxml'))
+        
+        # Process links
+        for a in soup.find_all('a', href=True):
+            text = a.get_text()
+            href = a['href']
+            a.replace_with(BeautifulSoup(f'[{text}]({href})', 'lxml'))
+        
+        # Process images
+        for img in soup.find_all('img', src=True):
+            alt = img.get('alt', '')
+            src = img['src']
+            img.replace_with(BeautifulSoup(f'![{alt}]({src})', 'lxml'))
+        
+        # Get the text and clean it up
+        text = soup.get_text()
+        
+        # Clean up extra newlines and whitespace
+        text = re.sub(r'\n\s*\n\s*\n', '\n\n', text)
+        text = re.sub(r'[ \t]+', ' ', text)
+        
+        return text.strip()
 
 def get_page_metadata(html_content: str, url: str) -> Dict[str, Any]:
     """Extract metadata from an HTML page."""
@@ -1030,219 +1067,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-app = FastAPI(title="Dataset Creator Agent API")
+def app(config):
+    """LangGraph app factory function that takes a RunnableConfig."""
+    agent = build_agent(use_postgres=False, use_tracing=True)
+    # Initialize agent with empty messages and configure with the provided config
+    messages = []
+    return agent.invoke({"messages": messages}, config=config)
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # For development - restrict in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# The LangGraph app function doesn't need the FastAPI middleware
+# and other FastAPI-specific code below
 
-# Global agent instance
-_agent = None
+# The global agent instance is no longer needed for LangGraph
+# since we're now using the app function above
 
-def get_agent():
-    global _agent
-    if _agent is None:
-        # Use either the explicit graph or the prebuilt agent
-        use_explicit_graph = os.environ.get("USE_EXPLICIT_GRAPH", "false").lower() == "true"
-        use_postgres = os.environ.get("POSTGRES_URI") is not None
-        
-        if use_explicit_graph:
-            _agent = build_graph(include_tracing=True)
-        else:
-            _agent = build_agent(use_postgres=use_postgres, use_tracing=True)
-    return _agent
+# The FastAPI routes are no longer needed when using LangGraph
+# This was converted to a LangGraph app function above
 
-@app.post("/agent")
-async def run_agent_api(request: Request):
-    try:
-        body = await request.json()
-        message = body.get("message")
-        thread_id = body.get("thread_id")
-        
-        if not message:
-            raise HTTPException(status_code=400, detail="Message is required")
-        
-        agent = get_agent()
-        
-        # Configure thread_id for persistence if available
-        config = {}
-        if thread_id:
-            config["configurable"] = {"thread_id": thread_id}
-        
-        messages = [("user", message)]
-        result = agent.invoke({"messages": messages}, config=config)
-        
-        # Extract AI response
-        ai_response = ""
-        for msg in result["messages"]:
-            if msg[0] == "ai":
-                ai_response = msg[1]
-                break
-        
-        return {
-            "message": ai_response,
-            "status": "success",
-            "thread_id": thread_id
-        }
-    except Exception as e:
-        print(f"Error in agent API: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "message": str(e)}
-        )
+# The FastAPI routes are no longer needed when using LangGraph
+# This was converted to a LangGraph app function above
 
-@app.get("/status")
-async def get_status():
-    provider = os.environ.get("LLM_PROVIDER", "bedrock").lower()
-    
-    # Get the model ID based on the provider
-    if provider == "openai":
-        model = os.environ.get("OPENAI_MODEL", "gpt-4o")
-    elif provider == "anthropic":
-        model = os.environ.get("ANTHROPIC_MODEL", "claude-3-7-sonnet-latest")
-    elif provider == "bedrock":
-        model = os.environ.get("BEDROCK_MODEL_ID", DEFAULT_MODEL_ID)
-    elif provider == "azure":
-        model = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4")
-    elif provider == "google":
-        model = os.environ.get("GOOGLE_MODEL", "gemini-1.5-pro")
-    elif provider == "groq":
-        model = os.environ.get("GROQ_MODEL", "llama3-70b-8192")
-    elif provider == "huggingface":
-        model = os.environ.get("HUGGINGFACE_MODEL_ID", "mistralai/Mixtral-8x7B-Instruct-v0.1")
-    else:
-        model = DEFAULT_MODEL_ID
-    
-    return {
-        "status": "running",
-        "provider": provider,
-        "model": model,
-        "timestamp": time.time(),
-        "persistence": POSTGRES_AVAILABLE
-    }
+# The FastAPI routes are no longer needed when using LangGraph
+# This was converted to a LangGraph app function above
 
-@app.get("/info")
-async def get_info():
-    """Mirror of the status endpoint for health checks."""
-    return await get_status()
-
-@app.post("/config")
-async def update_config(request: Request):
-    try:
-        config = await request.json()
-        
-        # Handle LLM provider configuration
-        if "llm_provider" in config:
-            provider = config["llm_provider"].lower()
-            valid_providers = [
-                "openai", "anthropic", "bedrock", "azure", 
-                "google", "groq", "huggingface"
-            ]
-            
-            if provider not in valid_providers:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"Invalid LLM provider. Must be one of: {', '.join(valid_providers)}"
-                )
-            
-            # Update environment variable
-            os.environ["LLM_PROVIDER"] = provider
-            
-            # Handle provider-specific configuration
-            if provider == "openai" and "model" in config:
-                os.environ["OPENAI_MODEL"] = config["model"]
-            elif provider == "anthropic" and "model" in config:
-                os.environ["ANTHROPIC_MODEL"] = config["model"]
-            elif provider == "bedrock" and "model" in config:
-                os.environ["BEDROCK_MODEL_ID"] = config["model"]
-            elif provider == "azure" and "deployment" in config:
-                os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"] = config["deployment"]
-            elif provider == "google" and "model" in config:
-                os.environ["GOOGLE_MODEL"] = config["model"]
-            elif provider == "groq" and "model" in config:
-                os.environ["GROQ_MODEL"] = config["model"]
-            elif provider == "huggingface" and "model" in config:
-                os.environ["HUGGINGFACE_MODEL_ID"] = config["model"]
-                
-            # Handle temperature if provided
-            if "temperature" in config:
-                try:
-                    temp = float(config["temperature"])
-                    if 0 <= temp <= 1:
-                        if provider == "openai":
-                            os.environ["OPENAI_TEMPERATURE"] = str(temp)
-                        elif provider == "anthropic":
-                            os.environ["ANTHROPIC_TEMPERATURE"] = str(temp)
-                        elif provider == "bedrock":
-                            os.environ["BEDROCK_TEMPERATURE"] = str(temp)
-                        elif provider == "azure":
-                            os.environ["AZURE_OPENAI_TEMPERATURE"] = str(temp)
-                        elif provider == "google":
-                            os.environ["GOOGLE_TEMPERATURE"] = str(temp)
-                        elif provider == "groq":
-                            os.environ["GROQ_TEMPERATURE"] = str(temp)
-                        elif provider == "huggingface":
-                            os.environ["HUGGINGFACE_TEMPERATURE"] = str(temp)
-                except:
-                    pass
-            
-            # Recreate the global LLM instance
-            global llm
-            llm = get_llm(callbacks=[ConsoleCallbackHandler()])
-            
-            # Rebuild the agent in real-time
-            global _agent
-            _agent = None  # Force recreation on next request
-        
-        # Handle other configuration updates here...
-        # (e.g., crawler settings)
-        
-        return {
-            "message": "Configuration updated successfully",
-            "config": config
-        }
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        print(f"Error in config API: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-def start_server(host="0.0.0.0", port=2024, reload=True):
-    """Start the FastAPI server."""
-    uvicorn.run("dataset_agent:app", host=host, port=port, reload=reload)
-
-def main():
-    """Run the agent CLI."""
-    agent = build_agent()
-    
-    # Example invocation
-    print("Dataset Creator Agent initialized. You can now ask it to create datasets from URLs.")
-    print("Example: Create a dataset from https://www.gov.uk/government/collections/hmrc-manuals")
-    
-    while True:
-        user_input = input("\nYour request (or 'quit' to exit): ")
-        if user_input.lower() in ['quit', 'exit']:
-            break
-        
-        messages = [("user", user_input)]
-        result = agent.invoke({"messages": messages})
-        
-        # Print the result
-        for message in result["messages"]:
-            if message[0] == "ai":
-                print(f"\nAgent: {message[1]}")
-
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "--api":
-        # Use environment variable if set, otherwise default to 2024
-        port = int(os.environ.get("DATASET_AGENT_PORT", 2024))
-        print(f"Starting Dataset Creator Agent API on http://localhost:{port}")
-        start_server(port=port)
-    else:
-        main()
+# We no longer need the API server or CLI components since we're using LangGraph directly
+# The LangGraph system handles the server aspects
