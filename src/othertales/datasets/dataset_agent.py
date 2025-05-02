@@ -124,31 +124,56 @@ class AgentState(TypedDict):
     dataset_info: Optional[Dict[str, Any]]
     temp_file_path: Optional[str]
 
-def clean_html(html_content: str) -> str:
-    """Clean HTML content by removing scripts, styles, and comments."""
+def replace_svg(html: str, new_content: str = "this is a placeholder") -> str:
+    """Replace SVG content with placeholder text."""
+    SVG_PATTERN = r"(<svg[^>]*>)(.*?)(<\/svg>)"
+    return re.sub(
+        SVG_PATTERN,
+        lambda match: f"{match.group(1)}{new_content}{match.group(3)}",
+        html,
+        flags=re.DOTALL,
+    )
+
+def replace_base64_images(html: str, new_image_src: str = "#") -> str:
+    """Replace base64 encoded images with a simple image tag."""
+    BASE64_IMG_PATTERN = r'<img[^>]+src="data:image/[^;]+;base64,[^"]+"[^>]*>'
+    return re.sub(BASE64_IMG_PATTERN, f'<img src="{new_image_src}"/>', html)
+
+def clean_html(html_content: str, clean_svg: bool = False, clean_base64: bool = False) -> str:
+    """Clean HTML content by removing unnecessary elements and optionally SVG/base64 images."""
     # Patterns
     SCRIPT_PATTERN = r"<[ ]*script.*?\/[ ]*script[ ]*>"
     STYLE_PATTERN = r"<[ ]*style.*?\/[ ]*style[ ]*>"
     META_PATTERN = r"<[ ]*meta.*?>"
     COMMENT_PATTERN = r"<[ ]*!--.*?--[ ]*>"
     LINK_PATTERN = r"<[ ]*link.*?>"
-    BASE64_IMG_PATTERN = r'<img[^>]+src="data:image/[^;]+;base64,[^"]+"[^>]*>'
-
+    
     # Clean HTML
     html_content = re.sub(SCRIPT_PATTERN, "", html_content, 
-                        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+                         flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
     html_content = re.sub(STYLE_PATTERN, "", html_content, 
-                        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+                         flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
     html_content = re.sub(META_PATTERN, "", html_content, 
-                        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+                         flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
     html_content = re.sub(COMMENT_PATTERN, "", html_content, 
-                        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+                         flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
     html_content = re.sub(LINK_PATTERN, "", html_content, 
-                        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
-    html_content = re.sub(BASE64_IMG_PATTERN, "", html_content, 
-                        flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+                         flags=re.IGNORECASE | re.MULTILINE | re.DOTALL)
+    
+    if clean_svg:
+        html_content = replace_svg(html_content)
+    if clean_base64:
+        html_content = replace_base64_images(html_content)
     
     return html_content
+
+def create_readerlm_prompt(text: str, tokenizer=None) -> str:
+    """Create a prompt for the ReaderLM model."""
+    instruction = "Extract the main content from the given HTML and convert it to Markdown format."
+    prompt = f"{instruction}\n```html\n{text}\n```"
+    
+    messages = [{"role": "user", "content": prompt}]
+    return tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
 def html_to_markdown(html_content: str) -> str:
     """
@@ -157,7 +182,7 @@ def html_to_markdown(html_content: str) -> str:
     Falls back to BeautifulSoup-based conversion if transformers is not available.
     """
     # Clean the HTML first
-    html_content = clean_html(html_content)
+    html_content = clean_html(html_content, clean_svg=True, clean_base64=True)
     
     try:
         # Try to use the ReaderLM-v2 model from HuggingFace
@@ -170,30 +195,31 @@ def html_to_markdown(html_content: str) -> str:
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
         
-        # Prepare input for HTML to Markdown conversion
-        prompt = f"<|html2md|>\n{html_content}\n<|output|>"
-        inputs = tokenizer(prompt, return_tensors="pt", truncation=True).to(device)
+        # Create input prompt and encode
+        input_prompt = create_readerlm_prompt(html_content, tokenizer)
+        inputs = tokenizer.encode(input_prompt, return_tensors="pt").to(device)
         
         # Generate markdown with recommended parameters
         outputs = model.generate(
-            **inputs, 
-            max_new_tokens=4096, 
+            inputs, 
+            max_new_tokens=4096,
             temperature=0,
             do_sample=False,
             repetition_penalty=1.08
         )
         
-        # Decode the output and extract just the markdown part
+        # Decode and clean up the output
         markdown_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        # Remove the prompt part if it appears in the output
-        if "<|output|>" in markdown_text:
-            markdown_text = markdown_text.split("<|output|>")[1].strip()
         
-        return markdown_text.strip()
+        # Extract just the markdown part (remove the prompt/instruction)
+        if "```" in markdown_text:
+            markdown_text = markdown_text.split("```")[-1].strip()
+        
+        return markdown_text
     
     except (ImportError, Exception) as e:
         print(f"ReaderLM-v2 model error: {str(e)}. Using fallback conversion method.")
-        # Fallback to BeautifulSoup-based conversion
+        # Fallback to existing BeautifulSoup implementation
         
         # Use BeautifulSoup to parse the HTML
         soup = BeautifulSoup(html_content, 'lxml')
@@ -1073,21 +1099,3 @@ def app(config):
     # Initialize agent with empty messages and configure with the provided config
     messages = []
     return agent.invoke({"messages": messages}, config=config)
-
-# The LangGraph app function doesn't need the FastAPI middleware
-# and other FastAPI-specific code below
-
-# The global agent instance is no longer needed for LangGraph
-# since we're now using the app function above
-
-# The FastAPI routes are no longer needed when using LangGraph
-# This was converted to a LangGraph app function above
-
-# The FastAPI routes are no longer needed when using LangGraph
-# This was converted to a LangGraph app function above
-
-# The FastAPI routes are no longer needed when using LangGraph
-# This was converted to a LangGraph app function above
-
-# We no longer need the API server or CLI components since we're using LangGraph directly
-# The LangGraph system handles the server aspects
