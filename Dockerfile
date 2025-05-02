@@ -32,4 +32,4 @@ RUN pip install --no-cache-dir playwright && playwright install --with-deps chro
 EXPOSE 2024
 
 # Start LangGraph in dev mode
-CMD ["python", "-m", "othertales.datasets.dataset_agent", "--api"]
+CMD ["python", "-m", "langgraph", "dev"]
