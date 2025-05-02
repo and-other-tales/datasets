@@ -85,7 +85,7 @@ COPY --from=ui-builder --chown=nextjs:nodejs /ui/.next/standalone ./
 COPY --from=ui-builder --chown=nextjs:nodejs /ui/.next/static ./.next/static
 
 # Copy Python and configuration files
-COPY dataset_agent.py llm_utils.py simple_agent.py fixed_agent.py agent_standalone.py langgraph.json cloudrun-start.sh nginx.conf env.example ./
+COPY dataset_agent.py llm_utils.py langgraph.json cloudrun-start.sh nginx.conf env.example ./
 
 # Make scripts executable
 RUN chmod +x cloudrun-start.sh
