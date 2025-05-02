@@ -29,8 +29,15 @@ COPY env.example .env
 RUN pip install --no-cache-dir -e .
 RUN pip install --no-cache-dir playwright && playwright install --with-deps chromium
 
+# Ensure Python can find the package
+ENV PYTHONPATH="/app:${PYTHONPATH}"
+
 # Expose port
 EXPOSE 2024
 
-# Start LangGraph in dev mode
-CMD ["langgraph", "dev"]
+# Copy and make entrypoint script executable
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
+
+# Start using the entrypoint script
+CMD ["/app/entrypoint.sh"]
