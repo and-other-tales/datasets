@@ -1,14 +1,15 @@
 #!/bin/bash
 set -e
 
-# Ensure the package is properly installed
-pip install -e .
-
-# Print Python path for debugging
+# Print debugging info
 echo "PYTHONPATH: $PYTHONPATH"
 echo "PWD: $(pwd)"
-echo "Listing package directory:"
-ls -la /app/src/othertales/datasets
+echo "PORT: $PORT"
+echo "HOST: $HOST"
 
-# Start the LangGraph server
-exec langgraph dev
+# Start the FastAPI application with uvicorn
+exec uvicorn othertales.datasets.dataset_agent:app \
+    --host ${HOST:-0.0.0.0} \
+    --port ${PORT:-2024} \
+    --workers 1 \
+    --timeout-keep-alive 75

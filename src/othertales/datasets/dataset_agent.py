@@ -1130,4 +1130,9 @@ def app(config):
         messages = body.get("messages", [])
         return agent.invoke({"messages": messages}, config=config)
     
+    # Add server configuration
+    if __name__ == "__main__":
+        port = int(os.environ.get("PORT", 2024))
+        uvicorn.run(fastapi_app, host="0.0.0.0", port=port)
+    
     return fastapi_app
