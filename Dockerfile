@@ -1,25 +1,33 @@
-FROM langchain/langgraph-api:3.11
+FROM python:3.12-slim AS base
 
+WORKDIR /app
 
+# Set environment variables
+ENV PORT=2024
+ENV PYTHONUNBUFFERED=1
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV LANGSMITH_TRACING=true
+ENV LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
 
-# -- Adding local package . --
-ADD . /deps/datasets
-# -- End of local package . --
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# -- Installing all local dependencies --
-RUN PYTHONDONTWRITEBYTECODE=1 pip install --no-cache-dir -c /api/constraints.txt -e /deps/*
-# -- End of local dependencies install --
-ENV LANGGRAPH_HTTP='{"port": 2024, "host": "0.0.0.0", "cors": {"allow_origins": ["*"], "allow_credentials": true, "allow_methods": ["*"], "allow_headers": ["*"]}}'
-ENV LANGSERVE_GRAPHS='{"dataset_agent": "/deps/datasets/dataset_agent.py:app", "dataset_workflow": "/deps/datasets/dataset_agent.py:app"}'
+# Copy application files
+COPY requirements.txt pyproject.toml ./
+COPY dataset_agent.py langgraph.json llm_utils.py ./
 
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir playwright && playwright install --with-deps chromium
 
+# Install the local package
+RUN pip install -e .
 
-# -- Ensure user deps didn't inadvertently overwrite langgraph-api
-RUN mkdir -p /api/langgraph_api /api/langgraph_runtime /api/langgraph_license &&     touch /api/langgraph_api/__init__.py /api/langgraph_runtime/__init__.py /api/langgraph_license/__init__.py
-RUN PYTHONDONTWRITEBYTECODE=1 pip install --no-cache-dir --no-deps -e /api
-# -- End of ensuring user deps didn't inadvertently overwrite langgraph-api --
-# -- Removing pip from the final image ~<:===~~~ --
-RUN pip uninstall -y pip setuptools wheel &&     rm -rf /usr/local/lib/python*/site-packages/pip* /usr/local/lib/python*/site-packages/setuptools* /usr/local/lib/python*/site-packages/wheel* &&     find /usr/local/bin -name "pip*" -delete
-# -- End of pip removal --
+# Expose port
+EXPOSE 2024
 
-WORKDIR /deps/datasets
+# Start LangGraph in dev mode
+#CMD ["python", "dataset_agent.py", "--api"]
+CMD ["langgraph", "dev"]
