@@ -1093,9 +1093,41 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
+def create_app():
+    """Create FastAPI application with health check endpoint."""
+    app = FastAPI()
+    
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    @app.get("/healthz")
+    async def healthz():
+        """Health check endpoint for Cloud Run."""
+        return {"status": "healthy"}
+    
+    @app.get("/")
+    async def root():
+        """Root endpoint for Cloud Run health checks."""
+        return {"status": "healthy"}
+    
+    return app
+
 def app(config):
     """LangGraph app factory function that takes a RunnableConfig."""
+    fastapi_app = create_app()
     agent = build_agent(use_postgres=False, use_tracing=True)
-    # Initialize agent with empty messages and configure with the provided config
-    messages = []
-    return agent.invoke({"messages": messages}, config=config)
+    
+    @fastapi_app.post("/agent")
+    async def handle_agent(request: Request):
+        """Handle agent requests."""
+        body = await request.json()
+        messages = body.get("messages", [])
+        return agent.invoke({"messages": messages}, config=config)
+    
+    return fastapi_app

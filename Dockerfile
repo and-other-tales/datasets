@@ -33,7 +33,11 @@ RUN pip install --no-cache-dir playwright && playwright install --with-deps chro
 ENV PYTHONPATH="/app:${PYTHONPATH}"
 
 # Expose port
-EXPOSE 2024
+EXPOSE ${PORT}
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/healthz || exit 1
 
 # Copy and make entrypoint script executable
 COPY entrypoint.sh /app/
