@@ -197,7 +197,61 @@ requests.post("http://localhost:8080/config", json={
 
 #### 3. From the Web UI (Coming Soon)
 
-A provider selection dropdown will be available in the web UI in future releases.
+   A provider selection dropdown will be available in the web UI in future releases.
+
+## LangGraph CLI & Development Server
+
+This project includes a [LangGraph CLI](https://langchain-ai.github.io/langgraph) development server for local testing and rapid iteration.
+
+### Local Development
+
+1. Install the CLI with in-memory support:
+
+```bash
+pip install -U "langgraph-cli[inmem]"
+```
+
+2. Copy the environment file and fill in your values:
+
+```bash
+cp env.example .env
+```
+
+3. Start the development server:
+
+```bash
+langgraph dev
+```
+
+The server will start on http://localhost:2024 by default, serving all configured graphs.
+
+### Docker
+
+Build the Docker image:
+
+```bash
+docker build -t othertales-datasets .
+```
+
+Run the container:
+
+```bash
+docker run --env-file .env -p 2024:2024 othertales-datasets
+```
+
+### Docker Compose
+
+Alternatively, use Docker Compose:
+
+```bash
+docker compose up
+```
+
+Verify the service is running:
+
+```bash
+curl http://localhost:2024/ok
+```
 
 ## Use Cases
 

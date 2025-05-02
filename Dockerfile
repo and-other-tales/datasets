@@ -23,6 +23,7 @@ RUN mkdir -p /app/src/othertales/datasets
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
 COPY langgraph.json ./
+COPY env.example .env
 
 # Install Python dependencies and local package
 RUN pip install --no-cache-dir -e .
