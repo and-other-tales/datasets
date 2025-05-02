@@ -53,9 +53,25 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error('Failed to connect to Python agent:', error);
       
-      // Return a fallback response when the Python agent is unavailable
+      // Return a helpful response with instructions
       return NextResponse.json({
-        message: "I'm a placeholder response. The real agent is not connected. Please start the Python agent with './start.sh' or directly with 'python agent_standalone.py'.",
+        message: `## Agent Connection Issue
+
+I'm unable to reach the agent backend that handles dataset creation. Here's what you can do:
+
+1. Make sure the agent is running by executing:
+   \`\`\`bash
+   python agent_standalone.py
+   \`\`\`
+
+2. Or use the start script that launches both the UI and agent:
+   \`\`\`bash
+   ./start.sh
+   \`\`\`
+
+3. If you continue to have issues, check that port 2024 is available and not blocked by firewall settings.
+
+You can reload this page once the agent is running.`,
         status: 'fallback',
         thread_id
       });
