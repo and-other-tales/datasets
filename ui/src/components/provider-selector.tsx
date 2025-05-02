@@ -79,6 +79,11 @@ const TEMPERATURE_OPTIONS = [
   { value: 1, label: '1.0 - Random' },
 ];
 
+// Local storage keys
+const LS_PROVIDER_KEY = 'llm_provider_selection';
+const LS_MODEL_KEY = 'llm_model_selection';
+const LS_TEMPERATURE_KEY = 'llm_temperature_selection';
+
 interface ProviderSelectorProps {
   onProviderChange?: (provider: string, model: string) => void;
   className?: string;
@@ -101,6 +106,28 @@ export default function ProviderSelector({
   const currentProviderData = PROVIDER_OPTIONS.find(p => p.id === selectedProvider);
   const availableModels = currentProviderData?.models || [];
 
+  // Load saved preferences from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Get saved preferences
+      const savedProvider = localStorage.getItem(LS_PROVIDER_KEY);
+      const savedModel = localStorage.getItem(LS_MODEL_KEY);
+      const savedTemperature = localStorage.getItem(LS_TEMPERATURE_KEY);
+      
+      if (savedProvider) {
+        setSelectedProvider(savedProvider);
+      }
+      
+      if (savedModel) {
+        setSelectedModel(savedModel);
+      }
+      
+      if (savedTemperature) {
+        setTemperature(parseFloat(savedTemperature));
+      }
+    }
+  }, []);
+
   // Fetch current provider info on mount
   useEffect(() => {
     const fetchProviderInfo = async () => {
@@ -111,9 +138,23 @@ export default function ProviderSelector({
           if (data.provider && data.model) {
             setCurrentProvider(data.provider);
             setCurrentModel(data.model);
-            // Update selected values to match current
-            setSelectedProvider(data.provider);
-            setSelectedModel(data.model);
+            
+            // Update selected values if they don't match saved preferences
+            const savedProvider = localStorage.getItem(LS_PROVIDER_KEY);
+            const savedModel = localStorage.getItem(LS_MODEL_KEY);
+            
+            if (!savedProvider || !savedModel) {
+              // If no saved preferences, use values from server
+              setSelectedProvider(data.provider);
+              setSelectedModel(data.model);
+            } else if (savedProvider !== data.provider || savedModel !== data.model) {
+              // If preferences don't match server, update the server to match preferences
+              updateAgentConfig({
+                provider: savedProvider,
+                model: savedModel,
+                temperature: parseFloat(localStorage.getItem(LS_TEMPERATURE_KEY) || '0.2')
+              });
+            }
           }
         }
       } catch (error) {
@@ -138,6 +179,13 @@ export default function ProviderSelector({
   const applyChanges = async () => {
     setIsLoading(true);
     try {
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(LS_PROVIDER_KEY, selectedProvider);
+        localStorage.setItem(LS_MODEL_KEY, selectedModel);
+        localStorage.setItem(LS_TEMPERATURE_KEY, temperature.toString());
+      }
+      
       // Call API to update provider and model
       const result = await updateAgentConfig({
         provider: selectedProvider,

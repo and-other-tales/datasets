@@ -23,15 +23,56 @@ export async function GET(request: NextRequest) {
       }
 
       const data = await response.json();
+      
+      // Ensure provider name is normalized for consistent UI handling
+      if (data.provider) {
+        data.provider = data.provider.toLowerCase();
+        
+        // Retrieve user preferences from localStorage if in browser
+        if (typeof window !== 'undefined') {
+          const savedProvider = localStorage.getItem('llm_provider_selection');
+          const savedModel = localStorage.getItem('llm_model_selection');
+          
+          // If preferences exist but differ from server, prefer the saved preferences
+          // This ensures UI stays consistent with user choices
+          if (savedProvider && savedProvider !== data.provider) {
+            console.log(`Provider mismatch: ${data.provider} (server) vs ${savedProvider} (saved)`);
+            data.client_provider = savedProvider;
+          }
+          
+          if (savedModel && savedModel !== data.model) {
+            console.log(`Model mismatch: ${data.model} (server) vs ${savedModel} (saved)`);
+            data.client_model = savedModel;
+          }
+        }
+      }
+      
       return NextResponse.json(data);
     } catch (error) {
       console.error('Failed to connect to Python agent status endpoint:', error);
       
+      // Try to get saved preferences from localStorage
+      let provider = 'bedrock';
+      let model = 'anthropic.claude-3-7-sonnet-20250219-v1:0';
+      
+      if (typeof window !== 'undefined') {
+        const savedProvider = localStorage.getItem('llm_provider_selection');
+        const savedModel = localStorage.getItem('llm_model_selection');
+        
+        if (savedProvider) {
+          provider = savedProvider;
+        }
+        
+        if (savedModel) {
+          model = savedModel;
+        }
+      }
+      
       // Return a fallback response when the Python agent is unavailable
       return NextResponse.json({
         status: 'unavailable',
-        provider: 'bedrock',
-        model: 'anthropic.claude-3-7-sonnet-20250219-v1:0',
+        provider: provider,
+        model: model,
         message: "Unable to determine current LLM provider. Python agent is not connected."
       });
     }

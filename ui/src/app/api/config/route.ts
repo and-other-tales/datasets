@@ -15,11 +15,17 @@ export async function POST(request: NextRequest) {
     
     // Handle LLM provider change
     if (body.provider) {
-      llmConfig.llm_provider = body.provider.toLowerCase();
+      // Normalize provider name
+      const normalizedProvider = body.provider.toLowerCase();
+      llmConfig.llm_provider = normalizedProvider;
+      
+      // Store the original configuration for frontend consumption
+      llmConfig.ui_provider = normalizedProvider;
       
       // Handle provider-specific settings
       if (body.model) {
         llmConfig.model = body.model;
+        llmConfig.ui_model = body.model;
       }
       
       if (body.temperature !== undefined) {
@@ -31,8 +37,24 @@ export async function POST(request: NextRequest) {
       }
       
       // For Azure, allow setting deployment name
-      if (llmConfig.llm_provider === 'azure' && body.deployment) {
+      if (normalizedProvider === 'azure' && body.deployment) {
         llmConfig.deployment = body.deployment;
+      }
+      
+      // Store persistent config server-side (if implemented)
+      try {
+        // Save to browser localStorage on the client side
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('llm_provider_selection', normalizedProvider);
+          if (body.model) {
+            localStorage.setItem('llm_model_selection', body.model);
+          }
+          if (body.temperature !== undefined) {
+            localStorage.setItem('llm_temperature_selection', body.temperature.toString());
+          }
+        }
+      } catch (storageError) {
+        console.warn('Failed to save persistent config:', storageError);
       }
     }
     

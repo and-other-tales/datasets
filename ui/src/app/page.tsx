@@ -94,10 +94,48 @@ To get started, tell me which website you'd like to crawl or what kind of datase
       setMessages((prevMessages) => [...prevMessages, message]);
       setIsLoading(false);
     });
-
+    
+    // Set up polling to detect environment variable changes
+    const statusPollInterval = setInterval(async () => {
+      try {
+        const response = await fetch('/api/agent/status');
+        if (response.ok) {
+          const data = await response.json();
+          // Update stored preferences if environment variables have changed
+          if (typeof window !== 'undefined' && data.provider && data.model) {
+            const savedProvider = localStorage.getItem('llm_provider_selection');
+            const savedModel = localStorage.getItem('llm_model_selection');
+            
+            // If env var changed externally, update local storage
+            if (savedProvider !== data.provider || savedModel !== data.model) {
+              localStorage.setItem('llm_provider_selection', data.provider);
+              localStorage.setItem('llm_model_selection', data.model);
+              
+              // Optionally notify the user
+              if (messages.length > 0) {
+                const providerName = data.provider.charAt(0).toUpperCase() + data.provider.slice(1);
+                setMessages((prevMessages) => [
+                  ...prevMessages, 
+                  {
+                    id: uuidv4(),
+                    role: "system",
+                    content: `The LLM provider has been updated to ${providerName} (${data.model}).`,
+                    timestamp: new Date(),
+                  }
+                ]);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error polling status:", error);
+      }
+    }, 30000); // Poll every 30 seconds
+    
     return () => {
       unsubscribe();
       agentClient.disconnect();
+      clearInterval(statusPollInterval);
     };
   }, []);
 
