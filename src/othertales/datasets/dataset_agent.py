@@ -1028,14 +1028,33 @@ def build_agent(use_postgres=False, use_tracing=True):
         }
     
     # Create the agent with proper tracing for LangSmith
-    agent = create_react_agent(
-        llm=llm,
-        tools=tools,
-        system_prompt=system_prompt,
-        checkpointer=checkpointer,
-        callbacks=callbacks,
-        tool_choice_transition=True  # Enables observation of tool choices in LangSmith
-    )
+    # Check LangGraph version and update the create_react_agent arguments as needed
+    import inspect
+    create_agent_args = {}
+    
+    # Get the signature of create_react_agent to determine the correct parameters
+    create_agent_sig = inspect.signature(create_react_agent)
+    if "llm" in create_agent_sig.parameters:
+        # Older LangGraph versions
+        create_agent_args["llm"] = llm
+    else:
+        # Newer LangGraph versions use model parameter
+        create_agent_args["model"] = llm
+        
+    # Add common parameters
+    create_agent_args.update({
+        "tools": tools,
+        "system_prompt": system_prompt,
+        "checkpointer": checkpointer,
+        "callbacks": callbacks,
+    })
+    
+    # Add tool_choice_transition if it's a valid parameter
+    if "tool_choice_transition" in create_agent_sig.parameters:
+        create_agent_args["tool_choice_transition"] = True
+    
+    # Create the agent
+    agent = create_react_agent(**create_agent_args)
     
     # Add runnable config to enhance visualization
     if use_tracing and hasattr(agent, "with_config"):
@@ -1067,21 +1086,58 @@ def build_graph(include_tracing=True):
         builder.add_node("crawl_url", traced_crawl_url_node)
         builder.add_node("create_dataset", traced_create_dataset_node)
         builder.add_node("verify_dataset", traced_verify_dataset_node)
-        builder.add_node("llm", llm)
+        
+        # Check if StateGraph.add_node accepts 'llm' or expects 'model'
+        import inspect
+        add_node_sig = inspect.signature(builder.add_node)
+        # This is a simplified check - both methods accept any args,
+        # but we're trying to match the pattern of newer LangGraph
+        try:
+            # For newer LangGraph versions
+            builder.add_node("model", llm)
+        except Exception:
+            # Fallback to older version
+            builder.add_node("llm", llm)
     else:
         builder.add_node("crawl_url", crawl_url_node)
         builder.add_node("create_dataset", create_dataset_node)
         builder.add_node("verify_dataset", verify_dataset_node)
-        builder.add_node("llm", llm)
+        
+        # Same logic as above
+        try:
+            # For newer LangGraph versions
+            builder.add_node("model", llm)
+        except Exception:
+            # Fallback to older version
+            builder.add_node("llm", llm)
     
-    # Add edges
-    builder.add_edge("llm", "crawl_url")
+    # Determine if we're using "llm" or "model" as the node name
+    llm_node_name = "model"  # Default to newer version
+    
+    # Check if "model" node exists, otherwise use "llm"
+    try:
+        if "model" in builder.nodes:
+            llm_node_name = "model"
+        elif "llm" in builder.nodes:
+            llm_node_name = "llm"
+    except (AttributeError, TypeError):
+        # If we can't check nodes directly, try both in edges
+        try:
+            # Add edges with "model" node
+            builder.add_edge("model", "crawl_url")
+            llm_node_name = "model"
+        except Exception:
+            # Fallback to "llm" node
+            builder.add_edge("llm", "crawl_url")
+            llm_node_name = "llm"
+    
+    # Add the remaining edges
     builder.add_edge("crawl_url", "create_dataset")
     builder.add_edge("create_dataset", "verify_dataset")
-    builder.add_edge("verify_dataset", "llm")
+    builder.add_edge("verify_dataset", llm_node_name)
     
     # Set entry and exit points
-    builder.set_entry_point("llm")
+    builder.set_entry_point(llm_node_name)
     
     # Compile the graph
     graph = builder.compile()
@@ -1148,6 +1204,24 @@ def create_app():
                 health_status["status"] = "unhealthy"
         except Exception as e:
             health_status["checks"]["llm_provider"] = f"error: {str(e)}"
+            health_status["status"] = "unhealthy"
+        
+        # Check LangGraph compatibility
+        try:
+            # Check if create_react_agent accepts the correct parameters
+            import inspect
+            from langgraph.prebuilt import create_react_agent
+            
+            create_agent_sig = inspect.signature(create_react_agent)
+            if "model" in create_agent_sig.parameters:
+                health_status["checks"]["langgraph_compatibility"] = "compatible (uses model parameter)"
+            elif "llm" in create_agent_sig.parameters:
+                health_status["checks"]["langgraph_compatibility"] = "compatible (uses llm parameter)"
+            else:
+                health_status["checks"]["langgraph_compatibility"] = "potentially incompatible"
+                health_status["status"] = "unhealthy"
+        except Exception as e:
+            health_status["checks"]["langgraph_compatibility"] = f"error: {str(e)}"
             health_status["status"] = "unhealthy"
         
         # Return 200 for healthy, 503 for unhealthy

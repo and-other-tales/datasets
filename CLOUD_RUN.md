@@ -103,3 +103,16 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
      docker run -p 2024:2024 dataset-creator:test
      curl http://localhost:2024/startup
      ```
+
+8. **LangGraph API compatibility issues**: If you encounter errors related to LangGraph API changes:
+   - The code has been updated to handle both newer and older LangGraph API versions
+   - Check for errors like `TypeError: create_react_agent() got an unexpected keyword argument 'llm'`
+   - This indicates that the LangGraph API has changed from using `llm` to `model` parameter
+   - The application now automatically detects and adapts to the correct API version
+   - If you still encounter issues, you can try updating the LangGraph version in requirements.txt:
+     ```bash
+     # Downgrade if your code expects the older API
+     langgraph==0.4.0
+     # Or upgrade if you want to use the latest API
+     langgraph==0.4.1
+     ```
