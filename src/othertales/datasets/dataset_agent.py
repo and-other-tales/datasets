@@ -1044,7 +1044,7 @@ def build_agent(use_postgres=False, use_tracing=True):
     # Add common parameters
     create_agent_args.update({
         "tools": tools,
-        "system_prompt": system_prompt,
+        "prompt": system_prompt,
         "checkpointer": checkpointer,
         "callbacks": callbacks,
     })
