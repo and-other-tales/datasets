@@ -25,7 +25,7 @@ docker push gcr.io/[PROJECT_ID]/dataset-creator:latest
 
 ## Deploying to Cloud Run
 
-1. Deploy the image to Cloud Run:
+1. Deploy the image to Cloud Run with startup probe configuration:
 
 ```bash
 gcloud run deploy dataset-creator \
@@ -38,8 +38,14 @@ gcloud run deploy dataset-creator \
   --cpu 2 \
   --min-instances 0 \
   --max-instances 10 \
-  --concurrency 80
+  --concurrency 80 \
+  --startup-probe-path /startup \
+  --startup-probe-period 5s \
+  --startup-probe-timeout 3s \
+  --startup-probe-failure-threshold 5
 ```
+
+The startup probe configuration ensures that Cloud Run only routes traffic to your container once it's fully initialized and ready to receive requests. This is especially important for LangGraph applications which may need time to initialize models and connections.
 
 2. Set environment variables needed for your deployment:
 
@@ -85,3 +91,15 @@ gcloud logging read "resource.type=cloud_run_revision AND resource.labels.servic
 5. **Cold start problems**: Consider setting min-instances to 1 to avoid cold starts if responsiveness is critical.
 
 6. **Container errors in logs**: Check that your entrypoint.sh script is properly configured and has execute permissions.
+
+7. **Startup probe failures**: If your service fails to start due to startup probe failures:
+   - Check the `/startup` endpoint is correctly implemented and responding with 200 status code
+   - Increase the `startup-probe-failure-threshold` if your application needs more time to initialize
+   - Inspect the logs using `gcloud logging read` to see why the startup probe is failing
+   - Ensure all required environment variables are properly set
+   - Test the startup endpoint locally by building and running the container:
+     ```bash
+     docker build -t dataset-creator:test .
+     docker run -p 2024:2024 dataset-creator:test
+     curl http://localhost:2024/startup
+     ```

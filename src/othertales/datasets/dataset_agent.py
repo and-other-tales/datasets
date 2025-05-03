@@ -1110,6 +1110,51 @@ def create_app():
     async def healthz():
         """Health check endpoint for Cloud Run."""
         return {"status": "healthy"}
+        
+    @app.get("/startup")
+    async def startup():
+        """Startup probe endpoint for Cloud Run."""
+        # Check essential dependencies and connections
+        health_status = {"status": "healthy", "checks": {}}
+        
+        # Check PostgreSQL connection if enabled
+        if POSTGRES_AVAILABLE and os.environ.get("POSTGRES_URI"):
+            try:
+                # Attempt to create a connection to test connectivity
+                pool = ConnectionPool(
+                    conninfo=os.environ.get("POSTGRES_URI"),
+                    max_size=1,
+                    kwargs={"autocommit": True}
+                )
+                with pool.connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("SELECT 1")
+                        conn.commit()
+                health_status["checks"]["database"] = "connected"
+            except Exception as e:
+                health_status["checks"]["database"] = f"error: {str(e)}"
+                health_status["status"] = "unhealthy"
+        else:
+            health_status["checks"]["database"] = "not configured"
+        
+        # Check LLM connectivity
+        try:
+            # Simple check to see if LLM provider is configured
+            provider = os.environ.get("LLM_PROVIDER", "").lower()
+            if provider in ["bedrock", "openai", "anthropic"]:
+                health_status["checks"]["llm_provider"] = f"{provider} configured"
+            else:
+                health_status["checks"]["llm_provider"] = "not configured or unknown"
+                health_status["status"] = "unhealthy"
+        except Exception as e:
+            health_status["checks"]["llm_provider"] = f"error: {str(e)}"
+            health_status["status"] = "unhealthy"
+        
+        # Return 200 for healthy, 503 for unhealthy
+        if health_status["status"] == "healthy":
+            return health_status
+        else:
+            return JSONResponse(content=health_status, status_code=503)
     
     @app.get("/")
     async def root():
