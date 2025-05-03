@@ -1032,14 +1032,8 @@ def build_agent(use_postgres=False, use_tracing=True):
     import inspect
     create_agent_args = {}
     
-    # Get the signature of create_react_agent to determine the correct parameters
-    create_agent_sig = inspect.signature(create_react_agent)
-    if "llm" in create_agent_sig.parameters:
-        # Older LangGraph versions
-        create_agent_args["llm"] = llm
-    else:
-        # Newer LangGraph versions use model parameter
-        create_agent_args["model"] = llm
+    # LangGraph 0.4.1+ uses 'model' parameter
+    create_agent_args["model"] = llm
         
     # Add common parameters
     create_agent_args.update({
@@ -1049,9 +1043,8 @@ def build_agent(use_postgres=False, use_tracing=True):
         "callbacks": callbacks,
     })
     
-    # Add tool_choice_transition if it's a valid parameter
-    if "tool_choice_transition" in create_agent_sig.parameters:
-        create_agent_args["tool_choice_transition"] = True
+    # Add tool_choice_transition if available (for newer LangGraph versions)
+    create_agent_args["tool_choice_transition"] = True
     
     # Create the agent
     agent = create_react_agent(**create_agent_args)
@@ -1082,61 +1075,27 @@ def build_graph(include_tracing=True):
     builder = StateGraph(AgentState)
     
     # Add nodes with or without tracing
+    # Using 'model' as the standard node name for LangGraph 0.4.1+
+    llm_node_name = "model"
+    
     if include_tracing:
         builder.add_node("crawl_url", traced_crawl_url_node)
         builder.add_node("create_dataset", traced_create_dataset_node)
         builder.add_node("verify_dataset", traced_verify_dataset_node)
-        
-        # Check if StateGraph.add_node accepts 'llm' or expects 'model'
-        import inspect
-        add_node_sig = inspect.signature(builder.add_node)
-        # This is a simplified check - both methods accept any args,
-        # but we're trying to match the pattern of newer LangGraph
-        try:
-            # For newer LangGraph versions
-            builder.add_node("model", llm)
-        except Exception:
-            # Fallback to older version
-            builder.add_node("llm", llm)
+        builder.add_node(llm_node_name, llm)
     else:
         builder.add_node("crawl_url", crawl_url_node)
         builder.add_node("create_dataset", create_dataset_node)
         builder.add_node("verify_dataset", verify_dataset_node)
-        
-        # Same logic as above
-        try:
-            # For newer LangGraph versions
-            builder.add_node("model", llm)
-        except Exception:
-            # Fallback to older version
-            builder.add_node("llm", llm)
+        builder.add_node(llm_node_name, llm)
     
-    # Determine if we're using "llm" or "model" as the node name
-    llm_node_name = "model"  # Default to newer version
-    
-    # Check if "model" node exists, otherwise use "llm"
-    try:
-        if "model" in builder.nodes:
-            llm_node_name = "model"
-        elif "llm" in builder.nodes:
-            llm_node_name = "llm"
-    except (AttributeError, TypeError):
-        # If we can't check nodes directly, try both in edges
-        try:
-            # Add edges with "model" node
-            builder.add_edge("model", "crawl_url")
-            llm_node_name = "model"
-        except Exception:
-            # Fallback to "llm" node
-            builder.add_edge("llm", "crawl_url")
-            llm_node_name = "llm"
-    
-    # Add the remaining edges
+    # Add edges with consistent node naming
+    builder.add_edge(llm_node_name, "crawl_url")
     builder.add_edge("crawl_url", "create_dataset")
     builder.add_edge("create_dataset", "verify_dataset")
     builder.add_edge("verify_dataset", llm_node_name)
     
-    # Set entry and exit points
+    # Set entry point
     builder.set_entry_point(llm_node_name)
     
     # Compile the graph
