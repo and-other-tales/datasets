@@ -1005,11 +1005,11 @@ def build_agent(use_postgres=False, use_tracing=True):
     # Initialize the checkpointer if PostgreSQL is available
     checkpointer = setup_postgres_connection() if use_postgres else None
     
-    # Create the agent arguments - removed tool_choice_transition
+    # Create the agent arguments - using 'model' instead of 'llm'
     create_agent_args = {
-        "llm": llm,  # Changed from "model" to "llm"
+        "model": llm,  # Changed back to "model" from "llm"
         "tools": tools,
-        "system_message": system_prompt,  # Changed from "prompt" to "system_message"
+        "prompt": system_prompt,  # Changed back to "prompt" from "system_message"
     }
     
     # Add checkpointer if available
