@@ -47,9 +47,5 @@ LABEL com.google.cloud.run.startup-probe.path="/startup" \
       com.google.cloud.run.startup-probe.timeout.seconds="3" \
       com.google.cloud.run.startup-probe.failure-threshold="5"
 
-# Copy and make entrypoint script executable
-COPY entrypoint.sh /app/
-RUN chmod +x /app/entrypoint.sh
-
-# Start using the entrypoint script
-CMD ["/app/entrypoint.sh"]
+# Start the LangGraph built-in server
+CMD ["langgraph", "dev"]
