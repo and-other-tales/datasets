@@ -51,7 +51,7 @@ def get_llm(callbacks: Optional[List[BaseCallbackHandler]] = None) -> BaseChatMo
     provider = os.environ.get("LLM_PROVIDER", "bedrock").lower()
     
     # Common parameters
-    model_kwargs = {}
+    model_kwargs: Dict[str, Any] = {}
     
     # Get the provider-specific LLM
     if provider == "openai":
