@@ -2,14 +2,8 @@
   "dependencies": ["."],
   "graphs": {
     "dataset_agent": {
-      "graph": {
-        "type": "fastapi",
-        "source": "othertales.datasets.dataset_agent:app"
-      },
-      "spec": {
-        "type": "fastapi",
-        "entrypoint": "othertales.datasets.dataset_agent:app"
-      }
+      "type": "fastapi",
+      "path": "othertales.datasets.dataset_agent:app"
     }
   },
   "http": {
