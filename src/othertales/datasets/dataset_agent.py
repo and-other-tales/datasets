@@ -1081,62 +1081,18 @@ def build_graph(include_tracing=True):
     
     return graph
 
-from fastapi import FastAPI, Request, HTTPException, Response
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import uvicorn
-
-def create_app():
-    """Create FastAPI application with health check endpoint."""
-    app = FastAPI()
-    
-    # Create agent once at startup
-    agent = build_agent(use_postgres=False, use_tracing=True)
-    
-    # Add CORS middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    
-    @app.get("/healthz")
-    async def healthz():
-        """Health check endpoint for Cloud Run."""
-        return {"status": "healthy"}
-    
-    @app.get("/")
-    async def root():
-        """Root endpoint for Cloud Run health checks."""
-        return {"status": "healthy"}
-    
-    @app.get("/info")
-    async def info():
-        """Info endpoint."""
-        return {
-            "status": "running",
-            "version": "1.0.0",
-            "endpoints": ["/", "/healthz", "/startup", "/agent"],
-            "agent_type": "dataset-creator"
-        }
-    
-    @app.post("/agent")
-    async def handle_agent(request: Request):
-        """Handle agent requests."""
-        try:
-            body = await request.json()
-            messages = body.get("messages", [])
-            return await agent.ainvoke({"messages": messages})
-        except Exception as e:
-            return JSONResponse(
-                status_code=500,
-                content={"error": str(e)}
-            )
-    
-    return app
-
 def app(config):
     """LangGraph app factory function that takes a RunnableConfig."""
-    return create_app()
+    # Create the agent
+    agent = build_agent(use_postgres=False, use_tracing=True)
+    
+    # Create a graph from the agent
+    graph = {
+        "run": agent,
+        "name": "dataset_agent",
+        "description": "Dataset Creator Agent",
+        "config": config
+    }
+    
+    # Return the graph for LangGraph registration
+    return graph

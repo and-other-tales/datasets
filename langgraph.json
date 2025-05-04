@@ -1,8 +1,10 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "dataset_agent": "./src/othertales/datasets/dataset_agent.py:app",
-    "dataset_workflow": "./src/othertales/datasets/dataset_agent.py:app"
+    "dataset_agent": {
+      "entrypoint": "./src/othertales/datasets/dataset_agent.py:app",
+      "type": "agent"
+    }
   },
   "http": {
     "port": 2024,
