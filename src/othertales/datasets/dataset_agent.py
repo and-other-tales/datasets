@@ -1005,18 +1005,22 @@ def build_agent(use_postgres=False, use_tracing=True):
     # Initialize the checkpointer if PostgreSQL is available
     checkpointer = setup_postgres_connection() if use_postgres else None
     
-    # Configure callbacks for LangSmith tracing
-    callbacks = []
-    runnable_config = {}
+    # Create the agent arguments
+    create_agent_args = {
+        "model": llm,
+        "tools": tools,
+        "prompt": system_prompt,
+        "checkpointer": checkpointer,
+    }
     
-    if use_tracing:
-        from langchain_core.callbacks import CallbackManager
-        from langchain_core.tracers import LangChainTracer
-        
-        tracer = LangChainTracer(project_name=os.environ.get("LANGCHAIN_PROJECT", "dataset-creator-agent"))
-        callback_manager = CallbackManager([tracer, ConsoleCallbackHandler()])
-        callbacks = [callback_manager]
-        
+    # Add tool_choice_transition if available
+    create_agent_args["tool_choice_transition"] = True
+    
+    # Create the agent
+    agent = create_react_agent(**create_agent_args)
+    
+    # Configure tracing if enabled
+    if use_tracing and hasattr(agent, "with_config"):
         # Add metadata for visualization
         runnable_config = {
             "tags": ["dataset-agent", "langgraph", "react-agent"],
@@ -1025,32 +1029,8 @@ def build_agent(use_postgres=False, use_tracing=True):
                 "version": "1.0.0",
                 "description": "Dataset Creator Agent with LangGraph",
             },
+            "callbacks": [ConsoleCallbackHandler()]
         }
-    
-    # Create the agent with proper tracing for LangSmith
-    # Check LangGraph version and update the create_react_agent arguments as needed
-    import inspect
-    create_agent_args = {}
-    
-    # LangGraph 0.4.1+ uses 'model' parameter
-    create_agent_args["model"] = llm
-        
-    # Add common parameters
-    create_agent_args.update({
-        "tools": tools,
-        "prompt": system_prompt,
-        "checkpointer": checkpointer,
-        "callbacks": callbacks,
-    })
-    
-    # Add tool_choice_transition if available (for newer LangGraph versions)
-    create_agent_args["tool_choice_transition"] = True
-    
-    # Create the agent
-    agent = create_react_agent(**create_agent_args)
-    
-    # Add runnable config to enhance visualization
-    if use_tracing and hasattr(agent, "with_config"):
         agent = agent.with_config(runnable_config)
     
     return agent
