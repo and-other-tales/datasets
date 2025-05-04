@@ -925,10 +925,10 @@ import langsmith
 from langchain_core.tracers import ConsoleCallbackHandler
 
 # Set up LangSmith for tracing
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_ENDPOINT"] = os.environ.get("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
-os.environ["LANGCHAIN_API_KEY"] = os.environ.get("LANGCHAIN_API_KEY", "")
-os.environ["LANGCHAIN_PROJECT"] = os.environ.get("LANGCHAIN_PROJECT", "dataset-creator-agent")
+os.environ["LANGSMITH_TRACING"] = "true"  # Changed from LANGCHAIN_TRACING
+os.environ["LANGSMITH_ENDPOINT"] = os.environ.get("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+os.environ["LANGSMITH_API_KEY"] = os.environ.get("LANGSMITH_API_KEY", "")
+os.environ["LANGSMITH_PROJECT"] = os.environ.get("LANGSMITH_PROJECT", "datasets")  # Changed from LANGCHAIN_PROJECT
 
 # Create the LLM with tracing
 llm = get_llm(callbacks=[ConsoleCallbackHandler()])
