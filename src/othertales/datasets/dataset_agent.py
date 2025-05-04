@@ -1128,7 +1128,22 @@ def create_app():
         try:
             body = await request.json()
             response = await agent.ainvoke(body)
-            return JSONResponse(content=response)
+            
+            # Convert AIMessage objects to dict
+            if hasattr(response, "content"):
+                serialized_response = {
+                    "content": response.content,
+                    "type": "ai_message",
+                    "additional_kwargs": getattr(response, "additional_kwargs", {})
+                }
+            else:
+                serialized_response = {
+                    "content": str(response),
+                    "type": "text"
+                }
+            
+            return JSONResponse(content=serialized_response)
+            
         except Exception as e:
             return JSONResponse(
                 status_code=500,
