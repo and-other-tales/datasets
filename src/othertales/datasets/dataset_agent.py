@@ -1431,7 +1431,7 @@ async def test_thread_tracking(thread_id=None):
     return {
         "thread_id": thread_id,
         "results": results,
-        "success_rate": len([r for r in results if r["success"]]) / len(results) if results else 0,
+        "success_rate": len([r for r in results if r["success"]]) / len(results if results else 0),
         "timestamp": datetime.datetime.now().isoformat()
     }
 
@@ -2372,3 +2372,10 @@ def create_app():
             )
     
     return app
+
+def _is_node_graph(spec):
+    """Check if the given spec is a node graph."""
+    if spec is None:
+        return False
+    file_path = spec.split(":")[0]
+    return file_path.endswith(".py")
