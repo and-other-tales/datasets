@@ -1086,6 +1086,17 @@ def build_graph(include_tracing=True):
     
     return graph
 
+def app(config):
+    """LangGraph app factory function."""
+    # Create FastAPI application
+    fastapi_app = create_app()
+    
+    # Create ASGI app instance
+    async def asgi_app(scope, receive, send):
+        await fastapi_app(scope, receive, send)
+    
+    return asgi_app
+
 def create_app():
     """Create FastAPI application."""
     app = FastAPI()
@@ -1131,7 +1142,3 @@ def create_app():
             )
     
     return app
-
-def app(config):
-    """LangGraph app factory function."""
-    return create_app()
