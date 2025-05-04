@@ -2,8 +2,8 @@
   "dependencies": ["."],
   "graphs": {
     "dataset_agent": {
-      "entrypoint": "./src/othertales/datasets/dataset_agent.py:build_graph",
-      "type": "state_graph"
+      "entrypoint": "src.othertales.datasets.dataset_agent:app",
+      "type": "fastapi"
     }
   },
   "http": {
