@@ -2033,7 +2033,7 @@ def create_app():
                 status_code=422,
                 content={"error": str(e)}
             )
-    
+        
     @app.post("/threads/search")
     async def search_threads(request: Request):
         """Search threads based on criteria."""
@@ -2370,7 +2370,7 @@ def create_app():
                 status_code=422,
                 content={"error": str(e)}
             )
-    
+
     return app
 
 def _is_node_graph(spec):
