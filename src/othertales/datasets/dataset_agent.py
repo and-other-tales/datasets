@@ -922,16 +922,33 @@ tools = [
 import os
 from langsmith import traceable
 import langsmith
-from langchain_core.tracers import ConsoleCallbackHandler
+from langchain_core.tracers import ConsoleCallbackHandler, LangChainTracer
 
-# Set up LangSmith for tracing
-os.environ["LANGSMITH_TRACING"] = "true"  # Changed from LANGCHAIN_TRACING
-os.environ["LANGSMITH_ENDPOINT"] = os.environ.get("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
-os.environ["LANGSMITH_API_KEY"] = os.environ.get("LANGSMITH_API_KEY", "")
-os.environ["LANGSMITH_PROJECT"] = os.environ.get("LANGSMITH_PROJECT", "datasets")  # Changed from LANGCHAIN_PROJECT
+# Create callback handlers for tracing
+callbacks = [ConsoleCallbackHandler()]
+
+# Set up LangSmith for tracing if API key is available
+if os.environ.get("LANGSMITH_API_KEY"):
+    # Ensure environment variables are set correctly
+    os.environ["LANGSMITH_TRACING_V2"] = "true"  # Use V2 tracing protocol
+    os.environ["LANGSMITH_ENDPOINT"] = os.environ.get("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+    os.environ["LANGSMITH_PROJECT"] = os.environ.get("LANGSMITH_PROJECT", "datasets")
+    
+    try:
+        # Create and configure a LangChain tracer
+        langsmith_tracer = LangChainTracer(
+            project_name=os.environ.get("LANGSMITH_PROJECT", "datasets"),
+            example_id=None,
+        )
+        callbacks.append(langsmith_tracer)
+        print("LangSmith tracing enabled successfully")
+    except Exception as e:
+        print(f"Error initializing LangSmith tracing: {str(e)}")
+else:
+    print("LangSmith API key not found. Tracing disabled.")
 
 # Create the LLM with tracing
-llm = get_llm(callbacks=[ConsoleCallbackHandler()])
+llm = get_llm(callbacks=callbacks)
 
 # Setup PostgreSQL connection if available
 def setup_postgres_connection():
@@ -1038,18 +1055,45 @@ def build_agent(use_postgres=False, use_tracing=True):
     
     return agent
 
-# Apply tracing to node functions
-@traceable()
+# Apply tracing to node functions with better serialization handling
+@traceable(name="crawl_url_node")
 def traced_crawl_url_node(state, config):
-    return crawl_url_node(state, config)
+    """Traceable wrapper for crawl_url_node with proper serialization."""
+    try:
+        return crawl_url_node(state, config)
+    except Exception as e:
+        print(f"Error in crawl_url_node: {str(e)}")
+        # Return a safe fallback state on error
+        return {
+            **state,
+            "messages": state.get("messages", []) + [("ai", f"Error crawling URL: {str(e)}")]
+        }
 
-@traceable()
+@traceable(name="create_dataset_node")
 def traced_create_dataset_node(state, config):
-    return create_dataset_node(state, config)
+    """Traceable wrapper for create_dataset_node with proper serialization."""
+    try:
+        return create_dataset_node(state, config)
+    except Exception as e:
+        print(f"Error in create_dataset_node: {str(e)}")
+        # Return a safe fallback state on error
+        return {
+            **state,
+            "messages": state.get("messages", []) + [("ai", f"Error creating dataset: {str(e)}")]
+        }
 
-@traceable()
+@traceable(name="verify_dataset_node") 
 def traced_verify_dataset_node(state, config):
-    return verify_dataset_node(state, config)
+    """Traceable wrapper for verify_dataset_node with proper serialization."""
+    try:
+        return verify_dataset_node(state, config)
+    except Exception as e:
+        print(f"Error in verify_dataset_node: {str(e)}")
+        # Return a safe fallback state on error
+        return {
+            **state,
+            "messages": state.get("messages", []) + [("ai", f"Error verifying dataset: {str(e)}")]
+        }
 
 # Build the graph explicitly (optional, can use the prebuilt agent instead)
 def build_graph(include_tracing=True):
@@ -1081,8 +1125,21 @@ def build_graph(include_tracing=True):
     # Set entry point
     builder.set_entry_point(llm_node_name)
     
-    # Compile the graph
-    graph = builder.compile()
+    # Compile the graph with proper tracing configuration
+    compile_config = {}
+    
+    if include_tracing:
+        compile_config = {
+            "tags": ["dataset-agent", "langgraph"],
+            "metadata": {
+                "agent_type": "dataset-creator",
+                "version": "1.0.0",
+                "description": "Dataset Creator Agent with LangGraph"
+            }
+        }
+    
+    # Compile the graph with configuration
+    graph = builder.compile(config=compile_config)
     
     return graph
 
@@ -1138,19 +1195,42 @@ def create_app():
             
             response = await agent.ainvoke(body)
             
-            # Handle different response types
+            # Better handling of different response types for LangSmith compatibility
             if hasattr(response, "content"):
                 serialized_response = {
                     "content": response.content,
                     "type": "ai_message",
                     "additional_kwargs": getattr(response, "additional_kwargs", {})
                 }
+            elif isinstance(response, dict) and "messages" in response:
+                # Handle LangGraph state dictionary with messages
+                messages = response.get("messages", [])
+                if messages and len(messages) > 0:
+                    last_message = messages[-1]
+                    if isinstance(last_message, tuple) and len(last_message) >= 2:
+                        serialized_response = {
+                            "content": str(last_message[1]),
+                            "type": "message",
+                            "role": str(last_message[0])
+                        }
+                    else:
+                        serialized_response = {
+                            "content": str(messages),
+                            "type": "messages"
+                        }
+                else:
+                    serialized_response = {
+                        "content": str(response),
+                        "type": "state"
+                    }
             elif isinstance(response, (list, tuple)):
+                # Ensure all elements are properly stringified for JSON
                 serialized_response = {
                     "content": [str(r) for r in response],
                     "type": "list"
                 }
             else:
+                # Default case - convert to string to ensure serialization works
                 serialized_response = {
                     "content": str(response),
                     "type": "text"
