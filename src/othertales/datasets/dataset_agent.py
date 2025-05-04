@@ -1127,14 +1127,28 @@ def create_app():
         """Handle assistant requests."""
         try:
             body = await request.json()
+            
+            # Ensure messages is a list if present
+            if "messages" in body and not isinstance(body["messages"], list):
+                body["messages"] = [body["messages"]]
+                
+            # If no messages key, wrap the entire body
+            if "messages" not in body:
+                body = {"messages": [body]}
+            
             response = await agent.ainvoke(body)
             
-            # Convert AIMessage objects to dict
+            # Handle different response types
             if hasattr(response, "content"):
                 serialized_response = {
                     "content": response.content,
                     "type": "ai_message",
                     "additional_kwargs": getattr(response, "additional_kwargs", {})
+                }
+            elif isinstance(response, (list, tuple)):
+                serialized_response = {
+                    "content": [str(r) for r in response],
+                    "type": "list"
                 }
             else:
                 serialized_response = {
