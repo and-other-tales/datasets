@@ -140,6 +140,10 @@ class AgentState(TypedDict):
     crawled_urls: Optional[List[Dict[str, Any]]]
     dataset_info: Optional[Dict[str, Any]]
     temp_file_path: Optional[str]
+    # Add metadata fields for LangSmith thread tracking
+    thread_id: Optional[str]
+    session_id: Optional[str]
+    metadata: Optional[Dict[str, Any]]
 
 def replace_svg(html: str, new_content: str = "this is a placeholder") -> str:
     """Replace SVG content with placeholder text."""
@@ -954,6 +958,19 @@ if os.environ.get("LANGSMITH_API_KEY"):
         )
         callbacks.append(langsmith_tracer)
         print("LangSmith tracing enabled successfully")
+        
+        # Register default LangSmith callbacks globally
+        from langchain_core.tracers.langsmith import LangSmithCallbackHandler
+        from langchain.callbacks.manager import CallbackManager
+        
+        # This helps ensure we have consistent thread tracking
+        global_langsmith_handler = LangSmithCallbackHandler(
+            project_name=os.environ.get("LANGSMITH_PROJECT", "datasets"),
+        )
+        from langchain.globals import set_handler
+        set_handler(global_langsmith_handler)
+        
+        print("Global LangSmith handler registered for thread tracking")
     except Exception as e:
         print(f"Error initializing LangSmith tracing: {str(e)}")
 else:
@@ -961,6 +978,26 @@ else:
 
 # Create the LLM with tracing
 llm = get_llm(callbacks=callbacks)
+
+# Create a metadata-aware LLM wrapper for thread tracking
+def get_thread_aware_llm(thread_id=None):
+    """Get a thread-aware LLM with proper LangSmith metadata."""
+    if not thread_id:
+        return llm
+        
+    # Configure metadata with thread_id for LangSmith
+    metadata = {"thread_id": thread_id}
+    
+    # Create a thread-aware LLM wrapper
+    from langchain_core.runnables import RunnableConfig
+    config = RunnableConfig(
+        tags=["dataset-agent", "thread-enabled"],
+        metadata=metadata
+    )
+    
+    # Create thread-aware wrapped LLM
+    thread_llm = llm.with_config(config)
+    return thread_llm
 
 # Setup PostgreSQL connection if available
 def setup_postgres_connection():
@@ -1004,8 +1041,14 @@ def setup_postgres_connection():
         return None
 
 # Create the agent using LangGraph
-def build_agent(use_postgres=False, use_tracing=True):
-    """Build the dataset creation agent."""
+def build_agent(use_postgres=False, use_tracing=True, thread_id=None):
+    """Build the dataset creation agent with thread support.
+    
+    Args:
+        use_postgres: Whether to use PostgreSQL for persistence
+        use_tracing: Whether to enable tracing
+        thread_id: Optional thread ID for LangSmith thread tracking
+    """
     # Custom system prompt
     system_prompt = """
     You are a specialized Dataset Creator Agent for generating HuggingFace datasets from web content. 
@@ -1055,8 +1098,11 @@ def build_agent(use_postgres=False, use_tracing=True):
         MessagesPlaceholder(variable_name="messages"),
     ])
     
+    # Get appropriate LLM - thread-aware if thread_id is provided
+    model = get_thread_aware_llm(thread_id) if thread_id else llm
+    
     create_agent_args = {
-        "model": llm,
+        "model": model,
         "tools": tools,
         "prompt": prompt,
     }
@@ -1072,17 +1118,25 @@ def build_agent(use_postgres=False, use_tracing=True):
         
         # Configure tracing if enabled
         if use_tracing and hasattr(agent, "with_config"):
+            # Add thread tracking metadata for LangSmith if available
+            metadata = {
+                "agent_type": "dataset-creator",
+                "version": "1.0.0",
+                "description": "Dataset Creator Agent with LangGraph",
+            }
+            
+            # Add thread metadata for LangSmith if available
+            if thread_id:
+                metadata["thread_id"] = thread_id
+                metadata["session_id"] = thread_id  # LangSmith supports session_id as well
+            
             runnable_config = {
                 "tags": ["dataset-agent", "langgraph", "react-agent"],
-                "metadata": {
-                    "agent_type": "dataset-creator",
-                    "version": "1.0.0",
-                    "description": "Dataset Creator Agent with LangGraph",
-                }
+                "metadata": metadata
             }
             agent = agent.with_config(runnable_config)
             
-        print("Created agent with newer LangGraph API")
+        print(f"Created agent with newer LangGraph API{' (thread-enabled)' if thread_id else ''}")
         
     except Exception as e:
         print(f"Error creating agent with newer API: {str(e)}")
@@ -1094,7 +1148,7 @@ def build_agent(use_postgres=False, use_tracing=True):
         
         try:
             agent = create_react_agent(**create_agent_args)
-            print("Created agent with legacy LangGraph API")
+            print(f"Created agent with legacy LangGraph API{' (thread-enabled)' if thread_id else ''}")
         except Exception as e2:
             print(f"Failed to create agent with legacy API as well: {str(e2)}")
             raise
@@ -1142,8 +1196,14 @@ def traced_verify_dataset_node(state, config):
         }
 
 # Build the graph explicitly (optional, can use the prebuilt agent instead)
-def build_graph(include_tracing=True, use_postgres=False):
-    """Build an explicit LangGraph for the dataset creator agent."""
+def build_graph(include_tracing=True, use_postgres=False, thread_id=None):
+    """Build an explicit LangGraph for the dataset creator agent with thread support.
+    
+    Args:
+        include_tracing: Whether to enable tracing
+        use_postgres: Whether to use PostgreSQL for persistence
+        thread_id: Optional thread ID for LangSmith thread tracking
+    """
     try:
         # Try with new API (LangGraph 0.4+)
         from langgraph.graph import START, END
@@ -1155,16 +1215,19 @@ def build_graph(include_tracing=True, use_postgres=False):
         # Using 'model' as the standard node name for LangGraph 0.4+
         llm_node_name = "model"
         
+        # Get thread-aware LLM if thread_id is provided
+        model = get_thread_aware_llm(thread_id) if thread_id else llm
+        
         if include_tracing:
             builder.add_node("crawl_url", traced_crawl_url_node)
             builder.add_node("create_dataset", traced_create_dataset_node)
             builder.add_node("verify_dataset", traced_verify_dataset_node)
-            builder.add_node(llm_node_name, llm)
+            builder.add_node(llm_node_name, model)
         else:
             builder.add_node("crawl_url", crawl_url_node)
             builder.add_node("create_dataset", create_dataset_node)
             builder.add_node("verify_dataset", verify_dataset_node)
-            builder.add_node(llm_node_name, llm)
+            builder.add_node(llm_node_name, model)
         
         # Add edges with consistent node naming
         builder.add_edge(START, llm_node_name)
@@ -1187,19 +1250,27 @@ def build_graph(include_tracing=True, use_postgres=False):
         
         # Add config with tracing information
         if include_tracing:
+            # Prepare metadata with thread information if available
+            metadata = {
+                "agent_type": "dataset-creator",
+                "version": "1.0.0",
+                "description": "Dataset Creator Agent with LangGraph"
+            }
+            
+            # Add thread metadata for LangSmith if available
+            if thread_id:
+                metadata["thread_id"] = thread_id
+                metadata["session_id"] = thread_id  # LangSmith supports session_id as well
+                
             compile_options["config"] = {
                 "tags": ["dataset-agent", "langgraph"],
-                "metadata": {
-                    "agent_type": "dataset-creator",
-                    "version": "1.0.0",
-                    "description": "Dataset Creator Agent with LangGraph"
-                }
+                "metadata": metadata
             }
         
         # Compile the graph with configuration
         graph = builder.compile(**compile_options)
         
-        print("Built graph with new LangGraph 0.4+ API")
+        print(f"Built graph with new LangGraph 0.4+ API{' (thread-enabled)' if thread_id else ''}")
         return graph
         
     except (ImportError, Exception) as e:
@@ -1213,16 +1284,19 @@ def build_graph(include_tracing=True, use_postgres=False):
             # Add nodes with or without tracing
             llm_node_name = "agent"  # Using 'agent' as the standard node name for older versions
             
+            # Get thread-aware LLM if thread_id is provided
+            model = get_thread_aware_llm(thread_id) if thread_id else llm
+            
             if include_tracing:
                 builder.add_node("crawl_url", traced_crawl_url_node)
                 builder.add_node("create_dataset", traced_create_dataset_node)
                 builder.add_node("verify_dataset", traced_verify_dataset_node)
-                builder.add_node(llm_node_name, llm)
+                builder.add_node(llm_node_name, model)
             else:
                 builder.add_node("crawl_url", crawl_url_node)
                 builder.add_node("create_dataset", create_dataset_node)
                 builder.add_node("verify_dataset", verify_dataset_node)
-                builder.add_node(llm_node_name, llm)
+                builder.add_node(llm_node_name, model)
             
             # Add edges with consistent node naming
             builder.add_edge(llm_node_name, "crawl_url")
@@ -1244,19 +1318,27 @@ def build_graph(include_tracing=True, use_postgres=False):
             
             # Add config with tracing information
             if include_tracing:
+                # Prepare metadata with thread information if available
+                metadata = {
+                    "agent_type": "dataset-creator",
+                    "version": "1.0.0",
+                    "description": "Dataset Creator Agent with LangGraph"
+                }
+                
+                # Add thread metadata for LangSmith if available
+                if thread_id:
+                    metadata["thread_id"] = thread_id
+                    metadata["session_id"] = thread_id  # LangSmith supports session_id as well
+                    
                 compile_options["config"] = {
                     "tags": ["dataset-agent", "langgraph"],
-                    "metadata": {
-                        "agent_type": "dataset-creator",
-                        "version": "1.0.0",
-                        "description": "Dataset Creator Agent with LangGraph"
-                    }
+                    "metadata": metadata
                 }
             
             # Compile the graph with configuration
             graph = builder.compile(**compile_options)
             
-            print("Built graph with legacy LangGraph API")
+            print(f"Built graph with legacy LangGraph API{' (thread-enabled)' if thread_id else ''}")
             return graph
         
         except Exception as e2:
@@ -1267,6 +1349,91 @@ def app(config=None):
     """LangGraph app factory function."""
     # Directly return the FastAPI application
     return create_app()
+
+async def test_thread_tracking(thread_id=None):
+    """Test function to verify thread tracking is working correctly.
+    
+    Args:
+        thread_id: Optional thread ID to test with. If not provided, a new one will be created.
+    
+    Returns:
+        dict: A dictionary containing test results
+    """
+    # Create a thread ID if none provided
+    if not thread_id:
+        thread_id = str(uuid.uuid4())
+        
+    print(f"Testing thread tracking with thread_id: {thread_id}")
+    
+    # Create a thread-aware agent
+    thread_agent = build_agent(use_tracing=True, thread_id=thread_id)
+    
+    # Create a few test inputs to send to the agent
+    test_inputs = [
+        {"messages": [("user", "What can you help me with?")]},
+        {"messages": [("user", "How would I create a dataset from example.com?")]},
+        {"messages": [("user", "Can I export that dataset to HuggingFace?")]}
+    ]
+    
+    # Process each input in sequence, maintaining thread context
+    results = []
+    for i, test_input in enumerate(test_inputs):
+        print(f"Processing test input {i+1}/{len(test_inputs)} in thread {thread_id}")
+        
+        # Add thread context to input
+        test_input["thread_id"] = thread_id
+        test_input["session_id"] = thread_id
+        test_input["metadata"] = {"thread_id": thread_id, "session_id": thread_id}
+        
+        # Create config with thread info
+        config = {
+            "configurable": {"thread_id": thread_id},
+            "metadata": {"thread_id": thread_id, "session_id": thread_id}
+        }
+        
+        # Process the input
+        try:
+            response = await thread_agent.ainvoke(test_input, config)
+            
+            # Extract result text
+            if hasattr(response, "content"):
+                result = response.content
+            elif isinstance(response, dict) and "messages" in response:
+                messages = response.get("messages", [])
+                if messages and len(messages) > 0:
+                    last_message = messages[-1]
+                    if isinstance(last_message, tuple) and len(last_message) >= 2:
+                        result = str(last_message[1])
+                    elif hasattr(last_message, "content"):
+                        result = last_message.content
+                    else:
+                        result = str(messages)
+                else:
+                    result = str(response)
+            else:
+                result = str(response)
+                
+            results.append({
+                "input": test_input["messages"][-1][1],
+                "response": result,
+                "success": True
+            })
+        except Exception as e:
+            results.append({
+                "input": test_input["messages"][-1][1],
+                "error": str(e),
+                "success": False
+            })
+            
+    print(f"Completed thread tracking test for thread: {thread_id}")
+    print(f"Results: {len([r for r in results if r['success']])} successful, {len([r for r in results if not r['success']])} failed")
+    
+    return {
+        "thread_id": thread_id,
+        "results": results,
+        "success_rate": len([r for r in results if r["success"]]) / len(results) if results else 0,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
 
 def create_app():
     """Create FastAPI application."""
@@ -1302,6 +1469,26 @@ def create_app():
     async def startup():
         """Startup probe endpoint."""
         return {"status": "ready"}
+        
+    @app.post("/test-thread-tracking")
+    async def test_langsmith_threads(request: Request):
+        """Test endpoint for verifying LangSmith thread tracking."""
+        try:
+            body = await request.json()
+            thread_id = body.get("thread_id")
+            
+            # Run the test
+            results = await test_thread_tracking(thread_id)
+            
+            return JSONResponse(content=results)
+        except Exception as e:
+            import traceback
+            error_msg = f"Error in thread tracking test: {str(e)}\n{traceback.format_exc()}"
+            print(error_msg)
+            return JSONResponse(
+                status_code=500,
+                content={"error": str(e)}
+            )
         
     @app.post("/assistants/search")
     async def search_assistants(request: Request):
@@ -1358,8 +1545,24 @@ def create_app():
                 content={"error": str(e)}
             )
 
-    # Create the agent once at startup
-    agent = build_agent(use_postgres=False, use_tracing=True)
+    # Agent cache to support thread-based continuations
+    agent_cache = {}
+    
+    # Helper function to get or create an agent with proper thread ID
+    def get_or_create_agent(thread_id=None):
+        """Get or create an agent for the given thread ID."""
+        if not thread_id:
+            # For stateless requests, use the default agent
+            return build_agent(use_postgres=False, use_tracing=True)
+            
+        # For thread-based requests, check cache or create new agent
+        if thread_id not in agent_cache:
+            agent_cache[thread_id] = build_agent(use_postgres=False, use_tracing=True, thread_id=thread_id)
+            
+        return agent_cache[thread_id]
+    
+    # Default agent for backward compatibility
+    default_agent = build_agent(use_postgres=False, use_tracing=True)
     
     @app.post("/assistants/{assistant_id}")
     async def handle_assistant_post(assistant_id: str, request: Request):
@@ -1383,9 +1586,17 @@ def create_app():
                     "pagination": {"limit": limit, "offset": offset}
                 })
             
-            # Ensure proper format for input - handle both "input" and "messages" keys
+            # Get the thread ID for LangSmith tracking
+            thread_id = body.get("thread_id", str(uuid.uuid4()))
+            
+            # Ensure proper format for input - handle both string inputs and structured messages
             input_data = {}
-            if "messages" in body:
+            
+            # Check for direct string input - preferred format for schema compatibility
+            if isinstance(body, str):
+                # Direct string input - simplest case
+                input_data["messages"] = [("user", body)]
+            elif "messages" in body:
                 # Fix message format for LangGraph
                 messages_list = []
                 if isinstance(body["messages"], list):
@@ -1406,13 +1617,32 @@ def create_app():
                     messages_list.append(("user", body["messages"]))
                 
                 input_data["messages"] = messages_list
+            elif "input" in body and isinstance(body["input"], str):
+                # Handle direct input field as string
+                input_data["messages"] = [("user", body["input"])]
             else:
                 # If no messages key, wrap the content as a user message
                 user_content = json.dumps(body) if isinstance(body, dict) else str(body)
                 input_data["messages"] = [("user", user_content)]
             
-            # Add config with checkpoint_id for persistence
-            config = {"configurable": {"thread_id": body.get("thread_id", str(uuid.uuid4()))}}
+            # Add thread_id and session_id to input state for LangSmith tracking
+            input_data["thread_id"] = thread_id
+            input_data["session_id"] = thread_id
+            input_data["metadata"] = {"thread_id": thread_id, "session_id": thread_id}
+            
+            # Prepare config with enhanced metadata for LangSmith
+            config = {
+                "configurable": {
+                    "thread_id": thread_id
+                },
+                "metadata": {
+                    "thread_id": thread_id,
+                    "session_id": thread_id
+                }
+            }
+            
+            # Get or create an agent specific to this thread for continuity
+            agent = get_or_create_agent(thread_id)
             
             # Invoke the agent with properly formatted input
             response = await agent.ainvoke(input_data, config)
@@ -1422,7 +1652,8 @@ def create_app():
                 serialized_response = {
                     "content": response.content,
                     "type": "ai_message",
-                    "additional_kwargs": getattr(response, "additional_kwargs", {})
+                    "additional_kwargs": getattr(response, "additional_kwargs", {}),
+                    "thread_id": thread_id
                 }
             elif isinstance(response, dict) and "messages" in response:
                 # Handle LangGraph state dictionary with messages
@@ -1433,7 +1664,8 @@ def create_app():
                         serialized_response = {
                             "content": str(last_message[1]),
                             "type": "message",
-                            "role": str(last_message[0])
+                            "role": str(last_message[0]),
+                            "thread_id": thread_id
                         }
                     elif hasattr(last_message, "content"):
                         # Handle BaseMessage objects
@@ -1441,29 +1673,34 @@ def create_app():
                             "content": last_message.content,
                             "type": "message",
                             "role": getattr(last_message, "type", "assistant"),
-                            "additional_kwargs": getattr(last_message, "additional_kwargs", {})
+                            "additional_kwargs": getattr(last_message, "additional_kwargs", {}),
+                            "thread_id": thread_id
                         }
                     else:
                         serialized_response = {
                             "content": str(messages),
-                            "type": "messages"
+                            "type": "messages",
+                            "thread_id": thread_id
                         }
                 else:
                     serialized_response = {
                         "content": str(response),
-                        "type": "state"
+                        "type": "state",
+                        "thread_id": thread_id
                     }
             elif isinstance(response, (list, tuple)):
                 # Ensure all elements are properly stringified for JSON
                 serialized_response = {
                     "content": [str(r) for r in response],
-                    "type": "list"
+                    "type": "list",
+                    "thread_id": thread_id
                 }
             else:
                 # Default case - convert to string to ensure serialization works
                 serialized_response = {
                     "content": str(response),
-                    "type": "text"
+                    "type": "text",
+                    "thread_id": thread_id
                 }
             
             return JSONResponse(content=serialized_response)
@@ -1617,12 +1854,12 @@ def create_app():
         # Return an enhanced graph representation with proper connections for visualization
         graph_representation = {
             "nodes": [
-                {"id": "__start__", "type": "start", "display_name": "Start"},
-                {"id": "model", "type": "llm", "display_name": "LLM"},
-                {"id": "crawl_url", "type": "tool", "display_name": "Crawl URL"},
-                {"id": "create_dataset", "type": "tool", "display_name": "Create Dataset"},
-                {"id": "verify_dataset", "type": "tool", "display_name": "Verify Dataset"},
-                {"id": "__end__", "type": "end", "display_name": "End"}
+                {"id": "__start__", "type": "start", "display_name": "Start", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
+                {"id": "model", "type": "llm", "display_name": "LLM", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
+                {"id": "crawl_url", "type": "tool", "display_name": "Crawl URL", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
+                {"id": "create_dataset", "type": "tool", "display_name": "Create Dataset", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
+                {"id": "verify_dataset", "type": "tool", "display_name": "Verify Dataset", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
+                {"id": "__end__", "type": "end", "display_name": "End", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}}
             ],
             "edges": [
                 {"from": "__start__", "to": "model", "label": "start"},
@@ -1639,7 +1876,11 @@ def create_app():
                 "end": {"color": "#ffccbc", "shape": "circle"}
             },
             "layout": "directed",
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "graph_schema": {
+                "input_schema": {"type": "string"},
+                "output_schema": {"type": "string"}
+            }
         }
         
         return JSONResponse(content=graph_representation)
@@ -1657,46 +1898,8 @@ def create_app():
         schema = {
             "graph_id": "dataset_creator",
             "input_schema": {
-                "type": "object",
-                "properties": {
-                    "messages": {
-                        "oneOf": [
-                            {
-                                "type": "array",
-                                "items": {
-                                    "oneOf": [
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "role": {"type": "string"},
-                                                "content": {"type": "string"}
-                                            },
-                                            "required": ["role", "content"]
-                                        },
-                                        {
-                                            "type": "array",
-                                            "items": {"type": "string"},
-                                            "minItems": 2,
-                                            "maxItems": 2
-                                        },
-                                        {
-                                            "type": "string"
-                                        }
-                                    ]
-                                }
-                            },
-                            {
-                                "type": "object",
-                                "properties": {
-                                    "text": {"type": "string"}
-                                }
-                            },
-                            {
-                                "type": "string"
-                            }
-                        ]
-                    }
-                }
+                "type": "string",
+                "description": "The user's message as a text string"
             },
             "output_schema": {
                 "type": "object",
@@ -1713,7 +1916,36 @@ def create_app():
                     "messages": {"type": "array"},
                     "crawled_urls": {"type": "array"},
                     "dataset_info": {"type": "object"},
-                    "temp_file_path": {"type": "string"}
+                    "temp_file_path": {"type": "string"},
+                    "thread_id": {"type": "string"},
+                    "session_id": {"type": "string"},
+                    "metadata": {"type": "object"}
+                }
+            },
+            "node_schemas": {
+                "__start__": {
+                    "input_schema": {"type": "string"},
+                    "output_schema": {"type": "string"}
+                },
+                "model": {
+                    "input_schema": {"type": "string"},
+                    "output_schema": {"type": "string"}
+                },
+                "crawl_url": {
+                    "input_schema": {"type": "string"},
+                    "output_schema": {"type": "string"}
+                },
+                "create_dataset": {
+                    "input_schema": {"type": "string"},
+                    "output_schema": {"type": "string"}
+                },
+                "verify_dataset": {
+                    "input_schema": {"type": "string"},
+                    "output_schema": {"type": "string"}
+                },
+                "__end__": {
+                    "input_schema": {"type": "string"},
+                    "output_schema": {"type": "string"}
                 }
             },
             "config_schema": {
@@ -1751,6 +1983,12 @@ def create_app():
             # Extract metadata or use empty dict
             metadata = body.get("metadata", {})
             
+            # Ensure the metadata has the necessary fields for LangSmith thread tracking
+            if "thread_id" not in metadata:
+                metadata["thread_id"] = thread_id
+            if "session_id" not in metadata:
+                metadata["session_id"] = thread_id
+                
             # Create thread response object
             thread = {
                 "thread_id": thread_id,
@@ -1760,6 +1998,34 @@ def create_app():
                 "status": "idle",
                 "values": {}
             }
+            
+            # Create a thread-specific agent for this thread_id
+            if thread_id not in agent_cache:
+                agent_cache[thread_id] = build_agent(use_postgres=False, use_tracing=True, thread_id=thread_id)
+                print(f"Created new thread-specific agent for thread: {thread_id}")
+            
+            # Register the thread with LangSmith if LangSmith tracing is enabled
+            if os.environ.get("LANGSMITH_API_KEY"):
+                try:
+                    import langsmith
+                    from langsmith.client import Client
+                    
+                    client = Client()
+                    
+                    # Create a run in this thread to register it with LangSmith
+                    langsmith_metadata = {
+                        "thread_id": thread_id,
+                        "session_id": thread_id,
+                        "chat_initialized": True,
+                        "agent_type": "dataset-creator"
+                    }
+                    
+                    # Update our thread object with LangSmith-specific fields
+                    thread["langsmith_metadata"] = langsmith_metadata
+                    
+                    print(f"Registered thread {thread_id} with LangSmith")
+                except Exception as e:
+                    print(f"Error registering thread with LangSmith: {str(e)}")
             
             return JSONResponse(content=thread)
         except Exception as e:
@@ -1830,6 +2096,45 @@ def create_app():
             run_id = str(uuid.uuid4())
             created_at = datetime.datetime.now().isoformat()
             
+            # Extract metadata from body or create empty dict
+            metadata = body.get("metadata", {})
+            
+            # Ensure the metadata has the necessary fields for LangSmith thread tracking
+            if "thread_id" not in metadata:
+                metadata["thread_id"] = thread_id
+            if "session_id" not in metadata:
+                metadata["session_id"] = thread_id
+            
+            # Create or get thread-specific agent for this thread_id
+            if thread_id not in agent_cache:
+                agent_cache[thread_id] = build_agent(use_postgres=False, use_tracing=True, thread_id=thread_id)
+                print(f"Created new thread-specific agent for thread: {thread_id}")
+                
+            # Register the run with LangSmith if LangSmith tracing is enabled
+            langsmith_run_id = None
+            if os.environ.get("LANGSMITH_API_KEY"):
+                try:
+                    import langsmith
+                    from langsmith.client import Client
+                    
+                    client = Client()
+                    
+                    # Add LangSmith tracking metadata
+                    langsmith_metadata = {
+                        "thread_id": thread_id,
+                        "session_id": thread_id,
+                        "run_id": run_id,
+                        "assistant_id": assistant_id,
+                        "agent_type": "dataset-creator"
+                    }
+                    
+                    # Add LangSmith run info to metadata
+                    metadata.update(langsmith_metadata)
+                    
+                    print(f"Added LangSmith tracking for run {run_id} in thread {thread_id}")
+                except Exception as e:
+                    print(f"Error adding LangSmith tracking: {str(e)}")
+            
             # Create run response
             run = {
                 "run_id": run_id,
@@ -1838,10 +2143,14 @@ def create_app():
                 "created_at": created_at,
                 "updated_at": created_at,
                 "status": "pending",
-                "metadata": body.get("metadata", {}),
+                "metadata": metadata,
                 "kwargs": {},
                 "multitask_strategy": body.get("multitask_strategy", "reject")
             }
+            
+            # If LangSmith run was created, add it to the response
+            if langsmith_run_id:
+                run["langsmith_run_id"] = langsmith_run_id
             
             return JSONResponse(content=run)
         except Exception as e:
@@ -1867,13 +2176,28 @@ def create_app():
             # Process the input using our agent
             input_data = body.get("input", {})
             
-            # Format input for the agent
+            # Format input for the agent - prioritize string input for schema compatibility
             if isinstance(input_data, str):
-                formatted_input = {"messages": [{"role": "user", "content": input_data}]}
+                # Direct string input - preferred format for schema compatibility
+                formatted_input = {"messages": [("user", input_data)]}
             elif isinstance(input_data, dict) and "messages" in input_data:
-                formatted_input = input_data
+                # Process structured messages
+                if isinstance(input_data["messages"], list):
+                    messages_list = []
+                    for msg in input_data["messages"]:
+                        if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                            messages_list.append((msg["role"], msg["content"]))
+                        elif isinstance(msg, str):
+                            messages_list.append(("user", msg))
+                    formatted_input = {"messages": messages_list}
+                elif isinstance(input_data["messages"], str):
+                    formatted_input = {"messages": [("user", input_data["messages"])]}
+                else:
+                    formatted_input = input_data
             else:
-                formatted_input = {"messages": [{"role": "user", "content": json.dumps(input_data)}]}
+                # Default case - convert to string
+                user_content = json.dumps(input_data) if isinstance(input_data, dict) else str(input_data)
+                formatted_input = {"messages": [("user", user_content)]}
             
             # Process through agent
             response = await agent.ainvoke(formatted_input)
@@ -1959,16 +2283,58 @@ def create_app():
             # Process the input using our agent
             input_data = body.get("input", {})
             
-            # Format input for the agent
-            if isinstance(input_data, str):
-                formatted_input = {"messages": [{"role": "user", "content": input_data}]}
-            elif isinstance(input_data, dict) and "messages" in input_data:
-                formatted_input = input_data
-            else:
-                formatted_input = {"messages": [{"role": "user", "content": json.dumps(input_data)}]}
+            # Get thread_id if available for LangSmith tracking
+            thread_id = body.get("thread_id")
             
-            # Process through agent
-            response = await agent.ainvoke(formatted_input)
+            # Format input for the agent - prioritize string input for schema compatibility
+            if isinstance(input_data, str):
+                # Direct string input - preferred format for schema compatibility
+                formatted_input = {"messages": [("user", input_data)]}
+            elif isinstance(input_data, dict) and "messages" in input_data:
+                # Process structured messages
+                if isinstance(input_data["messages"], list):
+                    messages_list = []
+                    for msg in input_data["messages"]:
+                        if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                            messages_list.append((msg["role"], msg["content"]))
+                        elif isinstance(msg, str):
+                            messages_list.append(("user", msg))
+                    formatted_input = {"messages": messages_list}
+                elif isinstance(input_data["messages"], str):
+                    formatted_input = {"messages": [("user", input_data["messages"])]}
+                else:
+                    formatted_input = input_data
+            else:
+                # Default case - convert to string
+                user_content = json.dumps(input_data) if isinstance(input_data, dict) else str(input_data)
+                formatted_input = {"messages": [("user", user_content)]}
+            
+            # Add thread tracking metadata if available
+            if thread_id:
+                formatted_input["thread_id"] = thread_id
+                formatted_input["session_id"] = thread_id
+                formatted_input["metadata"] = {
+                    "thread_id": thread_id,
+                    "session_id": thread_id
+                }
+                
+                # Create config with thread tracking info
+                config = {
+                    "configurable": {"thread_id": thread_id},
+                    "metadata": {
+                        "thread_id": thread_id,
+                        "session_id": thread_id
+                    }
+                }
+                
+                # Get thread-specific agent
+                thread_agent = get_or_create_agent(thread_id)
+                
+                # Process through thread-aware agent
+                response = await thread_agent.ainvoke(formatted_input, config)
+            else:
+                # Process through default agent for stateless requests
+                response = await default_agent.ainvoke(formatted_input)
             
             # Process the response
             if hasattr(response, "content"):
@@ -1988,16 +2354,20 @@ def create_app():
             else:
                 result = str(response)
             
+            # Add thread_id to result if available
+            if thread_id:
+                if isinstance(result, dict):
+                    result["thread_id"] = thread_id
+                else:
+                    result = {
+                        "content": result,
+                        "thread_id": thread_id
+                    }
+            
             return JSONResponse(content=result)
         except Exception as e:
             return JSONResponse(
                 status_code=422,
-                content={"error": str(e)}
-            )
-            
-        except Exception as e:
-            return JSONResponse(
-                status_code=500,
                 content={"error": str(e)}
             )
     
