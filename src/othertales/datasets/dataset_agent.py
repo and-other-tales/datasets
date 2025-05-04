@@ -1005,31 +1005,29 @@ def build_agent(use_postgres=False, use_tracing=True):
     # Initialize the checkpointer if PostgreSQL is available
     checkpointer = setup_postgres_connection() if use_postgres else None
     
-    # Create the agent arguments
+    # Create the agent arguments - removed tool_choice_transition
     create_agent_args = {
-        "model": llm,
+        "llm": llm,  # Changed from "model" to "llm"
         "tools": tools,
-        "prompt": system_prompt,
-        "checkpointer": checkpointer,
+        "system_message": system_prompt,  # Changed from "prompt" to "system_message"
     }
     
-    # Add tool_choice_transition if available
-    create_agent_args["tool_choice_transition"] = True
+    # Add checkpointer if available
+    if checkpointer:
+        create_agent_args["checkpointer"] = checkpointer
     
     # Create the agent
     agent = create_react_agent(**create_agent_args)
     
     # Configure tracing if enabled
     if use_tracing and hasattr(agent, "with_config"):
-        # Add metadata for visualization
         runnable_config = {
             "tags": ["dataset-agent", "langgraph", "react-agent"],
             "metadata": {
                 "agent_type": "dataset-creator",
                 "version": "1.0.0",
                 "description": "Dataset Creator Agent with LangGraph",
-            },
-            "callbacks": [ConsoleCallbackHandler()]
+            }
         }
         agent = agent.with_config(runnable_config)
     
@@ -1092,6 +1090,9 @@ def create_app():
     """Create FastAPI application with health check endpoint."""
     app = FastAPI()
     
+    # Create agent once at startup
+    agent = build_agent(use_postgres=False, use_tracing=True)
+    
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -1105,92 +1106,37 @@ def create_app():
     async def healthz():
         """Health check endpoint for Cloud Run."""
         return {"status": "healthy"}
-        
-    @app.get("/startup")
-    async def startup():
-        """Startup probe endpoint for Cloud Run."""
-        # Check essential dependencies and connections
-        health_status = {"status": "healthy", "checks": {}}
-        
-        # Check PostgreSQL connection if enabled
-        if POSTGRES_AVAILABLE and os.environ.get("POSTGRES_URI"):
-            try:
-                # Attempt to create a connection to test connectivity
-                pool = ConnectionPool(
-                    conninfo=os.environ.get("POSTGRES_URI"),
-                    max_size=1,
-                    kwargs={"autocommit": True}
-                )
-                with pool.connection() as conn:
-                    with conn.cursor() as cur:
-                        cur.execute("SELECT 1")
-                        conn.commit()
-                health_status["checks"]["database"] = "connected"
-            except Exception as e:
-                health_status["checks"]["database"] = f"error: {str(e)}"
-                health_status["status"] = "unhealthy"
-        else:
-            health_status["checks"]["database"] = "not configured"
-        
-        # Check LLM connectivity
-        try:
-            # Simple check to see if LLM provider is configured
-            provider = os.environ.get("LLM_PROVIDER", "").lower()
-            if provider in ["bedrock", "openai", "anthropic"]:
-                health_status["checks"]["llm_provider"] = f"{provider} configured"
-            else:
-                health_status["checks"]["llm_provider"] = "not configured or unknown"
-                health_status["status"] = "unhealthy"
-        except Exception as e:
-            health_status["checks"]["llm_provider"] = f"error: {str(e)}"
-            health_status["status"] = "unhealthy"
-        
-        # Check LangGraph compatibility
-        try:
-            # Check if create_react_agent accepts the correct parameters
-            import inspect
-            from langgraph.prebuilt import create_react_agent
-            
-            create_agent_sig = inspect.signature(create_react_agent)
-            if "model" in create_agent_sig.parameters:
-                health_status["checks"]["langgraph_compatibility"] = "compatible (uses model parameter)"
-            elif "llm" in create_agent_sig.parameters:
-                health_status["checks"]["langgraph_compatibility"] = "compatible (uses llm parameter)"
-            else:
-                health_status["checks"]["langgraph_compatibility"] = "potentially incompatible"
-                health_status["status"] = "unhealthy"
-        except Exception as e:
-            health_status["checks"]["langgraph_compatibility"] = f"error: {str(e)}"
-            health_status["status"] = "unhealthy"
-        
-        # Return 200 for healthy, 503 for unhealthy
-        if health_status["status"] == "healthy":
-            return health_status
-        else:
-            return JSONResponse(content=health_status, status_code=503)
     
     @app.get("/")
     async def root():
         """Root endpoint for Cloud Run health checks."""
         return {"status": "healthy"}
     
+    @app.get("/info")
+    async def info():
+        """Info endpoint."""
+        return {
+            "status": "running",
+            "version": "1.0.0",
+            "endpoints": ["/", "/healthz", "/startup", "/agent"],
+            "agent_type": "dataset-creator"
+        }
+    
+    @app.post("/agent")
+    async def handle_agent(request: Request):
+        """Handle agent requests."""
+        try:
+            body = await request.json()
+            messages = body.get("messages", [])
+            return await agent.ainvoke({"messages": messages})
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"error": str(e)}
+            )
+    
     return app
 
 def app(config):
     """LangGraph app factory function that takes a RunnableConfig."""
-    fastapi_app = create_app()
-    agent = build_agent(use_postgres=False, use_tracing=True)
-    
-    @fastapi_app.post("/agent")
-    async def handle_agent(request: Request):
-        """Handle agent requests."""
-        body = await request.json()
-        messages = body.get("messages", [])
-        return agent.invoke({"messages": messages}, config=config)
-    
-    # Add server configuration
-    if __name__ == "__main__":
-        port = int(os.environ.get("PORT", 2024))
-        uvicorn.run(fastapi_app, host="0.0.0.0", port=port)
-    
-    return fastapi_app
+    return create_app()
