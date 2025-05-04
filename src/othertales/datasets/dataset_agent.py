@@ -1091,11 +1091,13 @@ def app(config):
     # Create FastAPI application
     fastapi_app = create_app()
     
-    # Create ASGI app instance
-    async def asgi_app(scope, receive, send):
-        await fastapi_app(scope, receive, send)
+    # Create proper ASGI app wrapper
+    @fastapi_app.middleware("http")
+    async def dispatch_middleware(request, call_next):
+        response = await call_next(request)
+        return response
     
-    return asgi_app
+    return fastapi_app
 
 def create_app():
     """Create FastAPI application."""
