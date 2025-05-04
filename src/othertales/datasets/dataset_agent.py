@@ -1,5 +1,5 @@
 """
-HuggingFace Dataset Creator Agent using LangGraph
+Othertales Datasets Agent for HuggingFace
 
 This agent creates HuggingFace datasets from URLs by crawling, downloading, and processing content.
 It uses LangGraph with PostgreSQL persistence for maintaining state across interactions.
