@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     gcc \
     python3-dev \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and set up the package structure
