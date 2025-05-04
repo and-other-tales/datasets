@@ -20,6 +20,8 @@ import hashlib
 import tempfile
 from pathlib import Path
 import time
+import datetime 
+import uuid
 from urllib.parse import urljoin, urlparse
 
 # Web scraping and processing
@@ -1150,7 +1152,11 @@ def app(config=None):
 
 def create_app():
     """Create FastAPI application."""
-    app = FastAPI()
+    app = FastAPI(
+        title="OtherTales Dataset Creator",
+        description="Creates HuggingFace datasets from web content using LangGraph",
+        version="1.0.0"
+    )
     
     # Add CORS middleware
     app.add_middleware(
@@ -1160,6 +1166,9 @@ def create_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    
+    # Fixed assistant ID for the dataset creator
+    ASSISTANT_ID = "435f210f-5fb2-51f2-bac9-1b55c4915b36"
     
     @app.get("/healthz")
     async def healthz():
@@ -1175,24 +1184,104 @@ def create_app():
     async def startup():
         """Startup probe endpoint."""
         return {"status": "ready"}
+        
+    @app.post("/assistants/search")
+    async def search_assistants(request: Request):
+        """Search assistants endpoint."""
+        try:
+            # Parse request according to schema
+            query_params = await request.json()
+            
+            limit = query_params.get("limit", 10)
+            offset = query_params.get("offset", 0)
+            metadata_filter = query_params.get("metadata", {})
+            graph_id_filter = query_params.get("graph_id", None)
+            
+            # Create a fixed response with proper format matching schema
+            assistant_id = "435f210f-5fb2-51f2-bac9-1b55c4915b36"  # Using a fixed UUID format
+            
+            # Return a fixed result for now - just one assistant
+            assistants = [{
+                "assistant_id": assistant_id,
+                "graph_id": "dataset_creator",
+                "name": "Dataset Creator Agent",
+                "config": {
+                    "tags": ["dataset", "crawl", "huggingface"],
+                    "configurable": {
+                        "max_depth": MAX_DEPTH,
+                        "max_pages": MAX_PAGES,
+                        "patterns_to_match": None,
+                        "patterns_to_exclude": None
+                    }
+                },
+                "created_at": datetime.datetime.now().isoformat(),
+                "updated_at": datetime.datetime.now().isoformat(),
+                "metadata": {
+                    "description": "Creates HuggingFace datasets from web content",
+                    "capabilities": [
+                        "crawl_url", 
+                        "create_dataset",
+                        "verify_dataset"
+                    ],
+                    "model": os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-7-sonnet-20250219-v1:0")
+                },
+                "version": 1
+            }]
+            
+            # Apply pagination
+            paginated_assistants = assistants[offset:offset+limit]
+            
+            # Return directly as array according to schema
+            return JSONResponse(content=paginated_assistants)
+        
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"error": str(e)}
+            )
 
     # Create the agent once at startup
     agent = build_agent(use_postgres=False, use_tracing=True)
     
     @app.post("/assistants/{assistant_id}")
-    async def handle_assistant(assistant_id: str, request: Request):
-        """Handle assistant requests."""
+    async def handle_assistant_post(assistant_id: str, request: Request):
+        """Handle assistant POST requests."""
         try:
             body = await request.json()
+            
+            # We're going to continue handling the LangChain invocations,
+            # but make sure we handle the format correctly
+            
+            # Check if body contains pagination parameters but no valid message content
+            if ("limit" in body or "offset" in body) and "messages" not in body:
+                # Extract pagination parameters
+                limit = body.get("limit", 1000)
+                offset = body.get("offset", 0)
+                
+                # Return empty result with pagination info
+                return JSONResponse(content={
+                    "content": "No messages to process",
+                    "type": "text",
+                    "pagination": {"limit": limit, "offset": offset}
+                })
             
             # Ensure messages is a list if present
             if "messages" in body and not isinstance(body["messages"], list):
                 body["messages"] = [body["messages"]]
                 
-            # If no messages key, wrap the entire body
+            # If no messages key, wrap the entire body in a properly formatted message
             if "messages" not in body:
-                body = {"messages": [body]}
+                body = {"messages": [{"role": "user", "content": json.dumps(body)}]}
             
+            # Ensure all messages have role and content keys
+            if "messages" in body:
+                for i, msg in enumerate(body["messages"]):
+                    if isinstance(msg, dict) and ("role" not in msg or "content" not in msg):
+                        body["messages"][i] = {"role": "user", "content": json.dumps(msg)}
+                    elif not isinstance(msg, dict):
+                        body["messages"][i] = {"role": "user", "content": str(msg)}
+            
+            # Invoke the agent with properly formatted message
             response = await agent.ainvoke(body)
             
             # Better handling of different response types for LangSmith compatibility
@@ -1237,6 +1326,485 @@ def create_app():
                 }
             
             return JSONResponse(content=serialized_response)
+            
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"error": str(e)}
+            )
+    
+    @app.get("/assistants/{assistant_id}")
+    async def handle_assistant_get(assistant_id: str, request: Request):
+        """Handle assistant GET requests - returns assistant by ID."""
+        try:
+            # Check if assistant_id matches our fixed ID
+            if assistant_id != ASSISTANT_ID:
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"Assistant with ID {assistant_id} not found"}
+                )
+                
+            # Create an assistant response matching the OpenAPI schema
+            # Using same format as search endpoint
+            serialized_response = {
+                "assistant_id": assistant_id,
+                "graph_id": "dataset_creator",
+                "name": "Dataset Creator Agent", 
+                "config": {
+                    "tags": ["dataset", "crawl", "huggingface"],
+                    "configurable": {
+                        "max_depth": MAX_DEPTH,
+                        "max_pages": MAX_PAGES,
+                        "patterns_to_match": None,
+                        "patterns_to_exclude": None
+                    }
+                },
+                "created_at": datetime.datetime.now().isoformat(),
+                "updated_at": datetime.datetime.now().isoformat(),
+                "metadata": {
+                    "description": "Creates HuggingFace datasets from web content",
+                    "capabilities": [
+                        "crawl_url", 
+                        "create_dataset",
+                        "verify_dataset"
+                    ],
+                    "model": os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-7-sonnet-20250219-v1:0")
+                },
+                "version": 1
+            }
+            
+            return JSONResponse(content=serialized_response)
+            
+        except Exception as e:
+            return JSONResponse(
+                status_code=404 if "not found" in str(e).lower() else 500,
+                content={"error": str(e)}
+            )
+    
+    @app.delete("/assistants/{assistant_id}")
+    async def delete_assistant(assistant_id: str):
+        """Delete assistant by ID."""
+        if assistant_id != ASSISTANT_ID:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Assistant with ID {assistant_id} not found"}
+            )
+        
+        # Return an empty response to indicate success
+        return JSONResponse(content={})
+    
+    @app.patch("/assistants/{assistant_id}")
+    async def patch_assistant(assistant_id: str, request: Request):
+        """Update assistant with provided fields."""
+        try:
+            if assistant_id != ASSISTANT_ID:
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"Assistant with ID {assistant_id} not found"}
+                )
+                
+            body = await request.json()
+            
+            # Start with the current configuration
+            assistant_config = {
+                "tags": ["dataset", "crawl", "huggingface"],
+                "configurable": {
+                    "max_depth": MAX_DEPTH,
+                    "max_pages": MAX_PAGES,
+                    "patterns_to_match": None,
+                    "patterns_to_exclude": None
+                }
+            }
+            
+            # If config is provided, update the configurable parameters
+            if "config" in body and isinstance(body["config"], dict):
+                if "configurable" in body["config"] and isinstance(body["config"]["configurable"], dict):
+                    for key, value in body["config"]["configurable"].items():
+                        if key in assistant_config["configurable"]:
+                            assistant_config["configurable"][key] = value
+                
+                # Update tags if provided
+                if "tags" in body["config"] and isinstance(body["config"]["tags"], list):
+                    assistant_config["tags"] = body["config"]["tags"]
+            
+            # Merge metadata with existing metadata
+            base_metadata = {
+                "description": "Creates HuggingFace datasets from web content",
+                "capabilities": [
+                    "crawl_url", 
+                    "create_dataset",
+                    "verify_dataset"
+                ],
+                "model": os.environ.get("BEDROCK_MODEL_ID", "anthropic.claude-3-7-sonnet-20250219-v1:0")
+            }
+            
+            if "metadata" in body and isinstance(body["metadata"], dict):
+                # Merge the metadata, with new values taking precedence
+                for key, value in body["metadata"].items():
+                    base_metadata[key] = value
+            
+            serialized_response = {
+                "assistant_id": assistant_id,
+                "graph_id": body.get("graph_id", "dataset_creator"),
+                "name": body.get("name", "Dataset Creator Agent"), 
+                "config": assistant_config,
+                "created_at": datetime.datetime.now().isoformat(),
+                "updated_at": datetime.datetime.now().isoformat(),
+                "metadata": base_metadata,
+                "version": 1
+            }
+            
+            return JSONResponse(content=serialized_response)
+        except Exception as e:
+            return JSONResponse(
+                status_code=422,
+                content={"error": str(e)}
+            )
+    
+    @app.get("/assistants/{assistant_id}/graph")
+    async def get_assistant_graph(assistant_id: str, xray: bool = False):
+        """Get assistant graph."""
+        if assistant_id != ASSISTANT_ID and assistant_id != "dataset_creator":
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Assistant with ID {assistant_id} not found"}
+            )
+        
+        # Return a simple graph representation
+        graph_representation = {
+            "nodes": [
+                {"id": "entry", "type": "entry_point"},
+                {"id": "model", "type": "llm"},
+                {"id": "crawl_url", "type": "tool"},
+                {"id": "create_dataset", "type": "tool"},
+                {"id": "verify_dataset", "type": "tool"}
+            ],
+            "edges": [
+                {"from": "entry", "to": "model"},
+                {"from": "model", "to": "crawl_url"},
+                {"from": "crawl_url", "to": "create_dataset"},
+                {"from": "create_dataset", "to": "verify_dataset"},
+                {"from": "verify_dataset", "to": "model"}
+            ]
+        }
+        
+        return JSONResponse(content=graph_representation)
+    
+    @app.get("/assistants/{assistant_id}/schemas")
+    async def get_assistant_schemas(assistant_id: str):
+        """Get assistant schemas."""
+        if assistant_id != ASSISTANT_ID:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Assistant with ID {assistant_id} not found"}
+            )
+        
+        # Return a simplified schema representation
+        schema = {
+            "graph_id": "dataset_creator",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "messages": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "role": {"type": "string"},
+                                "content": {"type": "string"}
+                            },
+                            "required": ["role", "content"]
+                        }
+                    }
+                }
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "content": {"type": "string"},
+                    "type": {"type": "string"}
+                }
+            },
+            "state_schema": {
+                "type": "object",
+                "properties": {
+                    "messages": {"type": "array"},
+                    "crawled_urls": {"type": "array"},
+                    "dataset_info": {"type": "object"},
+                    "temp_file_path": {"type": "string"}
+                }
+            },
+            "config_schema": {
+                "type": "object",
+                "properties": {
+                    "max_depth": {"type": "integer"},
+                    "max_pages": {"type": "integer"},
+                    "patterns_to_match": {"type": "array"},
+                    "patterns_to_exclude": {"type": "array"}
+                }
+            }
+        }
+        
+        return JSONResponse(content=schema)
+        
+    @app.post("/threads")
+    async def create_thread(request: Request):
+        """Create a new thread for storing conversation state."""
+        try:
+            body = await request.json()
+            
+            # Generate a thread ID if not provided
+            thread_id = body.get("thread_id", str(uuid.uuid4()))
+            
+            # Store thread creation time
+            created_at = datetime.datetime.now().isoformat()
+            
+            # Extract metadata or use empty dict
+            metadata = body.get("metadata", {})
+            
+            # Create thread response object
+            thread = {
+                "thread_id": thread_id,
+                "created_at": created_at,
+                "updated_at": created_at,
+                "metadata": metadata,
+                "status": "idle",
+                "values": {}
+            }
+            
+            return JSONResponse(content=thread)
+        except Exception as e:
+            return JSONResponse(
+                status_code=422,
+                content={"error": str(e)}
+            )
+    
+    @app.post("/threads/search")
+    async def search_threads(request: Request):
+        """Search threads based on criteria."""
+        try:
+            body = await request.json()
+            
+            # Extract search parameters
+            limit = body.get("limit", 10)
+            offset = body.get("offset", 0)
+            metadata_filter = body.get("metadata", {})
+            values_filter = body.get("values", {})
+            status_filter = body.get("status")
+            
+            # Since this is a stateless implementation, we return an empty array
+            # A database-backed implementation would filter threads here
+            return JSONResponse(content=[])
+        except Exception as e:
+            return JSONResponse(
+                status_code=422,
+                content={"error": str(e)}
+            )
+    
+    @app.get("/threads/{thread_id}")
+    async def get_thread(thread_id: str):
+        """Get thread by ID."""
+        try:
+            # In this simple implementation, we construct a thread object
+            # A database-backed implementation would retrieve the thread data
+            thread = {
+                "thread_id": thread_id,
+                "created_at": datetime.datetime.now().isoformat(),
+                "updated_at": datetime.datetime.now().isoformat(),
+                "metadata": {},
+                "status": "idle",
+                "values": {}
+            }
+            
+            return JSONResponse(content=thread)
+        except Exception as e:
+            return JSONResponse(
+                status_code=404,
+                content={"error": f"Thread {thread_id} not found"}
+            )
+    
+    @app.post("/threads/{thread_id}/runs")
+    async def create_run(thread_id: str, request: Request):
+        """Create a run in an existing thread."""
+        try:
+            body = await request.json()
+            
+            # Validate the assistant ID
+            assistant_id = body.get("assistant_id")
+            if assistant_id != ASSISTANT_ID and assistant_id != "dataset_creator":
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"Assistant with ID {assistant_id} not found"}
+                )
+            
+            # Generate a run ID
+            run_id = str(uuid.uuid4())
+            created_at = datetime.datetime.now().isoformat()
+            
+            # Create run response
+            run = {
+                "run_id": run_id,
+                "thread_id": thread_id,
+                "assistant_id": assistant_id,
+                "created_at": created_at,
+                "updated_at": created_at,
+                "status": "pending",
+                "metadata": body.get("metadata", {}),
+                "kwargs": {},
+                "multitask_strategy": body.get("multitask_strategy", "reject")
+            }
+            
+            return JSONResponse(content=run)
+        except Exception as e:
+            return JSONResponse(
+                status_code=422,
+                content={"error": str(e)}
+            )
+    
+    @app.post("/threads/{thread_id}/runs/wait")
+    async def wait_run(thread_id: str, request: Request):
+        """Create a run and wait for completion."""
+        try:
+            body = await request.json()
+            
+            # Validate the assistant ID
+            assistant_id = body.get("assistant_id")
+            if assistant_id != ASSISTANT_ID and assistant_id != "dataset_creator":
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"Assistant with ID {assistant_id} not found"}
+                )
+            
+            # Process the input using our agent
+            input_data = body.get("input", {})
+            
+            # Format input for the agent
+            if isinstance(input_data, str):
+                formatted_input = {"messages": [{"role": "user", "content": input_data}]}
+            elif isinstance(input_data, dict) and "messages" in input_data:
+                formatted_input = input_data
+            else:
+                formatted_input = {"messages": [{"role": "user", "content": json.dumps(input_data)}]}
+            
+            # Process through agent
+            response = await agent.ainvoke(formatted_input)
+            
+            # Process the response
+            if hasattr(response, "content"):
+                result = response.content
+            elif isinstance(response, dict) and "messages" in response:
+                messages = response.get("messages", [])
+                if messages and len(messages) > 0:
+                    last_message = messages[-1]
+                    if isinstance(last_message, tuple) and len(last_message) >= 2:
+                        result = str(last_message[1])
+                    else:
+                        result = str(messages)
+                else:
+                    result = str(response)
+            elif isinstance(response, (list, tuple)):
+                result = [str(r) for r in response]
+            else:
+                result = str(response)
+            
+            return JSONResponse(content=result)
+        except Exception as e:
+            return JSONResponse(
+                status_code=422,
+                content={"error": str(e)}
+            )
+    
+    @app.post("/runs")
+    async def create_stateless_run(request: Request):
+        """Create a stateless run (no persistent thread)."""
+        try:
+            body = await request.json()
+            
+            # Validate the assistant ID
+            assistant_id = body.get("assistant_id")
+            if assistant_id != ASSISTANT_ID and assistant_id != "dataset_creator":
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"Assistant with ID {assistant_id} not found"}
+                )
+            
+            # Generate IDs
+            run_id = str(uuid.uuid4())
+            thread_id = str(uuid.uuid4())
+            created_at = datetime.datetime.now().isoformat()
+            
+            # Create run response
+            run = {
+                "run_id": run_id,
+                "thread_id": thread_id,
+                "assistant_id": assistant_id,
+                "created_at": created_at,
+                "updated_at": created_at,
+                "status": "pending",
+                "metadata": body.get("metadata", {}),
+                "kwargs": {},
+                "multitask_strategy": body.get("multitask_strategy", "reject")
+            }
+            
+            return JSONResponse(content=run)
+        except Exception as e:
+            return JSONResponse(
+                status_code=422,
+                content={"error": str(e)}
+            )
+    
+    @app.post("/runs/wait")
+    async def wait_stateless_run(request: Request):
+        """Create a stateless run and wait for completion."""
+        try:
+            body = await request.json()
+            
+            # Validate the assistant ID
+            assistant_id = body.get("assistant_id")
+            if assistant_id != ASSISTANT_ID and assistant_id != "dataset_creator":
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": f"Assistant with ID {assistant_id} not found"}
+                )
+            
+            # Process the input using our agent
+            input_data = body.get("input", {})
+            
+            # Format input for the agent
+            if isinstance(input_data, str):
+                formatted_input = {"messages": [{"role": "user", "content": input_data}]}
+            elif isinstance(input_data, dict) and "messages" in input_data:
+                formatted_input = input_data
+            else:
+                formatted_input = {"messages": [{"role": "user", "content": json.dumps(input_data)}]}
+            
+            # Process through agent
+            response = await agent.ainvoke(formatted_input)
+            
+            # Process the response
+            if hasattr(response, "content"):
+                result = response.content
+            elif isinstance(response, dict) and "messages" in response:
+                messages = response.get("messages", [])
+                if messages and len(messages) > 0:
+                    last_message = messages[-1]
+                    if isinstance(last_message, tuple) and len(last_message) >= 2:
+                        result = str(last_message[1])
+                    else:
+                        result = str(messages)
+                else:
+                    result = str(response)
+            elif isinstance(response, (list, tuple)):
+                result = [str(r) for r in response]
+            else:
+                result = str(response)
+            
+            return JSONResponse(content=result)
+        except Exception as e:
+            return JSONResponse(
+                status_code=422,
+                content={"error": str(e)}
+            )
             
         except Exception as e:
             return JSONResponse(
