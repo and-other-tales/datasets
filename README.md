@@ -230,13 +230,13 @@ The server will start on http://localhost:2024 by default, serving all configure
 Build the Docker image:
 
 ```bash
-docker build -t othertales-datasets .
+docker build -t othertales.datasets .
 ```
 
 Run the container:
 
 ```bash
-docker run --env-file .env -p 2024:2024 othertales-datasets
+docker run --env-file .env -p 2024:2024 othertales.datasets
 ```
 
 ### Docker Compose
