@@ -1086,18 +1086,10 @@ def build_graph(include_tracing=True):
     
     return graph
 
-def app(config):
+def app(config=None):
     """LangGraph app factory function."""
-    # Create FastAPI application
-    fastapi_app = create_app()
-    
-    # Create proper ASGI app wrapper
-    @fastapi_app.middleware("http")
-    async def dispatch_middleware(request, call_next):
-        response = await call_next(request)
-        return response
-    
-    return fastapi_app
+    # Directly return the FastAPI application
+    return create_app()
 
 def create_app():
     """Create FastAPI application."""
