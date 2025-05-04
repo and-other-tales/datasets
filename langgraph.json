@@ -3,7 +3,7 @@
   "graphs": {
     "dataset_agent": {
       "entrypoint": "./src/othertales/datasets/dataset_agent.py:app",
-      "type": "agent"
+      "type": "fastapi"
     }
   },
   "http": {

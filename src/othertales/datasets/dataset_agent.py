@@ -52,6 +52,11 @@ from othertales.datasets.llm_utils import get_llm
 from datasets import Dataset, DatasetDict, Features, Value, Sequence
 import datasets
 
+# FastAPI for web server
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 # Configuration 
 DEFAULT_MODEL_ID = "anthropic.claude-3-7-sonnet-20250219-v1:0"  # Default for Bedrock
 MAX_DEPTH = 3  # Maximum crawling depth
@@ -1081,18 +1086,52 @@ def build_graph(include_tracing=True):
     
     return graph
 
-def app(config):
-    """LangGraph app factory function that takes a RunnableConfig."""
-    # Create the agent
+def create_app():
+    """Create FastAPI application."""
+    app = FastAPI()
+    
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    @app.get("/healthz")
+    async def healthz():
+        """Health check endpoint."""
+        return {"status": "healthy"}
+    
+    @app.get("/")
+    async def root():
+        """Root endpoint."""
+        return {"status": "healthy"}
+    
+    @app.get("/startup")
+    async def startup():
+        """Startup probe endpoint."""
+        return {"status": "ready"}
+
+    # Create the agent once at startup
     agent = build_agent(use_postgres=False, use_tracing=True)
     
-    # Create a graph from the agent
-    graph = {
-        "run": agent,
-        "name": "dataset_agent",
-        "description": "Dataset Creator Agent",
-        "config": config
-    }
+    @app.post("/assistants/{assistant_id}")
+    async def handle_assistant(assistant_id: str, request: Request):
+        """Handle assistant requests."""
+        try:
+            body = await request.json()
+            response = await agent.ainvoke(body)
+            return JSONResponse(content=response)
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"error": str(e)}
+            )
     
-    # Return the graph for LangGraph registration
-    return graph
+    return app
+
+def app(config):
+    """LangGraph app factory function."""
+    return create_app()
