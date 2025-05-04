@@ -15,7 +15,7 @@ import os
 import re
 import json
 import asyncio
-from typing import List, Dict, Any, Optional, Union, Literal, TypedDict
+from typing import List, Dict, Any, Optional, Union, Literal, TypedDict, Annotated
 import hashlib
 import tempfile
 from pathlib import Path
@@ -40,12 +40,20 @@ from pydantic import BaseModel, Field
 
 # PostgreSQL persistence
 try:
+    import psycopg
     from psycopg_pool import ConnectionPool
-    from langgraph.checkpoint.postgres import PostgresSaver
+    try:
+        # For newer langgraph versions
+        from langgraph.checkpoint.postgres import PostgresSaver
+    except ImportError:
+        # For backward compatibility
+        from langgraph_checkpoint_postgres import PostgresSaver
+    
     POSTGRES_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     POSTGRES_AVAILABLE = False
-    print("PostgreSQL dependencies not found. Running without persistence.")
+    print(f"PostgreSQL dependencies not found ({str(e)}). Running without persistence.")
+    print("To enable persistence, install: pip install psycopg psycopg_pool langgraph-checkpoint-postgres")
 
 # Multi-LLM provider support
 from othertales.datasets.llm_utils import get_llm
@@ -124,9 +132,11 @@ class DatasetCreationInput(BaseModel):
         description="Description of the dataset")
 
 # State management for the LangGraph agent
+from langgraph.graph.message import add_messages
+
 class AgentState(TypedDict):
     """State for the Dataset Creator Agent."""
-    messages: List
+    messages: Annotated[List[BaseMessage], add_messages]  # Use Annotated with add_messages reducer
     crawled_urls: Optional[List[Dict[str, Any]]]
     dataset_info: Optional[Dict[str, Any]]
     temp_file_path: Optional[str]
@@ -959,9 +969,10 @@ def setup_postgres_connection():
         return None
     
     # Get database connection details from environment variables
-    db_uri = os.environ.get("POSTGRES_URI")
+    db_uri = os.environ.get("DATABASE_URI", os.environ.get("POSTGRES_URI"))
     if not db_uri:
         print("PostgreSQL URI not found in environment variables. Running without persistence.")
+        print("Set DATABASE_URI or POSTGRES_URI environment variable to enable persistence.")
         return None
     
     try:
@@ -979,11 +990,17 @@ def setup_postgres_connection():
         
         # Create and setup the checkpointer
         checkpointer = PostgresSaver(pool)
-        checkpointer.setup()  # Initialize schema
+        try:
+            # Initialize schema (wrap in try-except in case schema already exists)
+            checkpointer.setup()  
+            print("PostgreSQL connection established successfully.")
+        except Exception as setup_err:
+            print(f"Warning: Schema setup error (schema might already exist): {str(setup_err)}")
         
         return checkpointer
     except Exception as e:
         print(f"Error setting up PostgreSQL connection: {str(e)}")
+        print("Continuing without persistence...")
         return None
 
 # Create the agent using LangGraph
@@ -1029,11 +1046,19 @@ def build_agent(use_postgres=False, use_tracing=True):
     # Initialize the checkpointer if PostgreSQL is available
     checkpointer = setup_postgres_connection() if use_postgres else None
     
-    # Create the agent arguments - using 'model' instead of 'llm'
+    # Create the agent arguments 
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+    from langchain_core.messages import SystemMessage
+    
+    prompt = ChatPromptTemplate.from_messages([
+        SystemMessage(content=system_prompt),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
+    
     create_agent_args = {
-        "model": llm,  # Changed back to "model" from "llm"
+        "model": llm,
         "tools": tools,
-        "prompt": system_prompt,  # Changed back to "prompt" from "system_message"
+        "prompt": prompt,
     }
     
     # Add checkpointer if available
@@ -1041,19 +1066,38 @@ def build_agent(use_postgres=False, use_tracing=True):
         create_agent_args["checkpointer"] = checkpointer
     
     # Create the agent
-    agent = create_react_agent(**create_agent_args)
-    
-    # Configure tracing if enabled
-    if use_tracing and hasattr(agent, "with_config"):
-        runnable_config = {
-            "tags": ["dataset-agent", "langgraph", "react-agent"],
-            "metadata": {
-                "agent_type": "dataset-creator",
-                "version": "1.0.0",
-                "description": "Dataset Creator Agent with LangGraph",
+    try:
+        # Try with newer LangGraph API
+        agent = create_react_agent(**create_agent_args)
+        
+        # Configure tracing if enabled
+        if use_tracing and hasattr(agent, "with_config"):
+            runnable_config = {
+                "tags": ["dataset-agent", "langgraph", "react-agent"],
+                "metadata": {
+                    "agent_type": "dataset-creator",
+                    "version": "1.0.0",
+                    "description": "Dataset Creator Agent with LangGraph",
+                }
             }
-        }
-        agent = agent.with_config(runnable_config)
+            agent = agent.with_config(runnable_config)
+            
+        print("Created agent with newer LangGraph API")
+        
+    except Exception as e:
+        print(f"Error creating agent with newer API: {str(e)}")
+        print("Falling back to legacy mode...")
+        
+        # Fall back to older version of LangGraph
+        create_agent_args["system_message"] = system_prompt
+        create_agent_args.pop("prompt", None)
+        
+        try:
+            agent = create_react_agent(**create_agent_args)
+            print("Created agent with legacy LangGraph API")
+        except Exception as e2:
+            print(f"Failed to create agent with legacy API as well: {str(e2)}")
+            raise
     
     return agent
 
@@ -1098,52 +1142,126 @@ def traced_verify_dataset_node(state, config):
         }
 
 # Build the graph explicitly (optional, can use the prebuilt agent instead)
-def build_graph(include_tracing=True):
+def build_graph(include_tracing=True, use_postgres=False):
     """Build an explicit LangGraph for the dataset creator agent."""
-    # Define the state graph
-    builder = StateGraph(AgentState)
-    
-    # Add nodes with or without tracing
-    # Using 'model' as the standard node name for LangGraph 0.4.1+
-    llm_node_name = "model"
-    
-    if include_tracing:
-        builder.add_node("crawl_url", traced_crawl_url_node)
-        builder.add_node("create_dataset", traced_create_dataset_node)
-        builder.add_node("verify_dataset", traced_verify_dataset_node)
-        builder.add_node(llm_node_name, llm)
-    else:
-        builder.add_node("crawl_url", crawl_url_node)
-        builder.add_node("create_dataset", create_dataset_node)
-        builder.add_node("verify_dataset", verify_dataset_node)
-        builder.add_node(llm_node_name, llm)
-    
-    # Add edges with consistent node naming
-    builder.add_edge(llm_node_name, "crawl_url")
-    builder.add_edge("crawl_url", "create_dataset")
-    builder.add_edge("create_dataset", "verify_dataset")
-    builder.add_edge("verify_dataset", llm_node_name)
-    
-    # Set entry point
-    builder.set_entry_point(llm_node_name)
-    
-    # Compile the graph with proper tracing configuration
-    compile_config = {}
-    
-    if include_tracing:
-        compile_config = {
-            "tags": ["dataset-agent", "langgraph"],
-            "metadata": {
-                "agent_type": "dataset-creator",
-                "version": "1.0.0",
-                "description": "Dataset Creator Agent with LangGraph"
+    try:
+        # Try with new API (LangGraph 0.4+)
+        from langgraph.graph import START, END
+        
+        # Define the state graph
+        builder = StateGraph(AgentState)
+        
+        # Add nodes with or without tracing
+        # Using 'model' as the standard node name for LangGraph 0.4+
+        llm_node_name = "model"
+        
+        if include_tracing:
+            builder.add_node("crawl_url", traced_crawl_url_node)
+            builder.add_node("create_dataset", traced_create_dataset_node)
+            builder.add_node("verify_dataset", traced_verify_dataset_node)
+            builder.add_node(llm_node_name, llm)
+        else:
+            builder.add_node("crawl_url", crawl_url_node)
+            builder.add_node("create_dataset", create_dataset_node)
+            builder.add_node("verify_dataset", verify_dataset_node)
+            builder.add_node(llm_node_name, llm)
+        
+        # Add edges with consistent node naming
+        builder.add_edge(START, llm_node_name)
+        builder.add_edge(llm_node_name, "crawl_url")
+        builder.add_edge("crawl_url", "create_dataset")
+        builder.add_edge("create_dataset", "verify_dataset")
+        builder.add_edge("verify_dataset", llm_node_name)
+        
+        # Add optional edges (for visualization)
+        builder.add_edge("verify_dataset", END, condition=lambda state: state.get("dataset_info", {}).get("verified", False))
+        
+        # Compile options
+        compile_options = {}
+        
+        # Add checkpointer if postgres is available
+        if use_postgres:
+            checkpointer = setup_postgres_connection()
+            if checkpointer:
+                compile_options["checkpointer"] = checkpointer
+        
+        # Add config with tracing information
+        if include_tracing:
+            compile_options["config"] = {
+                "tags": ["dataset-agent", "langgraph"],
+                "metadata": {
+                    "agent_type": "dataset-creator",
+                    "version": "1.0.0",
+                    "description": "Dataset Creator Agent with LangGraph"
+                }
             }
-        }
-    
-    # Compile the graph with configuration
-    graph = builder.compile(config=compile_config)
-    
-    return graph
+        
+        # Compile the graph with configuration
+        graph = builder.compile(**compile_options)
+        
+        print("Built graph with new LangGraph 0.4+ API")
+        return graph
+        
+    except (ImportError, Exception) as e:
+        print(f"Error building graph with new API: {str(e)}. Falling back to legacy API...")
+        
+        try:
+            # Fall back to legacy API (LangGraph < 0.4)
+            # Define the state graph
+            builder = StateGraph(AgentState)
+            
+            # Add nodes with or without tracing
+            llm_node_name = "agent"  # Using 'agent' as the standard node name for older versions
+            
+            if include_tracing:
+                builder.add_node("crawl_url", traced_crawl_url_node)
+                builder.add_node("create_dataset", traced_create_dataset_node)
+                builder.add_node("verify_dataset", traced_verify_dataset_node)
+                builder.add_node(llm_node_name, llm)
+            else:
+                builder.add_node("crawl_url", crawl_url_node)
+                builder.add_node("create_dataset", create_dataset_node)
+                builder.add_node("verify_dataset", verify_dataset_node)
+                builder.add_node(llm_node_name, llm)
+            
+            # Add edges with consistent node naming
+            builder.add_edge(llm_node_name, "crawl_url")
+            builder.add_edge("crawl_url", "create_dataset")
+            builder.add_edge("create_dataset", "verify_dataset")
+            builder.add_edge("verify_dataset", llm_node_name)
+            
+            # Set entry point (legacy method)
+            builder.set_entry_point(llm_node_name)
+            
+            # Compile options
+            compile_options = {}
+            
+            # Add checkpointer if postgres is available
+            if use_postgres:
+                checkpointer = setup_postgres_connection()
+                if checkpointer:
+                    compile_options["checkpointer"] = checkpointer
+            
+            # Add config with tracing information
+            if include_tracing:
+                compile_options["config"] = {
+                    "tags": ["dataset-agent", "langgraph"],
+                    "metadata": {
+                        "agent_type": "dataset-creator",
+                        "version": "1.0.0",
+                        "description": "Dataset Creator Agent with LangGraph"
+                    }
+                }
+            
+            # Compile the graph with configuration
+            graph = builder.compile(**compile_options)
+            
+            print("Built graph with legacy LangGraph API")
+            return graph
+        
+        except Exception as e2:
+            print(f"Error building graph with legacy API as well: {str(e2)}")
+            raise
 
 def app(config=None):
     """LangGraph app factory function."""
@@ -1265,24 +1383,39 @@ def create_app():
                     "pagination": {"limit": limit, "offset": offset}
                 })
             
-            # Ensure messages is a list if present
-            if "messages" in body and not isinstance(body["messages"], list):
-                body["messages"] = [body["messages"]]
-                
-            # If no messages key, wrap the entire body in a properly formatted message
-            if "messages" not in body:
-                body = {"messages": [{"role": "user", "content": json.dumps(body)}]}
-            
-            # Ensure all messages have role and content keys
+            # Ensure proper format for input - handle both "input" and "messages" keys
+            input_data = {}
             if "messages" in body:
-                for i, msg in enumerate(body["messages"]):
-                    if isinstance(msg, dict) and ("role" not in msg or "content" not in msg):
-                        body["messages"][i] = {"role": "user", "content": json.dumps(msg)}
-                    elif not isinstance(msg, dict):
-                        body["messages"][i] = {"role": "user", "content": str(msg)}
+                # Fix message format for LangGraph
+                messages_list = []
+                if isinstance(body["messages"], list):
+                    for msg in body["messages"]:
+                        if isinstance(msg, dict) and "role" in msg and "content" in msg:
+                            # Convert to tuple format for compatibility
+                            messages_list.append((msg["role"], msg["content"]))
+                        elif isinstance(msg, tuple) and len(msg) == 2:
+                            messages_list.append(msg)
+                        elif isinstance(msg, str):
+                            # Default to user role for string messages
+                            messages_list.append(("user", msg))
+                elif isinstance(body["messages"], dict) and "role" in body["messages"] and "content" in body["messages"]:
+                    # Single message as dict
+                    messages_list.append((body["messages"]["role"], body["messages"]["content"]))
+                elif isinstance(body["messages"], str):
+                    # Single message as string
+                    messages_list.append(("user", body["messages"]))
+                
+                input_data["messages"] = messages_list
+            else:
+                # If no messages key, wrap the content as a user message
+                user_content = json.dumps(body) if isinstance(body, dict) else str(body)
+                input_data["messages"] = [("user", user_content)]
             
-            # Invoke the agent with properly formatted message
-            response = await agent.ainvoke(body)
+            # Add config with checkpoint_id for persistence
+            config = {"configurable": {"thread_id": body.get("thread_id", str(uuid.uuid4()))}}
+            
+            # Invoke the agent with properly formatted input
+            response = await agent.ainvoke(input_data, config)
             
             # Better handling of different response types for LangSmith compatibility
             if hasattr(response, "content"):
@@ -1301,6 +1434,14 @@ def create_app():
                             "content": str(last_message[1]),
                             "type": "message",
                             "role": str(last_message[0])
+                        }
+                    elif hasattr(last_message, "content"):
+                        # Handle BaseMessage objects
+                        serialized_response = {
+                            "content": last_message.content,
+                            "type": "message",
+                            "role": getattr(last_message, "type", "assistant"),
+                            "additional_kwargs": getattr(last_message, "additional_kwargs", {})
                         }
                     else:
                         serialized_response = {
@@ -1328,6 +1469,9 @@ def create_app():
             return JSONResponse(content=serialized_response)
             
         except Exception as e:
+            import traceback
+            error_msg = f"Error processing request: {str(e)}\n{traceback.format_exc()}"
+            print(error_msg)
             return JSONResponse(
                 status_code=500,
                 content={"error": str(e)}
@@ -1470,22 +1614,32 @@ def create_app():
                 content={"error": f"Assistant with ID {assistant_id} not found"}
             )
         
-        # Return a simple graph representation
+        # Return an enhanced graph representation with proper connections for visualization
         graph_representation = {
             "nodes": [
-                {"id": "entry", "type": "entry_point"},
-                {"id": "model", "type": "llm"},
-                {"id": "crawl_url", "type": "tool"},
-                {"id": "create_dataset", "type": "tool"},
-                {"id": "verify_dataset", "type": "tool"}
+                {"id": "__start__", "type": "start", "display_name": "Start"},
+                {"id": "model", "type": "llm", "display_name": "LLM"},
+                {"id": "crawl_url", "type": "tool", "display_name": "Crawl URL"},
+                {"id": "create_dataset", "type": "tool", "display_name": "Create Dataset"},
+                {"id": "verify_dataset", "type": "tool", "display_name": "Verify Dataset"},
+                {"id": "__end__", "type": "end", "display_name": "End"}
             ],
             "edges": [
-                {"from": "entry", "to": "model"},
-                {"from": "model", "to": "crawl_url"},
-                {"from": "crawl_url", "to": "create_dataset"},
-                {"from": "create_dataset", "to": "verify_dataset"},
-                {"from": "verify_dataset", "to": "model"}
-            ]
+                {"from": "__start__", "to": "model", "label": "start"},
+                {"from": "model", "to": "crawl_url", "label": "crawl"},
+                {"from": "crawl_url", "to": "create_dataset", "label": "create"},
+                {"from": "create_dataset", "to": "verify_dataset", "label": "verify"},
+                {"from": "verify_dataset", "to": "model", "label": "continue", "condition": "not verified"},
+                {"from": "verify_dataset", "to": "__end__", "label": "end", "condition": "verified"}
+            ],
+            "node_types": {
+                "start": {"color": "#e0f7fa", "shape": "circle"},
+                "llm": {"color": "#bbdefb", "shape": "rectangle"},
+                "tool": {"color": "#c8e6c9", "shape": "rectangle"},
+                "end": {"color": "#ffccbc", "shape": "circle"}
+            },
+            "layout": "directed",
+            "version": "1.0.0"
         }
         
         return JSONResponse(content=graph_representation)
@@ -1499,22 +1653,48 @@ def create_app():
                 content={"error": f"Assistant with ID {assistant_id} not found"}
             )
         
-        # Return a simplified schema representation
+        # Return a schema representation with updated format for chat support
         schema = {
             "graph_id": "dataset_creator",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "messages": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "role": {"type": "string"},
-                                "content": {"type": "string"}
+                        "oneOf": [
+                            {
+                                "type": "array",
+                                "items": {
+                                    "oneOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "role": {"type": "string"},
+                                                "content": {"type": "string"}
+                                            },
+                                            "required": ["role", "content"]
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                            "minItems": 2,
+                                            "maxItems": 2
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
                             },
-                            "required": ["role", "content"]
-                        }
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "text": {"type": "string"}
+                                }
+                            },
+                            {
+                                "type": "string"
+                            }
+                        ]
                     }
                 }
             },
@@ -1522,7 +1702,9 @@ def create_app():
                 "type": "object",
                 "properties": {
                     "content": {"type": "string"},
-                    "type": {"type": "string"}
+                    "type": {"type": "string"},
+                    "role": {"type": "string"},
+                    "additional_kwargs": {"type": "object"}
                 }
             },
             "state_schema": {
@@ -1537,10 +1719,17 @@ def create_app():
             "config_schema": {
                 "type": "object",
                 "properties": {
-                    "max_depth": {"type": "integer"},
-                    "max_pages": {"type": "integer"},
-                    "patterns_to_match": {"type": "array"},
-                    "patterns_to_exclude": {"type": "array"}
+                    "configurable": {
+                        "type": "object",
+                        "properties": {
+                            "thread_id": {"type": "string"},
+                            "user_id": {"type": "string"},
+                            "max_depth": {"type": "integer"},
+                            "max_pages": {"type": "integer"},
+                            "patterns_to_match": {"type": "array"},
+                            "patterns_to_exclude": {"type": "array"}
+                        }
+                    }
                 }
             }
         }
