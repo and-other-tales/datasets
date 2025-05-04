@@ -290,6 +290,42 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
   - Google Vertex AI
 - Uses [HuggingFace Datasets](https://github.com/huggingface/datasets)
 
+## Troubleshooting
+
+### Common Issues
+
+#### NameError: name 'BaseMessage' is not defined
+This error occurs if there's an import issue with langchain_core. Make sure you have imported BaseMessage in your dataset_agent.py file:
+```python
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
+```
+
+#### Missing dependencies
+If you encounter dependency issues, make sure all required packages are installed:
+```bash
+pip install -r requirements.txt
+```
+
+For projects using the package directly, ensure your pyproject.toml or setup.py includes all necessary dependencies.
+
+## Troubleshooting
+
+### Common Issues
+
+#### NameError: name 'BaseMessage' is not defined
+This error occurs if there's an import issue with langchain_core. Make sure you have imported BaseMessage in your dataset_agent.py file:
+```python
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
+```
+
+#### Missing dependencies
+If you encounter dependency issues, make sure all required packages are installed:
+```bash
+pip install -r requirements.txt
+```
+
+For projects using the package directly, ensure your pyproject.toml or setup.py includes all necessary dependencies.
+
 ## Support
 
 For support, please [open an issue](https://github.com/and-other-tales/datasets/issues) on GitHub.

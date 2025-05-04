@@ -34,7 +34,7 @@ import markdown
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import create_react_agent
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
 from langchain_core.tools import Tool, StructuredTool
 from pydantic import BaseModel, Field
 
