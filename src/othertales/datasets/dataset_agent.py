@@ -1852,9 +1852,25 @@ def create_app():
             )
         
         # Return an enhanced graph representation with proper connections for visualization
+        # Define message list schema for graph inputs/outputs
+        message_item_schema = {
+            "type": "object",
+            "properties": {
+                "role": {"type": "string", "description": "Role of the message sender (e.g., user, system, assistant)"},
+                "content": {"type": "string", "description": "Message content text"}
+            },
+            "required": ["role", "content"]
+        }
+        messages_schema = {"type": "array", "items": message_item_schema}
+        state_input_schema = {
+            "type": "object",
+            "properties": {"messages": messages_schema},
+            "required": ["messages"],
+            "description": "Initial state with a list of messages"
+        }
         graph_representation = {
             "nodes": [
-                {"id": "__start__", "type": "start", "display_name": "Start", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
+                {"id": "__start__", "type": "start", "display_name": "Start", "input_schema": state_input_schema, "output_schema": state_input_schema},
                 {"id": "model", "type": "llm", "display_name": "LLM", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
                 {"id": "crawl_url", "type": "tool", "display_name": "Crawl URL", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
                 {"id": "create_dataset", "type": "tool", "display_name": "Create Dataset", "input_schema": {"type": "string"}, "output_schema": {"type": "string"}},
@@ -1878,8 +1894,10 @@ def create_app():
             "layout": "directed",
             "version": "1.0.0",
             "graph_schema": {
-                "input_schema": {"type": "string"},
-                "output_schema": {"type": "string"}
+                # Graph expects initial state with messages key
+                "input_schema": state_input_schema,
+                # Graph output returns updated state, include messages key
+                "output_schema": state_input_schema
             }
         }
         
@@ -1895,11 +1913,23 @@ def create_app():
             )
         
         # Return a schema representation with updated format for chat support
+        # Define schema for incoming messages array
+        message_item_schema = {
+            "type": "object",
+            "properties": {
+                "role": {"type": "string", "description": "Role of the message sender (e.g., user, system, assistant)"},
+                "content": {"type": "string", "description": "Message content text"}
+            },
+            "required": ["role", "content"]
+        }
+        messages_schema = {"type": "array", "items": message_item_schema}
         schema = {
             "graph_id": "dataset_creator",
             "input_schema": {
-                "type": "string",
-                "description": "The user's message as a text string"
+                "type": "object",
+                "properties": {"messages": messages_schema},
+                "required": ["messages"],
+                "description": "Input must be an object with a 'messages' key containing an array of message objects"
             },
             "output_schema": {
                 "type": "object",

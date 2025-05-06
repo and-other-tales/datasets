@@ -30,7 +30,7 @@ dependencies = [
     "psycopg_pool==3.2.6",
     "Requests==2.32.3",
     "transformers==4.41.2",
-    "torch==2.2.2",
+    "torch==2.7.0",
     "uvicorn==0.34.2",
 ]
 
