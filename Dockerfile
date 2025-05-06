@@ -42,10 +42,10 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/healthz || exit 1
 
 # Add labels for Google Cloud Run startup probe
-LABEL com.google.cloud.run.startup-probe.path="/startup" \
-      com.google.cloud.run.startup-probe.period.seconds="5" \
-      com.google.cloud.run.startup-probe.timeout.seconds="3" \
-      com.google.cloud.run.startup-probe.failure-threshold="5"
+LABEL com.google.cloud.run.startup-probe.path=/startup \
+      com.google.cloud.run.startup-probe.period.seconds=5 \
+      com.google.cloud.run.startup-probe.timeout.seconds=3 \
+      com.google.cloud.run.startup-probe.failure-threshold=5
 
 # Start the LangGraph built-in server
 CMD ["langgraph", "dev"]
