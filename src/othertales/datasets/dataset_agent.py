@@ -934,47 +934,12 @@ tools = [
     )
 ]
 
-# Configure LangSmith tracing for node visibility
-import os
+# Configure LangSmith tracing for node visibility (os already imported above)
 from langsmith import traceable
 import langsmith
-from langchain_core.tracers import ConsoleCallbackHandler, LangChainTracer
 
-# Create callback handlers for tracing
-callbacks = [ConsoleCallbackHandler()]
-
-# Set up LangSmith for tracing if API key is available
-if os.environ.get("LANGSMITH_API_KEY"):
-    # Ensure environment variables are set correctly
-    os.environ["LANGSMITH_TRACING_V2"] = "true"  # Use V2 tracing protocol
-    os.environ["LANGSMITH_ENDPOINT"] = os.environ.get("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
-    os.environ["LANGSMITH_PROJECT"] = os.environ.get("LANGSMITH_PROJECT", "datasets")
-    
-    try:
-        # Create and configure a LangChain tracer
-        langsmith_tracer = LangChainTracer(
-            project_name=os.environ.get("LANGSMITH_PROJECT", "datasets"),
-            example_id=None,
-        )
-        callbacks.append(langsmith_tracer)
-        print("LangSmith tracing enabled successfully")
-        
-        # Register default LangSmith callbacks globally
-        from langchain_core.tracers.langsmith import LangSmithCallbackHandler
-        from langchain.callbacks.manager import CallbackManager
-        
-        # This helps ensure we have consistent thread tracking
-        global_langsmith_handler = LangSmithCallbackHandler(
-            project_name=os.environ.get("LANGSMITH_PROJECT", "datasets"),
-        )
-        from langchain.globals import set_handler
-        set_handler(global_langsmith_handler)
-        
-        print("Global LangSmith handler registered for thread tracking")
-    except Exception as e:
-        print(f"Error initializing LangSmith tracing: {str(e)}")
-else:
-    print("LangSmith API key not found. Tracing disabled.")
+# Create callback handlers for tracing (empty by default)
+callbacks = []
 
 # Create the LLM with tracing
 llm = get_llm(callbacks=callbacks)
