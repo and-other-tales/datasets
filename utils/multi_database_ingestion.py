@@ -47,10 +47,7 @@ class LegalDataIngester:
         )
         
         # Pinecone connection
-        pinecone.init(
-            api_key=config['pinecone']['api_key'],
-            environment=config['pinecone']['environment']
-        )
+        self.pc = Pinecone(api_key=config['pinecone']['api_key'])
         
         # Create or connect to indexes
         self.cases_index = self._get_or_create_pinecone_index(
@@ -62,13 +59,15 @@ class LegalDataIngester:
 
     def _get_or_create_pinecone_index(self, name: str, dimension: int):
         """Get existing or create new Pinecone index"""
-        if name not in pinecone.list_indexes():
-            pinecone.create_index(
+        existing_indexes = [index['name'] for index in self.pc.list_indexes()]
+        if name not in existing_indexes:
+            self.pc.create_index(
                 name=name,
                 dimension=dimension,
-                metric='cosine'
+                metric='cosine',
+                spec={'serverless': {'cloud': 'aws', 'region': 'us-east-1'}}
             )
-        return pinecone.Index(name)
+        return self.pc.Index(name)
 
     def _generate_document_id(self, content: str) -> str:
         """Generate unique document ID from content hash"""
