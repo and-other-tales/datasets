@@ -17,11 +17,11 @@ import uuid
 try:
     from pymongo import MongoClient
     from neo4j import GraphDatabase
-    import pinecone
+    from pinecone import Pinecone
     from sentence_transformers import SentenceTransformer
 except ImportError as e:
     print(f"Missing dependencies: {e}")
-    print("Install with: pip install pymongo neo4j-driver pinecone-client sentence-transformers")
+    print("Install with: pip install pymongo neo4j-driver pinecone sentence-transformers")
     exit(1)
 
 # Configuration
