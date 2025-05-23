@@ -345,7 +345,7 @@ def show_interactive_menu():
     """Show interactive menu for pipeline selection"""
     while True:
         print("\n" + "="*60)
-        print("              LEGAL LLAMA - MAIN MENU")
+        print("              othertales Datasets Tools")
         print("="*60)
         print()
         print("DATA COLLECTION PIPELINES:")
