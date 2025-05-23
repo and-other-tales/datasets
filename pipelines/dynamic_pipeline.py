@@ -22,6 +22,8 @@ import anthropic
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,13 @@ class DynamicDatasetPipeline:
         # Initialize Anthropic client
         self.anthropic_client = self._initialize_anthropic_client()
         
+        # Initialize pipeline controller for pause functionality
+        self.controller = PipelineController()
+        
+        # Register pause functionality callbacks
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        
         # Domain context from session analysis
         self.domain_context = {
             "legal_training": True,
@@ -68,6 +77,7 @@ class DynamicDatasetPipeline:
         }
         
         logger.info(f"othertales Dynamic Pipeline initialised for {target_url}")
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
     
     def _initialize_anthropic_client(self) -> Optional[anthropic.Anthropic]:
         """Initialize Anthropic client for API access"""
@@ -615,21 +625,49 @@ Return a JSON array of adversarial scenarios.
         
         try:
             # Step 1: Extract content from URL
+            logger.info("Step 1: Extracting content from URL...")
+            self.controller.set_current_phase('content_extraction', {'step': 'url_analysis'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             content_data = self.extract_content_from_url()
             if not content_data:
                 raise Exception("Failed to extract content from URL")
             
             # Step 2: Analyze domain and purpose
+            logger.info("Step 2: Analyzing domain and purpose...")
+            self.controller.set_current_phase('domain_analysis', {'step': 'ai_analysis'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             analysis_data = self.analyze_domain_and_purpose(content_data)
             if not analysis_data:
                 raise Exception("Failed to analyze domain and purpose")
             
             # Step 3: Generate all dataset types
-            logger.info("Generating comprehensive training datasets...")
+            logger.info("Step 3: Generating comprehensive training datasets...")
+            self.controller.set_current_phase('dataset_generation', {'step': 'base_knowledge'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
             
             base_examples = self.generate_base_knowledge_dataset(content_data, analysis_data)
+            
+            self.controller.set_current_phase('dataset_generation', {'step': 'reasoning'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             reasoning_examples = self.generate_reasoning_dataset(content_data, analysis_data)
+            
+            self.controller.set_current_phase('dataset_generation', {'step': 'expert_scenarios'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             expert_examples = self.generate_expert_scenarios(content_data, analysis_data)
+            
+            self.controller.set_current_phase('dataset_generation', {'step': 'adversarial'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             adversarial_examples = self.generate_adversarial_scenarios(content_data, analysis_data)
             
             # Combine all examples
@@ -639,9 +677,19 @@ Return a JSON array of adversarial scenarios.
                 raise Exception("Failed to generate training examples")
             
             # Step 4: Create comprehensive datasets
+            logger.info("Step 4: Creating comprehensive datasets...")
+            self.controller.set_current_phase('dataset_creation', {'step': 'organizing'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             dataset_stats = self.create_comprehensive_datasets(analysis_data, all_examples)
             
             # Step 5: Generate training configuration
+            logger.info("Step 5: Generating training configuration...")
+            self.controller.set_current_phase('config_generation', {'step': 'autotrain_config'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             training_config = self.generate_training_config(analysis_data, dataset_stats)
             
             # Step 6: Generate summary report
@@ -678,6 +726,9 @@ Return a JSON array of adversarial scenarios.
         except Exception as e:
             logger.error(f"othertales Dynamic Pipeline failed: {e}")
             return {"status": "failed", "error": str(e)}
+        finally:
+            # Cleanup controller
+            self.controller.cleanup()
 
 def main():
     """Main function for othertales Dynamic Pipeline"""

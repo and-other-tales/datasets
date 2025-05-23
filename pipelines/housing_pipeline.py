@@ -14,7 +14,11 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
-# Import our housing-specific modules
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+
+# Import our housing-specific modules  
 from housing_legislation_downloader import HousingLegislationDownloader
 
 # Conditional imports for modules that might require additional dependencies
@@ -54,7 +58,8 @@ class LegalLlamaHousingLawPipeline:
         skip_case_law: bool = False,
         skip_qa_generation: bool = False,
         skip_dataset_creation: bool = False,
-        max_cases: int = 500
+        max_cases: int = 500,
+        enable_pause_controls: bool = True
     ):
         self.legislation_dir = legislation_dir
         self.case_law_dir = case_law_dir
@@ -64,6 +69,17 @@ class LegalLlamaHousingLawPipeline:
         self.skip_qa_generation = skip_qa_generation
         self.skip_dataset_creation = skip_dataset_creation
         self.max_cases = max_cases
+        
+        # Initialize pipeline controller
+        self.controller = None
+        if enable_pause_controls:
+            try:
+                self.controller = PipelineController()
+                self.controller.register_callback('database_update', create_database_update_callback(self))
+                self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+            except Exception as e:
+                logger.warning(f"Could not initialize pause controls: {e}")
+                self.controller = None
         
         # Initialize components
         self.legislation_downloader = HousingLegislationDownloader(legislation_dir)
@@ -82,15 +98,35 @@ class LegalLlamaHousingLawPipeline:
         
         logger.info("=== STARTING HOUSING LEGISLATION DOWNLOAD PHASE ===")
         
+        # Check for pause/quit commands
+        if self.controller:
+            command = self.controller.check_for_commands()
+            if command == 'quit':
+                return False
+            self.controller.wait_while_paused()
+            self.controller.set_current_phase("Downloading housing legislation", {})
+        
         try:
             # Load any previous progress
             self.legislation_downloader.load_progress()
             
             # Discover and download housing legislation
             logger.info("Discovering housing legislation...")
+            if self.controller:
+                command = self.controller.check_for_commands()
+                if command == 'quit':
+                    return False
+                self.controller.wait_while_paused()
+            
             self.legislation_downloader.run_housing_discovery()
             
             logger.info("Downloading housing legislation...")
+            if self.controller:
+                command = self.controller.check_for_commands()
+                if command == 'quit':
+                    return False
+                self.controller.wait_while_paused()
+            
             self.legislation_downloader.download_all_housing_legislation()
             
             # Generate summary

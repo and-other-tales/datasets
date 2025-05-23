@@ -53,13 +53,24 @@ UK_DATABASES = [
 logger = logging.getLogger(__name__)
 
 class BailiiScraper:
-    def __init__(self, output_dir: str = "case_law", max_depth: int = 3, delay: float = 1.0):
+    def __init__(self, output_dir: str = "case_law", max_depth: int = 3, delay: float = 1.0, enable_pause_controls: bool = True):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         self.max_depth = max_depth
         self.delay = delay
         self.visited_urls: Set[str] = set()
         self.case_urls: Set[str] = set()
+        
+        # Initialize pipeline controller
+        self.controller = None
+        if enable_pause_controls:
+            try:
+                self.controller = PipelineController()
+                self.controller.register_callback('database_update', create_database_update_callback(self))
+                self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+            except Exception as e:
+                logger.warning(f"Could not initialize pause controls: {e}")
+                self.controller = None
         
         # Session for connection pooling
         self.session = requests.Session()
@@ -116,8 +127,24 @@ class BailiiScraper:
             
             logger.info(f"Crawling depth {depth}: {current_url}")
             
+            # Check for pause/quit commands
+            if self.controller:
+                command = self.controller.check_for_commands()
+                if command == 'quit':
+                    return case_urls
+                self.controller.wait_while_paused()
+                
+                # Set current phase for pause state tracking
+                self.controller.set_current_phase(f"Crawling database", {
+                    'current_url': current_url,
+                    'depth': depth,
+                    'queue_size': len(queue),
+                    'cases_found': len(case_urls)
+                })
+            
             if self.is_case_url(current_url):
                 case_urls.add(current_url)
+                logger.info(f"Found case: {current_url}")
                 continue
             
             # Get all links from current page
@@ -136,9 +163,23 @@ class BailiiScraper:
         all_case_urls = set()
         all_databases = EW_DATABASES + UK_DATABASES
         
-        for db_path in tqdm(all_databases, desc="Crawling databases"):
+        for i, db_path in enumerate(tqdm(all_databases, desc="Crawling databases")):
             db_url = BASE_URL + db_path
             logger.info(f"Starting crawl of database: {db_url}")
+            
+            # Check for pause/quit commands
+            if self.controller:
+                command = self.controller.check_for_commands()
+                if command == 'quit':
+                    break
+                self.controller.wait_while_paused()
+                
+                # Set current phase for pause state tracking
+                self.controller.set_current_phase(f"Discovering case URLs", {
+                    'current_database': db_path,
+                    'database_progress': f"{i+1}/{len(all_databases)}",
+                    'total_cases_found': len(all_case_urls)
+                })
             
             case_urls = self.crawl_database_recursively(db_url)
             all_case_urls.update(case_urls)
@@ -256,29 +297,42 @@ def main():
     """Main execution function for comprehensive BAILII scraping"""
     scraper = BailiiScraper(max_depth=3, delay=1.0)
     
-    logger.info("Starting comprehensive BAILII case discovery...")
+    # Show keyboard controls
+    print("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
     
-    # Discover all case URLs
-    case_urls = scraper.discover_all_case_urls()
-    logger.info(f"Discovered {len(case_urls)} total case URLs")
-    
-    # Save discovered URLs for reference
-    with open("discovered_case_urls.json", "w", encoding="utf-8") as f:
-        json.dump(list(case_urls), f, indent=2)
-    
-    # Process cases (limit for testing)
-    max_cases = 1000  # Adjust as needed
-    logger.info(f"Processing up to {max_cases} cases...")
-    
-    all_cases = scraper.process_case_urls(case_urls, max_cases=max_cases)
-    
-    # Save the dataset
-    output_file = "uk_legal_cases_comprehensive.json"
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(all_cases, f, indent=2)
-    
-    logger.info(f"✅ Saved {len(all_cases)} fine-tuning entries to {output_file}")
-    logger.info(f"✅ Total unique case URLs discovered: {len(case_urls)}")
+    try:
+        logger.info("Starting comprehensive BAILII case discovery...")
+        
+        # Discover all case URLs
+        case_urls = scraper.discover_all_case_urls()
+        logger.info(f"Discovered {len(case_urls)} total case URLs")
+        
+        # Save discovered URLs for reference
+        with open("discovered_case_urls.json", "w", encoding="utf-8") as f:
+            json.dump(list(case_urls), f, indent=2)
+        
+        # Process cases (limit for testing)
+        max_cases = 1000  # Adjust as needed
+        logger.info(f"Processing up to {max_cases} cases...")
+        
+        all_cases = scraper.process_case_urls(case_urls, max_cases=max_cases)
+        
+        # Save the dataset
+        output_file = "uk_legal_cases_comprehensive.json"
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(all_cases, f, indent=2)
+        
+        logger.info(f"✅ Saved {len(all_cases)} fine-tuning entries to {output_file}")
+        logger.info(f"✅ Total unique case URLs discovered: {len(case_urls)}")
+        
+    except KeyboardInterrupt:
+        logger.info("Scraping interrupted by user")
+    except Exception as e:
+        logger.error(f"Scraping failed: {e}")
+    finally:
+        # Cleanup controller
+        if scraper.controller:
+            scraper.controller.cleanup()
 
 if __name__ == "__main__":
     main()

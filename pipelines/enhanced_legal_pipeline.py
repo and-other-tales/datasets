@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
 from utils.legal_metadata import LegalMetadata, LegalDocumentProcessor, save_legal_metadata
 from utils.hmrc_metadata import HMRCMetadata, HMRCDocumentProcessor, save_hmrc_metadata
 from utils.legal_citation_graph import LegalCitationGraph
@@ -40,6 +41,13 @@ class EnhancedLegalPipeline:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
+        # Initialize pipeline controller for pause functionality
+        self.controller = PipelineController()
+        
+        # Register pause functionality callbacks
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        
         # Create enhanced output structure
         self.enhanced_metadata_dir = self.output_dir / "enhanced_metadata"
         self.citation_graphs_dir = self.output_dir / "citation_graphs"
@@ -47,6 +55,8 @@ class EnhancedLegalPipeline:
         self.training_datasets_dir = self.output_dir / "training_datasets"
         self.compliance_reports_dir = self.output_dir / "compliance_reports"
         self.rag_system_dir = self.output_dir / "rag_system"
+        
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         for dir_path in [
             self.enhanced_metadata_dir, self.citation_graphs_dir, self.faiss_indices_dir,
