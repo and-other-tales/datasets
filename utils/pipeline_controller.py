@@ -7,9 +7,11 @@ Handles keyboard input for pipeline control: P (pause/unpause), A (update databa
 import threading
 import queue
 import sys
+import os
 import select
 import tty
 import termios
+import fcntl
 import json
 import logging
 from pathlib import Path
@@ -42,40 +44,37 @@ class PipelineController:
     
     def _setup_non_blocking_input(self):
         """Setup non-blocking input without breaking terminal output"""
-        if not sys.stdin.isatty():
-            return
-        
-        try:
-            # Get current terminal attributes
-            attrs = termios.tcgetattr(sys.stdin)
-            
-            # Modify only what we need: disable canonical mode and echo for input
-            attrs[3] &= ~(termios.ICANON | termios.ECHO)
-            
-            # Set minimum bytes to read and timeout
-            attrs[6][termios.VMIN] = 0
-            attrs[6][termios.VTIME] = 0
-            
-            # Apply the changes
-            termios.tcsetattr(sys.stdin, termios.TCSANOW, attrs)
-        except Exception:
-            pass
+        # Don't modify terminal settings at all during initialization
+        # Only use select() for non-blocking reads
+        pass
     
     def _monitor_input(self):
         """Monitor keyboard input in a separate thread"""
         while self.is_running:
             if sys.stdin.isatty():
                 try:
-                    # Use select with a timeout to avoid blocking
-                    if select.select([sys.stdin], [], [], 0.1)[0]:
-                        key = sys.stdin.read(1)
-                        if key:
-                            self.input_queue.put(key.lower())
+                    # Use select with a very short timeout to check for input
+                    ready, _, _ = select.select([sys.stdin], [], [], 0.1)
+                    if ready:
+                        # Temporarily set non-blocking mode only for reading
+                        fd = sys.stdin.fileno()
+                        old_flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+                        fcntl.fcntl(fd, fcntl.F_SETFL, old_flags | os.O_NONBLOCK)
+                        
+                        try:
+                            key = sys.stdin.read(1)
+                            if key:
+                                self.input_queue.put(key.lower())
+                        except (BlockingIOError, OSError):
+                            pass
+                        finally:
+                            # Restore original flags
+                            fcntl.fcntl(fd, fcntl.F_SETFL, old_flags)
                 except Exception:
-                    continue
-            else:
-                # If not a TTY, just sleep to avoid busy waiting
-                threading.Event().wait(0.1)
+                    pass
+            
+            # Small delay to prevent busy waiting
+            threading.Event().wait(0.1)
     
     def _restore_terminal(self):
         """Restore original terminal settings"""
