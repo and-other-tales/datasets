@@ -26,6 +26,7 @@ from utils.hmrc_metadata import (
     HMRCMetadata, HMRCDocumentProcessor, save_hmrc_metadata,
     HMRCDocumentType, TaxAuthority, TaxDomain
 )
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
 
 # Setup logging
 script_dir = Path(__file__).parent.parent
@@ -48,6 +49,11 @@ class HMRCScraper:
         self.base_url = "https://www.gov.uk"
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        
+        # Initialize pipeline controller
+        self.controller = PipelineController()
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
         
         # Create subdirectories for different content types
         self.text_dir = self.output_dir / "text"
@@ -184,6 +190,12 @@ class HMRCScraper:
                                     guidance_urls.add(full_url)
                                     found_documents += 1
                                     logger.info(f"Found: {title}")
+                                    
+                                    # Check for pause/quit commands
+                                    command = self.controller.check_for_commands()
+                                    if command == 'quit':
+                                        return guidance_urls
+                                    self.controller.wait_while_paused()
                     
                     if found_documents == 0:
                         logger.info(f"No more documents found on page {page} for {endpoint}")
@@ -234,6 +246,12 @@ class HMRCScraper:
                             full_url = urljoin(self.base_url, href)
                             form_urls.add(full_url)
                             logger.info(f"Found form: {title}")
+                            
+                            # Check for pause/quit commands
+                            command = self.controller.check_for_commands()
+                            if command == 'quit':
+                                return form_urls
+                            self.controller.wait_while_paused()
                 
                 time.sleep(0.1)
                 
@@ -271,6 +289,12 @@ class HMRCScraper:
                             full_url = urljoin(self.base_url, href)
                             manual_urls.add(full_url)
                             logger.info(f"Found manual: {title}")
+                            
+                            # Check for pause/quit commands
+                            command = self.controller.check_for_commands()
+                            if command == 'quit':
+                                return manual_urls
+                            self.controller.wait_while_paused()
                 
                 time.sleep(0.1)
                 
@@ -606,6 +630,19 @@ class HMRCScraper:
         for i, url in enumerate(urls_to_download, 1):
             logger.info(f"Progress: {i}/{len(urls_to_download)}")
             
+            # Check for pause/quit commands before downloading
+            command = self.controller.check_for_commands()
+            if command == 'quit':
+                break
+            self.controller.wait_while_paused()
+            
+            # Set current phase for pause state tracking
+            self.controller.set_current_phase(f"Downloading documents", {
+                'current_document': i,
+                'total_documents': len(urls_to_download),
+                'current_url': url
+            })
+            
             success = self.download_document(url)
             
             if success:
@@ -757,6 +794,9 @@ def main():
     
     scraper = HMRCScraper(args.output_dir)
     
+    # Show keyboard controls
+    print("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
+    
     try:
         if args.discover_only:
             scraper.run_comprehensive_discovery()
@@ -779,6 +819,9 @@ def main():
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
         scraper.save_progress()
+    finally:
+        # Cleanup controller
+        scraper.controller.cleanup()
 
 if __name__ == "__main__":
     main()

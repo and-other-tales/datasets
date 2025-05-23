@@ -9,7 +9,9 @@ and enhanced dataset generation for training domain-specialist Legal Llama model
 import os
 import sys
 import argparse
+import curses
 from pathlib import Path
+from typing import Dict, Optional, List, Tuple, Callable
 
 # Add project root to Python path
 project_root = Path(__file__).parent
@@ -406,6 +408,7 @@ def show_interactive_menu():
         print("OTHER OPTIONS:")
         print(" 15. Show Pipeline Status")
         print(" 16. View Documentation")
+        print(" 17. Manage Credentials")
         print("  0. Exit")
         print()
         
@@ -555,6 +558,332 @@ TARGET MODELS:
 For detailed documentation, see README.md
 """)
     input("\nPress Enter to continue...")
+
+def _load_env_credentials() -> Dict[str, str]:
+    """Load credentials from .env file"""
+    env_file = Path('.env')
+    credentials = {}
+    
+    if env_file.exists():
+        try:
+            with open(env_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and '=' in line:
+                        key, value = line.split('=', 1)
+                        credentials[key.strip()] = value.strip()
+        except Exception as e:
+            print(f"Error reading .env file: {e}")
+    
+    return credentials
+
+def _save_env_credentials(credentials: Dict[str, str]):
+    """Save credentials to .env file"""
+    env_file = Path('.env')
+    
+    try:
+        # Read existing file to preserve comments and structure
+        existing_lines = []
+        if env_file.exists():
+            with open(env_file, 'r') as f:
+                existing_lines = f.readlines()
+        
+        # Write updated credentials
+        with open(env_file, 'w') as f:
+            for line in existing_lines:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key = line.split('=', 1)[0].strip()
+                    if key in credentials:
+                        f.write(f"{key}={credentials[key]}\n")
+                    else:
+                        f.write(line + '\n')
+                else:
+                    f.write(line + '\n')
+            
+            # Add any new credentials that weren't in the original file
+            existing_keys = set()
+            for line in existing_lines:
+                if '=' in line and not line.strip().startswith('#'):
+                    existing_keys.add(line.split('=', 1)[0].strip())
+            
+            for key, value in credentials.items():
+                if key not in existing_keys:
+                    f.write(f"{key}={value}\n")
+        
+        print("✅ Credentials saved successfully!")
+        
+    except Exception as e:
+        print(f"❌ Error saving credentials: {e}")
+
+class MenuItem:
+    """Represents a menu item with title, description, and action"""
+    def __init__(self, title: str, description: str, action: Callable, category: str = ""):
+        self.title = title
+        self.description = description
+        self.action = action
+        self.category = category
+
+class CursesMenu:
+    """Modern curses-based menu interface"""
+    def __init__(self, stdscr):
+        self.stdscr = stdscr
+        self.current_row = 0
+        self.top_row = 0
+        self.menu_items = []
+        self.categories = []
+        self.max_visible_items = 0
+        
+        # Initialize colors
+        curses.start_color()
+        curses.use_default_colors()
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Selected item
+        curses.init_pair(2, curses.COLOR_CYAN, -1)    # Category headers
+        curses.init_pair(3, curses.COLOR_GREEN, -1)   # Active items
+        curses.init_pair(4, curses.COLOR_YELLOW, -1)  # Descriptions
+        curses.init_pair(5, curses.COLOR_RED, -1)     # Exit items
+        
+        # Hide cursor
+        curses.curs_set(0)
+        
+    def add_category(self, category_name: str):
+        """Add a category separator"""
+        self.categories.append(len(self.menu_items))
+        self.menu_items.append(MenuItem(f"=== {category_name} ===", "", None, "category"))
+        
+    def add_item(self, title: str, description: str, action: Callable, category: str = ""):
+        """Add a menu item"""
+        self.menu_items.append(MenuItem(title, description, action, category))
+        
+    def add_separator(self):
+        """Add a visual separator"""
+        self.menu_items.append(MenuItem("", "", None, "separator"))
+        
+    def draw_header(self):
+        """Draw the header"""
+        height, width = self.stdscr.getmaxyx()
+        
+        # Clear header area
+        for i in range(5):
+            self.stdscr.move(i, 0)
+            self.stdscr.clrtoeol()
+        
+        # Title
+        title = "othertales Datasets Tools"
+        self.stdscr.addstr(1, (width - len(title)) // 2, title, curses.A_BOLD)
+        
+        # Subtitle
+        subtitle = "Legal AI Training Dataset Pipeline"
+        self.stdscr.addstr(2, (width - len(subtitle)) // 2, subtitle, curses.color_pair(4))
+        
+        # Controls
+        controls = "↑↓: Navigate  ENTER: Select  Q: Quit"
+        self.stdscr.addstr(4, (width - len(controls)) // 2, controls, curses.color_pair(4))
+        
+    def draw_menu(self):
+        """Draw the menu items"""
+        height, width = self.stdscr.getmaxyx()
+        self.max_visible_items = height - 8  # Reserve space for header and footer
+        
+        menu_start_y = 6
+        
+        # Clear menu area
+        for i in range(menu_start_y, height - 2):
+            self.stdscr.move(i, 0)
+            self.stdscr.clrtoeol()
+        
+        # Determine visible range
+        if self.current_row >= self.top_row + self.max_visible_items:
+            self.top_row = self.current_row - self.max_visible_items + 1
+        elif self.current_row < self.top_row:
+            self.top_row = self.current_row
+            
+        # Draw visible menu items
+        for i, item_idx in enumerate(range(self.top_row, min(self.top_row + self.max_visible_items, len(self.menu_items)))):
+            y = menu_start_y + i
+            item = self.menu_items[item_idx]
+            
+            if item.category == "category":
+                # Category header
+                self.stdscr.addstr(y, 2, item.title, curses.color_pair(2) | curses.A_BOLD)
+            elif item.category == "separator":
+                # Separator line
+                self.stdscr.addstr(y, 2, "─" * (width - 4))
+            else:
+                # Regular menu item
+                is_selected = item_idx == self.current_row
+                
+                if is_selected:
+                    # Highlight selected item
+                    self.stdscr.addstr(y, 0, " " * width, curses.color_pair(1))
+                    self.stdscr.addstr(y, 2, f"▶ {item.title}", curses.color_pair(1) | curses.A_BOLD)
+                    
+                    # Show description at bottom
+                    if item.description:
+                        desc_y = height - 2
+                        self.stdscr.move(desc_y, 0)
+                        self.stdscr.clrtoeol()
+                        desc_text = f"Info: {item.description}"
+                        if len(desc_text) > width - 2:
+                            desc_text = desc_text[:width - 5] + "..."
+                        self.stdscr.addstr(desc_y, 2, desc_text, curses.color_pair(4))
+                else:
+                    # Regular item
+                    color = curses.color_pair(3)
+                    if "exit" in item.title.lower() or "quit" in item.title.lower():
+                        color = curses.color_pair(5)
+                    
+                    self.stdscr.addstr(y, 4, item.title, color)
+        
+        # Draw scrollbar if needed
+        if len(self.menu_items) > self.max_visible_items:
+            self.draw_scrollbar(menu_start_y, self.max_visible_items)
+            
+    def draw_scrollbar(self, start_y: int, visible_items: int):
+        """Draw a scrollbar on the right side"""
+        height, width = self.stdscr.getmaxyx()
+        scrollbar_x = width - 2
+        
+        # Calculate scrollbar position
+        total_items = len(self.menu_items)
+        thumb_size = max(1, (visible_items * visible_items) // total_items)
+        thumb_pos = (self.top_row * visible_items) // total_items
+        
+        # Draw scrollbar track
+        for i in range(visible_items):
+            self.stdscr.addstr(start_y + i, scrollbar_x, "│", curses.color_pair(4))
+        
+        # Draw scrollbar thumb
+        for i in range(thumb_size):
+            if thumb_pos + i < visible_items:
+                self.stdscr.addstr(start_y + thumb_pos + i, scrollbar_x, "█", curses.color_pair(2))
+    
+    def find_next_selectable(self, start_idx: int, direction: int) -> int:
+        """Find the next selectable menu item"""
+        items_count = len(self.menu_items)
+        idx = start_idx
+        
+        while True:
+            idx = (idx + direction) % items_count
+            if idx == start_idx:  # Wrapped around
+                break
+            
+            item = self.menu_items[idx]
+            if item.action is not None and item.category not in ["category", "separator"]:
+                return idx
+                
+        return start_idx
+    
+    def run(self) -> Optional[Callable]:
+        """Run the menu and return selected action"""
+        # Find first selectable item
+        self.current_row = self.find_next_selectable(-1, 1)
+        
+        while True:
+            self.stdscr.clear()
+            self.draw_header()
+            self.draw_menu()
+            self.stdscr.refresh()
+            
+            try:
+                key = self.stdscr.getch()
+                
+                if key == curses.KEY_UP:
+                    self.current_row = self.find_next_selectable(self.current_row, -1)
+                elif key == curses.KEY_DOWN:
+                    self.current_row = self.find_next_selectable(self.current_row, 1)
+                elif key == ord('\n') or key == curses.KEY_ENTER:
+                    # Return selected action
+                    if self.current_row < len(self.menu_items):
+                        item = self.menu_items[self.current_row]
+                        if item.action:
+                            return item.action
+                elif key == ord('q') or key == ord('Q'):
+                    return None
+                    
+            except KeyboardInterrupt:
+                return None
+
+def _manage_credentials():
+    """Interactive credential management"""
+    def manage_credentials_curses(stdscr):
+        menu = CursesMenu(stdscr)
+        
+        # Load current credentials
+        credentials = _load_env_credentials()
+        
+        # Define expected credentials with descriptions
+        credential_definitions = {
+            'MONGODB_CONNECTION_STRING': 'MongoDB Atlas connection string (mongodb+srv://...)',
+            'MONGODB_DATABASE': 'MongoDB database name (default: legal_datasets)',
+            'NEO4J_URI': 'Neo4j connection URI (bolt://...)',
+            'NEO4J_USERNAME': 'Neo4j username (default: neo4j)',
+            'NEO4J_PASSWORD': 'Neo4j password',
+            'PINECONE_API_KEY': 'Pinecone API key',
+            'PINECONE_ENVIRONMENT': 'Pinecone environment (default: us-west1-gcp)',
+            'ANTHROPIC_API_KEY': 'Anthropic API key for Claude integration'
+        }
+        
+        menu.add_category("DATABASE CREDENTIALS")
+        
+        def create_edit_action(key):
+            def edit_credential():
+                # Switch back to normal mode to get input
+                curses.endwin()
+                description = credential_definitions[key]
+                current_value = credentials.get(key, '')
+                print(f"\nEditing: {key}")
+                print(f"Description: {description}")
+                print(f"Current value: {'***Hidden***' if ('PASSWORD' in key or 'KEY' in key) and current_value else current_value}")
+                
+                new_value = input("Enter new value (press Enter to keep current): ").strip()
+                if new_value:
+                    credentials[key] = new_value
+                    print(f"✅ Updated {key}")
+                else:
+                    print("Value unchanged")
+                
+                input("\nPress Enter to continue...")
+                # Restart curses
+                stdscr.clear()
+                stdscr.refresh()
+            return edit_credential
+        
+        # Add credential items
+        for key, description in credential_definitions.items():
+            current_value = credentials.get(key, 'Not set')
+            if 'PASSWORD' in key or 'KEY' in key:
+                display_value = '***Hidden***' if current_value != 'Not set' else 'Not set'
+            else:
+                display_value = current_value[:50] + '...' if len(current_value) > 50 else current_value
+            
+            title = f"{key}: {display_value}"
+            menu.add_item(title, description, create_edit_action(key))
+        
+        menu.add_separator()
+        
+        def save_and_exit():
+            curses.endwin()
+            _save_env_credentials(credentials)
+            print("Credentials saved. Restart applications to use new credentials.")
+            input("Press Enter to continue...")
+            stdscr.clear()
+            stdscr.refresh()
+            return "exit"
+        
+        def exit_without_saving():
+            return "exit"
+        
+        menu.add_item("Save and Exit", "Save credentials to .env file and return to main menu", save_and_exit)
+        menu.add_item("Exit without Saving", "Return to main menu without saving changes", exit_without_saving)
+        
+        while True:
+            action = menu.run()
+            if action is None or (callable(action) and action() == "exit"):
+                break
+    
+    # Run the curses interface
+    curses.wrapper(manage_credentials_curses)
 
 def main():
     """Main entry point"""

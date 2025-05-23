@@ -6,12 +6,17 @@ from tqdm import tqdm
 import re
 import textwrap
 import os
+import sys
 from pathlib import Path
 from typing import List, Dict, Optional, Set
 import logging
 from anthropic import Anthropic
 from urllib.parse import urljoin, urlparse
 from collections import deque
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
 
 BASE_URL = "https://www.bailii.org"
 CHUNK_CHAR_LIMIT = 4000  # Adjust for token limits (4k characters ~ 1000 tokens)
