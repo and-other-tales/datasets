@@ -20,11 +20,16 @@ from collections import deque
 import xml.etree.ElementTree as ET
 
 # Setup logging
+script_dir = Path(__file__).parent.parent
+log_dir = script_dir / 'logs'
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / 'hmrc_scraper.log'
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/hmrc_scraper.log'),
+        logging.FileHandler(log_file),
         logging.StreamHandler()
     ]
 )
