@@ -5,12 +5,18 @@ Scrapes housing, tenancy, landlord-tenant, and eviction cases from Bailli
 """
 
 import re
+import sys
 import json
 import time
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional, Set
-from bailii_scraper import BailiiScraper
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+from pipelines.bailii_scraper import BailiiScraper
 
 logger = logging.getLogger(__name__)
 

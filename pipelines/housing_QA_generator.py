@@ -5,19 +5,34 @@ Generates housing, tenancy, and landlord-tenant focused Q&A pairs
 """
 
 import os
+import sys
 import json
 import re
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional
 import anthropic
-from QA_pairs import UKLegislationQAGenerator
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+from utils.QA_pairs import UKLegislationQAGenerator
 
 logger = logging.getLogger(__name__)
 
 class HousingQAGenerator(UKLegislationQAGenerator):
     def __init__(self, anthropic_api_key: Optional[str] = None):
         super().__init__(anthropic_api_key)
+        
+        # Initialize pipeline controller for pause functionality
+        self.controller = PipelineController()
+        
+        # Register pause functionality callbacks
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         # Housing-specific prompts and categories
         self.housing_categories = {
@@ -296,39 +311,68 @@ Return only the JSON array, no additional text."""
     def process_all_housing_sources(self, legislation_dir: str, case_law_file: str = None, 
                                   output_file: str = "housing_qa_dataset.json"):
         """Process all housing sources and generate comprehensive Q&A dataset"""
+        logger.info("=== STARTING HOUSING Q&A GENERATION ===")
+        
         all_qa_pairs = []
         
-        # Process legislation
-        legislation_path = Path(legislation_dir)
-        text_files = []
-        if (legislation_path / "text").exists():
-            text_files.extend(list((legislation_path / "text").glob("*.txt")))
-        text_files.extend(list(legislation_path.glob("*.txt")))
-        
-        if text_files:
-            logger.info(f"Processing {len(text_files)} housing legislation files")
-            for file_path in text_files:
-                qa_pairs = self.process_housing_legislation_file(file_path)
-                all_qa_pairs.extend(qa_pairs)
-        
-        # Process case law if available
-        if case_law_file and Path(case_law_file).exists():
-            logger.info("Processing housing case law")
-            case_qa_pairs = self.process_housing_case_law(case_law_file)
-            all_qa_pairs.extend(case_qa_pairs)
-        
-        # Save results
-        output_path = Path(output_file)
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(all_qa_pairs, f, indent=2, ensure_ascii=False)
-        
-        logger.info(f"Generated {len(all_qa_pairs)} housing Q&A pairs")
-        logger.info(f"Results saved to {output_path.absolute()}")
-        
-        # Generate specialised housing summary
-        self.generate_housing_qa_summary(all_qa_pairs, output_path.parent / "housing_qa_summary.json")
-        
-        return all_qa_pairs
+        try:
+            # Phase 1: Process legislation
+            logger.info("Phase 1: Processing housing legislation...")
+            self.controller.set_current_phase('legislation_processing', {'step': 'housing_acts'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            legislation_path = Path(legislation_dir)
+            text_files = []
+            if (legislation_path / "text").exists():
+                text_files.extend(list((legislation_path / "text").glob("*.txt")))
+            text_files.extend(list(legislation_path.glob("*.txt")))
+            
+            if text_files:
+                logger.info(f"Processing {len(text_files)} housing legislation files")
+                for file_path in text_files:
+                    # Check for pause commands periodically
+                    self.controller.check_for_commands()
+                    self.controller.wait_while_paused()
+                    
+                    qa_pairs = self.process_housing_legislation_file(file_path)
+                    all_qa_pairs.extend(qa_pairs)
+            
+            # Phase 2: Process case law if available
+            if case_law_file and Path(case_law_file).exists():
+                logger.info("Phase 2: Processing housing case law...")
+                self.controller.set_current_phase('case_law_processing', {'step': 'housing_cases'})
+                self.controller.check_for_commands()
+                self.controller.wait_while_paused()
+                
+                case_qa_pairs = self.process_housing_case_law(case_law_file)
+                all_qa_pairs.extend(case_qa_pairs)
+            
+            # Phase 3: Save results
+            logger.info("Phase 3: Saving Q&A datasets...")
+            self.controller.set_current_phase('dataset_saving', {'step': 'output_generation'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            # Save results
+            output_path = Path(output_file)
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(all_qa_pairs, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Generated {len(all_qa_pairs)} housing Q&A pairs")
+            logger.info(f"Results saved to {output_path.absolute()}")
+            
+            # Generate specialised housing summary
+            self.generate_housing_qa_summary(all_qa_pairs, output_path.parent / "housing_qa_summary.json")
+            
+            return all_qa_pairs
+            
+        except Exception as e:
+            logger.error(f"Housing Q&A generation failed: {e}")
+            raise
+        finally:
+            # Cleanup controller
+            self.controller.cleanup()
     
     def generate_housing_qa_summary(self, qa_pairs: List[Dict[str, str]], output_file: Path):
         """Generate summary statistics for housing Q&A dataset"""

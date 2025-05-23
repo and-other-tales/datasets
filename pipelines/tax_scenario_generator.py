@@ -364,6 +364,8 @@ This guidance is based on current HMRC requirements and regulations.
     
     def enhance_tax_dataset(self) -> Dict[str, int]:
         """Enhance the tax dataset with calculations and scenarios"""
+        logger.info("=== STARTING TAX SCENARIO GENERATION ===")
+        
         stats = {
             "calculation_examples": 0,
             "optimisation_examples": 0,
@@ -373,32 +375,65 @@ This guidance is based on current HMRC requirements and regulations.
         
         enhanced_examples = []
         
-        # Generate different types of examples
-        calculation_examples = self.generate_calculation_examples({})
-        optimisation_examples = self.generate_optimisation_examples()
-        compliance_examples = self.generate_compliance_examples()
-        
-        enhanced_examples.extend(calculation_examples)
-        enhanced_examples.extend(optimisation_examples)
-        enhanced_examples.extend(compliance_examples)
-        
-        stats["calculation_examples"] = len(calculation_examples)
-        stats["optimisation_examples"] = len(optimisation_examples)
-        stats["compliance_examples"] = len(compliance_examples)
-        stats["total_enhanced"] = len(enhanced_examples)
-        
-        # Save enhanced dataset
-        output_file = self.output_dir / "enhanced_tax_scenarios.json"
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(enhanced_examples, f, indent=2, ensure_ascii=False)
-        
-        # Save statistics
-        stats_file = self.output_dir / "tax_enhancement_stats.json"
-        with open(stats_file, 'w', encoding='utf-8') as f:
-            json.dump(stats, f, indent=2)
-        
-        logger.info(f"Enhanced tax dataset created with {stats['total_enhanced']} examples")
-        return stats
+        try:
+            # Phase 1: Generate calculation examples
+            logger.info("Phase 1: Generating tax calculation examples...")
+            self.controller.set_current_phase('calculation_generation', {'step': 'income_tax_calculations'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            calculation_examples = self.generate_calculation_examples({})
+            
+            # Phase 2: Generate optimisation examples
+            logger.info("Phase 2: Generating tax optimisation examples...")
+            self.controller.set_current_phase('optimisation_generation', {'step': 'tax_planning'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            optimisation_examples = self.generate_optimisation_examples()
+            
+            # Phase 3: Generate compliance examples
+            logger.info("Phase 3: Generating compliance examples...")
+            self.controller.set_current_phase('compliance_generation', {'step': 'regulatory_scenarios'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            compliance_examples = self.generate_compliance_examples()
+            
+            # Phase 4: Combine and save datasets
+            logger.info("Phase 4: Combining and saving tax scenarios...")
+            self.controller.set_current_phase('dataset_saving', {'step': 'output_generation'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            enhanced_examples.extend(calculation_examples)
+            enhanced_examples.extend(optimisation_examples)
+            enhanced_examples.extend(compliance_examples)
+            
+            stats["calculation_examples"] = len(calculation_examples)
+            stats["optimisation_examples"] = len(optimisation_examples)
+            stats["compliance_examples"] = len(compliance_examples)
+            stats["total_enhanced"] = len(enhanced_examples)
+            
+            # Save enhanced dataset
+            output_file = self.output_dir / "enhanced_tax_scenarios.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(enhanced_examples, f, indent=2, ensure_ascii=False)
+            
+            # Save statistics
+            stats_file = self.output_dir / "tax_enhancement_stats.json"
+            with open(stats_file, 'w', encoding='utf-8') as f:
+                json.dump(stats, f, indent=2)
+            
+            logger.info(f"Enhanced tax dataset created with {stats['total_enhanced']} examples")
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Tax scenario generation failed: {e}")
+            raise
+        finally:
+            # Cleanup controller
+            self.controller.cleanup()
 
 def main():
     import argparse
