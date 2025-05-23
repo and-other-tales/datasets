@@ -7,12 +7,18 @@ and compliance checks for training sophisticated tax LLMs.
 """
 
 import os
+import sys
 import json
 import logging
 import random
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 from datetime import datetime, timedelta
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,6 +28,15 @@ class TaxScenarioGenerator:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize pipeline controller for pause functionality
+        self.controller = PipelineController()
+        
+        # Register pause functionality callbacks
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         # Tax calculation templates and scenarios
         self.income_tax_scenarios = [

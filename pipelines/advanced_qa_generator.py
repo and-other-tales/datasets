@@ -7,12 +7,18 @@ designed specifically for training Legal Llama models that can handle complex pr
 """
 
 import os
+import sys
 import json
 import logging
 import random
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 import re
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,6 +28,15 @@ class LegalLlamaAdvancedQAGenerator:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize pipeline controller for pause functionality
+        self.controller = PipelineController()
+        
+        # Register pause functionality callbacks
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         # Advanced Q&A patterns for different reasoning types
         self.qa_patterns = {
@@ -481,6 +496,8 @@ class LegalLlamaAdvancedQAGenerator:
     
     def generate_advanced_qa_dataset(self) -> Dict[str, int]:
         """Generate the complete advanced Q&A dataset"""
+        logger.info("=== STARTING LEGAL LLAMA ADVANCED Q&A GENERATION ===")
+        
         stats = {
             "legal_qa": 0,
             "tax_qa": 0,
@@ -490,49 +507,79 @@ class LegalLlamaAdvancedQAGenerator:
             "total_qa": 0
         }
         
-        # Process legal sources
-        legal_qa = self.process_legal_sources()
-        
-        # Process tax sources
-        tax_qa = self.process_tax_sources()
-        
-        # Combine all Q&A pairs
-        all_qa = legal_qa + tax_qa
-        
-        # Calculate statistics
-        stats["legal_qa"] = len(legal_qa)
-        stats["tax_qa"] = len(tax_qa)
-        stats["total_qa"] = len(all_qa)
-        
-        for qa in all_qa:
-            if qa.get("multi_step"):
-                stats["multi_step"] += 1
-            if qa.get("complexity") == "adversarial":
-                stats["adversarial"] += 1
-            if qa.get("complexity") == "practical":
-                stats["practical"] += 1
-        
-        # Save complete dataset
-        output_file = self.output_dir / "advanced_qa_dataset.json"
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(all_qa, f, indent=2, ensure_ascii=False)
-        
-        # Save by domain
-        legal_file = self.output_dir / "legal_advanced_qa.json"
-        with open(legal_file, 'w', encoding='utf-8') as f:
-            json.dump(legal_qa, f, indent=2, ensure_ascii=False)
-        
-        tax_file = self.output_dir / "tax_advanced_qa.json"
-        with open(tax_file, 'w', encoding='utf-8') as f:
-            json.dump(tax_qa, f, indent=2, ensure_ascii=False)
-        
-        # Save statistics
-        stats_file = self.output_dir / "advanced_qa_stats.json"
-        with open(stats_file, 'w', encoding='utf-8') as f:
-            json.dump(stats, f, indent=2)
-        
-        logger.info(f"Advanced Q&A dataset created with {stats['total_qa']} pairs")
-        return stats
+        try:
+            # Phase 1: Process legal sources
+            logger.info("Phase 1: Processing legal sources...")
+            self.controller.set_current_phase('legal_processing', {'step': 'case_law_analysis'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            legal_qa = self.process_legal_sources()
+            
+            # Phase 2: Process tax sources
+            logger.info("Phase 2: Processing tax sources...")
+            self.controller.set_current_phase('tax_processing', {'step': 'hmrc_analysis'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            tax_qa = self.process_tax_sources()
+            
+            # Phase 3: Combine and organize Q&A pairs
+            logger.info("Phase 3: Combining and organizing Q&A pairs...")
+            self.controller.set_current_phase('qa_organization', {'step': 'dataset_creation'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            # Combine all Q&A pairs
+            all_qa = legal_qa + tax_qa
+            
+            # Calculate statistics
+            stats["legal_qa"] = len(legal_qa)
+            stats["tax_qa"] = len(tax_qa)
+            stats["total_qa"] = len(all_qa)
+            
+            for qa in all_qa:
+                if qa.get("multi_step"):
+                    stats["multi_step"] += 1
+                if qa.get("complexity") == "adversarial":
+                    stats["adversarial"] += 1
+                if qa.get("complexity") == "practical":
+                    stats["practical"] += 1
+            
+            # Phase 4: Save datasets
+            logger.info("Phase 4: Saving advanced Q&A datasets...")
+            self.controller.set_current_phase('dataset_saving', {'step': 'file_output'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            # Save complete dataset
+            output_file = self.output_dir / "advanced_qa_dataset.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(all_qa, f, indent=2, ensure_ascii=False)
+            
+            # Save by domain
+            legal_file = self.output_dir / "legal_advanced_qa.json"
+            with open(legal_file, 'w', encoding='utf-8') as f:
+                json.dump(legal_qa, f, indent=2, ensure_ascii=False)
+            
+            tax_file = self.output_dir / "tax_advanced_qa.json"
+            with open(tax_file, 'w', encoding='utf-8') as f:
+                json.dump(tax_qa, f, indent=2, ensure_ascii=False)
+            
+            # Save statistics
+            stats_file = self.output_dir / "advanced_qa_stats.json"
+            with open(stats_file, 'w', encoding='utf-8') as f:
+                json.dump(stats, f, indent=2)
+            
+            logger.info(f"Advanced Q&A dataset created with {stats['total_qa']} pairs")
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Advanced Q&A generation failed: {e}")
+            raise
+        finally:
+            # Cleanup controller
+            self.controller.cleanup()
 
 def main():
     import argparse

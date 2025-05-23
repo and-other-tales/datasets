@@ -87,30 +87,58 @@ class EnhancedLegalPipeline:
         try:
             # Phase 1: Enhanced Metadata Extraction
             logger.info("Phase 1: Enhanced metadata extraction and processing...")
+            self.controller.set_current_phase('metadata_extraction', {'step': 'document_processing'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             processed_documents = self._process_all_documents(max_documents)
             
             # Phase 2: Citation Graph Construction
             logger.info("Phase 2: Building citation graphs and authority analysis...")
+            self.controller.set_current_phase('citation_graph', {'step': 'building_network'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             citation_graph = self._build_citation_graph(processed_documents)
             
             # Phase 3: Advanced Indexing
             logger.info("Phase 3: Creating legal-aware FAISS indices...")
+            self.controller.set_current_phase('faiss_indexing', {'step': 'creating_embeddings'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             faiss_index = self._create_legal_index(processed_documents)
             
             # Phase 4: Training Dataset Generation
             logger.info("Phase 4: Generating legal training datasets...")
+            self.controller.set_current_phase('training_datasets', {'step': 'generating_examples'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             training_datasets = self._generate_training_datasets(processed_documents)
             
             # Phase 5: Compliance Validation
             logger.info("Phase 5: Validating compliance and professional standards...")
+            self.controller.set_current_phase('compliance_validation', {'step': 'checking_standards'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             compliance_results = self._validate_compliance(training_datasets)
             
             # Phase 6: RAG System Creation
             logger.info("Phase 6: Creating advanced legal RAG system...")
+            self.controller.set_current_phase('rag_system', {'step': 'building_pipeline'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             rag_system = self._create_rag_system(faiss_index, citation_graph, processed_documents)
             
             # Phase 7: System Validation and Testing
             logger.info("Phase 7: System validation and testing...")
+            self.controller.set_current_phase('system_validation', {'step': 'testing_queries'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             validation_results = self._validate_system(rag_system)
             
             # Generate comprehensive report
@@ -128,6 +156,9 @@ class EnhancedLegalPipeline:
         except Exception as e:
             logger.error(f"Enhanced legal pipeline failed: {e}")
             raise
+        finally:
+            # Cleanup controller
+            self.controller.cleanup()
     
     def _process_all_documents(self, max_documents: Optional[int] = None) -> List[Tuple[str, Union[LegalMetadata, HMRCMetadata], str]]:
         """Process all documents with enhanced metadata extraction"""

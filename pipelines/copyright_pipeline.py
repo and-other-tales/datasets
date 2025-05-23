@@ -17,6 +17,8 @@ from typing import Optional
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+
 # Import our copyright-specific modules
 from utils.copyright_legislation_downloader import CopyrightLegislationDownloader
 
@@ -72,6 +74,13 @@ class CopyrightLawPipeline:
         self.max_legislation_items = max_legislation_items
         self.max_cases = max_cases
         
+        # Initialize pipeline controller for pause functionality
+        self.controller = PipelineController()
+        
+        # Register pause functionality callbacks
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        
         # Create directories
         self.legislation_dir.mkdir(parents=True, exist_ok=True)
         self.case_law_dir.mkdir(parents=True, exist_ok=True)
@@ -81,6 +90,7 @@ class CopyrightLawPipeline:
         logger.info(f"Legislation directory: {self.legislation_dir}")
         logger.info(f"Case law directory: {self.case_law_dir}")
         logger.info(f"Datasets directory: {self.datasets_dir}")
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
     
     def download_copyright_legislation(self) -> bool:
         """Download copyright-specific UK legislation using ParaLlama utilities"""
@@ -199,19 +209,39 @@ class CopyrightLawPipeline:
         
         try:
             # Phase 1: Download copyright legislation
+            logger.info("Phase 1: Downloading copyright legislation...")
+            self.controller.set_current_phase('legislation_download', {'step': 'copyright_docs'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             if not self.download_copyright_legislation():
                 logger.error("Copyright legislation download failed, stopping pipeline")
                 return False
             
             # Phase 2: Scrape copyright case law
+            logger.info("Phase 2: Scraping copyright case law...")
+            self.controller.set_current_phase('case_law_scraping', {'step': 'copyright_cases'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             if not self.scrape_copyright_case_law():
                 logger.error("Copyright case law scraping failed, continuing with available data")
             
             # Phase 3: Generate Q&A pairs
+            logger.info("Phase 3: Generating copyright Q&A pairs...")
+            self.controller.set_current_phase('qa_generation', {'step': 'copyright_qa'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             if not self.generate_copyright_qa_pairs():
                 logger.error("Copyright Q&A generation failed, continuing with available data")
             
             # Phase 4: Create final datasets
+            logger.info("Phase 4: Creating copyright datasets...")
+            self.controller.set_current_phase('dataset_creation', {'step': 'copyright_datasets'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             if not self.create_copyright_datasets():
                 logger.error("Copyright dataset creation failed")
                 return False
@@ -229,6 +259,9 @@ class CopyrightLawPipeline:
         except Exception as e:
             logger.error(f"Legal Llama copyright pipeline failed: {e}")
             return False
+        finally:
+            # Cleanup controller
+            self.controller.cleanup()
     
     def generate_pipeline_summary(self):
         """Generate a summary report of the copyright pipeline results"""

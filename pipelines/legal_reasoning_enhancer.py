@@ -7,11 +7,17 @@ and adversarial examples for training sophisticated legal LLMs.
 """
 
 import os
+import sys
 import json
 import logging
 from pathlib import Path
 from typing import List, Dict, Any
 import random
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+
+from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,6 +27,15 @@ class LegalReasoningEnhancer:
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize pipeline controller for pause functionality
+        self.controller = PipelineController()
+        
+        # Register pause functionality callbacks
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         # Legal reasoning templates for enhanced training
         self.reasoning_templates = {
@@ -148,64 +163,90 @@ class LegalReasoningEnhancer:
     
     def enhance_dataset(self) -> Dict[str, int]:
         """Enhance the legal dataset with reasoning and adversarial examples"""
-        stats = {"reasoning_examples": 0, "adversarial_examples": 0, "total_enhanced": 0}
+        logger.info("=== STARTING LEGAL REASONING ENHANCEMENT ===")
         
+        stats = {"reasoning_examples": 0, "adversarial_examples": 0, "total_enhanced": 0}
         enhanced_examples = []
         
-        # Process case law files
-        case_dirs = [
-            self.input_dir / "housing_case_law",
-            self.input_dir / "case_law",
-            self.input_dir / "bailii_cases"
-        ]
-        
-        for case_dir in case_dirs:
-            if not case_dir.exists():
-                continue
-                
-            metadata_dir = case_dir / "metadata"
-            if not metadata_dir.exists():
-                continue
+        try:
+            # Phase 1: Process case law files
+            logger.info("Phase 1: Processing case law files...")
+            self.controller.set_current_phase('case_processing', {'step': 'reasoning_analysis'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
             
-            for metadata_file in metadata_dir.glob("*.json"):
-                try:
-                    with open(metadata_file, 'r', encoding='utf-8') as f:
-                        case_data = json.load(f)
-                    
-                    # Read corresponding text file
-                    text_file = case_dir / "text" / f"{metadata_file.stem}.txt"
-                    if text_file.exists():
-                        with open(text_file, 'r', encoding='utf-8') as f:
-                            case_data['content'] = f.read()
-                    
-                    # Generate enhanced examples
-                    reasoning_examples = self.generate_reasoning_examples(case_data)
-                    adversarial_examples = self.generate_adversarial_examples(case_data)
-                    
-                    enhanced_examples.extend(reasoning_examples)
-                    enhanced_examples.extend(adversarial_examples)
-                    
-                    stats["reasoning_examples"] += len(reasoning_examples)
-                    stats["adversarial_examples"] += len(adversarial_examples)
-                    
-                except Exception as e:
-                    logger.error(f"Error processing {metadata_file}: {e}")
+            case_dirs = [
+                self.input_dir / "housing_case_law",
+                self.input_dir / "case_law",
+                self.input_dir / "bailii_cases"
+            ]
+            
+            for case_dir in case_dirs:
+                if not case_dir.exists():
                     continue
-        
-        # Save enhanced dataset
-        output_file = self.output_dir / "enhanced_legal_reasoning.json"
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(enhanced_examples, f, indent=2, ensure_ascii=False)
-        
-        stats["total_enhanced"] = len(enhanced_examples)
-        
-        # Save statistics
-        stats_file = self.output_dir / "enhancement_stats.json"
-        with open(stats_file, 'w', encoding='utf-8') as f:
-            json.dump(stats, f, indent=2)
-        
-        logger.info(f"Enhanced dataset created with {stats['total_enhanced']} examples")
-        return stats
+                    
+                metadata_dir = case_dir / "metadata"
+                if not metadata_dir.exists():
+                    continue
+                
+                logger.info(f"Processing {case_dir.name}...")
+                
+                for metadata_file in metadata_dir.glob("*.json"):
+                    try:
+                        # Check for pause commands periodically
+                        self.controller.check_for_commands()
+                        self.controller.wait_while_paused()
+                        
+                        with open(metadata_file, 'r', encoding='utf-8') as f:
+                            case_data = json.load(f)
+                        
+                        # Read corresponding text file
+                        text_file = case_dir / "text" / f"{metadata_file.stem}.txt"
+                        if text_file.exists():
+                            with open(text_file, 'r', encoding='utf-8') as f:
+                                case_data['content'] = f.read()
+                        
+                        # Generate enhanced examples
+                        reasoning_examples = self.generate_reasoning_examples(case_data)
+                        adversarial_examples = self.generate_adversarial_examples(case_data)
+                        
+                        enhanced_examples.extend(reasoning_examples)
+                        enhanced_examples.extend(adversarial_examples)
+                        
+                        stats["reasoning_examples"] += len(reasoning_examples)
+                        stats["adversarial_examples"] += len(adversarial_examples)
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing {metadata_file}: {e}")
+                        continue
+            
+            # Phase 2: Save enhanced dataset
+            logger.info("Phase 2: Saving enhanced datasets...")
+            self.controller.set_current_phase('dataset_saving', {'step': 'output_generation'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
+            # Save enhanced dataset
+            output_file = self.output_dir / "enhanced_legal_reasoning.json"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(enhanced_examples, f, indent=2, ensure_ascii=False)
+            
+            stats["total_enhanced"] = len(enhanced_examples)
+            
+            # Save statistics
+            stats_file = self.output_dir / "enhancement_stats.json"
+            with open(stats_file, 'w', encoding='utf-8') as f:
+                json.dump(stats, f, indent=2)
+            
+            logger.info(f"Enhanced dataset created with {stats['total_enhanced']} examples")
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Legal reasoning enhancement failed: {e}")
+            raise
+        finally:
+            # Cleanup controller
+            self.controller.cleanup()
 
 def main():
     import argparse
