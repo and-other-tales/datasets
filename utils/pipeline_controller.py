@@ -53,28 +53,24 @@ class PipelineController:
         while self.is_running:
             if sys.stdin.isatty():
                 try:
-                    # Use select with a very short timeout to check for input
+                    # Use select with a short timeout to check for input
                     ready, _, _ = select.select([sys.stdin], [], [], 0.1)
                     if ready:
-                        # Temporarily set non-blocking mode only for reading
-                        fd = sys.stdin.fileno()
-                        old_flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-                        fcntl.fcntl(fd, fcntl.F_SETFL, old_flags | os.O_NONBLOCK)
-                        
+                        # Set terminal to raw mode temporarily to read single characters
+                        old_settings = termios.tcgetattr(sys.stdin)
                         try:
+                            tty.setraw(sys.stdin.fileno())
                             key = sys.stdin.read(1)
                             if key:
                                 self.input_queue.put(key.lower())
-                        except (BlockingIOError, OSError):
-                            pass
                         finally:
-                            # Restore original flags
-                            fcntl.fcntl(fd, fcntl.F_SETFL, old_flags)
+                            # Always restore terminal settings
+                            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
                 except Exception:
                     pass
-            
-            # Small delay to prevent busy waiting
-            threading.Event().wait(0.1)
+            else:
+                # Small delay to prevent busy waiting
+                threading.Event().wait(0.1)
     
     def _restore_terminal(self):
         """Restore original terminal settings"""
@@ -91,21 +87,26 @@ class PipelineController:
     def check_for_commands(self) -> Optional[str]:
         """Check for keyboard commands and handle them"""
         try:
+            # Process all available keys
+            commands_processed = []
             while not self.input_queue.empty():
                 key = self.input_queue.get_nowait()
                 
                 if key == 'p':
                     self._handle_pause()
-                    return 'pause'
+                    commands_processed.append('pause')
                 elif key == 'a' and self.is_paused:
                     self._handle_database_update()
-                    return 'database_update'
+                    commands_processed.append('database_update')
                 elif key == 'd' and self.is_paused:
                     self._handle_dataset_creation()
-                    return 'dataset_creation'
+                    commands_processed.append('dataset_creation')
                 elif key == 'q':
                     self._handle_quit()
-                    return 'quit'
+                    commands_processed.append('quit')
+            
+            # Return the last processed command
+            return commands_processed[-1] if commands_processed else None
                     
         except queue.Empty:
             pass
@@ -116,15 +117,17 @@ class PipelineController:
         self.is_paused = not self.is_paused
         
         if self.is_paused:
-            print("\n" + "="*60)
-            print("🔶 PIPELINE PAUSED")
-            print("="*60)
-            print("Available commands:")
-            print("  P - Resume pipeline")
-            print("  A - Update databases from current point")
-            print("  D - Create dataset from current point")
-            print("  Q - Quit pipeline")
-            print("="*60)
+            # Force output to be visible
+            sys.stdout.write("\n" + "="*60 + "\n")
+            sys.stdout.write("🔶 PIPELINE PAUSED\n")
+            sys.stdout.write("="*60 + "\n")
+            sys.stdout.write("Available commands:\n")
+            sys.stdout.write("  P - Resume pipeline\n")
+            sys.stdout.write("  A - Update databases from current point\n")
+            sys.stdout.write("  D - Create dataset from current point\n")
+            sys.stdout.write("  Q - Quit pipeline\n")
+            sys.stdout.write("="*60 + "\n")
+            sys.stdout.flush()
             
             # Save current pause point
             self.pause_point_data = {
@@ -136,8 +139,9 @@ class PipelineController:
             
             self._save_pause_state()
         else:
-            print("\n🔶 PIPELINE RESUMED")
-            print("Press P to pause again, Q to quit\n")
+            sys.stdout.write("\n🔶 PIPELINE RESUMED\n")
+            sys.stdout.write("Press P to pause again, Q to quit\n\n")
+            sys.stdout.flush()
     
     def _handle_database_update(self):
         """Handle database update from current pause point"""

@@ -379,47 +379,148 @@ def run_enhanced_legal_pipeline(args):
         sys.argv = original_argv
 
 def show_interactive_menu():
-    """Show interactive menu for pipeline selection"""
+    """Show interactive curses-based menu for pipeline selection"""
+    def create_menu(stdscr):
+        menu = CursesMenu(stdscr)
+        
+        # Data Collection Pipelines
+        menu.add_category("DATA COLLECTION PIPELINES")
+        menu.add_item("Dynamic Pipeline (Any URL)", 
+                     "Generate datasets from any URL using AI analysis", 
+                     lambda: _run_with_menu_args(run_dynamic_pipeline, "Dynamic Pipeline"))
+        menu.add_item("HMRC Tax Documentation Scraper", 
+                     "Collect HMRC tax documentation from gov.uk", 
+                     lambda: _run_with_menu_args(run_hmrc_scraper, "HMRC Scraper"))
+        menu.add_item("Housing Legislation & Case Law", 
+                     "Collect housing legislation and case law", 
+                     lambda: _run_with_menu_args(run_housing_pipeline, "Housing Pipeline"))
+        menu.add_item("BAILII Case Law Scraper", 
+                     "Scrape case law from BAILII database", 
+                     lambda: _run_with_menu_args(run_bailii_scraper, "BAILII Scraper"))
+        menu.add_item("Copyright Law Pipeline", 
+                     "Collect copyright and IP law documentation", 
+                     lambda: _run_with_menu_args(run_copyright_pipeline, "Copyright Pipeline"))
+        menu.add_item("Complete Data Collection Pipeline", 
+                     "Run all data collection pipelines with pause controls", 
+                     lambda: _run_with_menu_args(run_complete_pipeline, "Complete Pipeline"))
+        
+        menu.add_separator()
+        
+        # Dataset Enhancement
+        menu.add_category("DATASET ENHANCEMENT (for LLM Training)")
+        menu.add_item("Legal Reasoning Enhancer", 
+                     "Enhance legal datasets with reasoning patterns", 
+                     lambda: _run_with_menu_args(run_legal_reasoning_enhancer, "Legal Reasoning Enhancer"))
+        menu.add_item("Tax Scenario Generator", 
+                     "Generate tax calculation and optimization scenarios", 
+                     lambda: _run_with_menu_args(run_tax_scenario_generator, "Tax Scenario Generator"))
+        menu.add_item("Advanced Q&A Generator", 
+                     "Generate advanced multi-step Q&A pairs", 
+                     lambda: _run_with_menu_args(run_advanced_qa_generator, "Advanced Q&A Generator"))
+        menu.add_item("Legal Llama Training Optimizer", 
+                     "Optimize datasets for Legal Llama 3.1 training", 
+                     lambda: _run_with_menu_args(run_llama_training_optimizer, "Legal Llama Training Optimizer"))
+        
+        menu.add_separator()
+        
+        # Complete Workflows
+        menu.add_category("COMPLETE WORKFLOWS")
+        menu.add_item("Enhanced Complete Pipeline (All Steps)", 
+                     "Run full data collection and enhancement pipeline", 
+                     lambda: _run_with_menu_args(run_enhanced_complete_pipeline, "Enhanced Complete Pipeline"))
+        menu.add_item("Production Legal AI Pipeline", 
+                     "Run production legal AI pipeline with GUIDANCE.md implementation", 
+                     lambda: _run_with_menu_args(run_enhanced_legal_pipeline, "Production Legal AI Pipeline"))
+        menu.add_item("Q&A Generation Only", 
+                     "Generate Q&A pairs from existing data", 
+                     lambda: _run_with_menu_args(run_qa_generator, "Q&A Generator"))
+        menu.add_item("Database Ingestion", 
+                     "Ingest data into MongoDB, Neo4j, and Pinecone", 
+                     lambda: _run_with_menu_args(run_database_ingestion, "Database Ingestion"))
+        
+        menu.add_separator()
+        
+        # Other Options
+        menu.add_category("OTHER OPTIONS")
+        menu.add_item("Show Pipeline Status", 
+                     "View status of data directories and files", 
+                     lambda: _show_pipeline_status())
+        menu.add_item("View Documentation", 
+                     "Show quick documentation and help", 
+                     lambda: _show_documentation())
+        menu.add_item("Manage Credentials", 
+                     "Edit database and API credentials", 
+                     lambda: _manage_credentials())
+        
+        menu.add_separator()
+        menu.add_item("Exit", "Exit the application", lambda: None)
+        
+        while True:
+            action = menu.run()
+            if action is None:
+                break
+            
+            # Execute the selected action
+            try:
+                curses.endwin()  # Temporarily exit curses mode
+                result = action()
+                if result is None and action.__name__ == '<lambda>':
+                    # If it's the exit option
+                    break
+                input("\nPress Enter to return to menu...")
+            except Exception as e:
+                print(f"Error: {e}")
+                input("Press Enter to continue...")
+            finally:
+                # Restart curses
+                stdscr.clear()
+                stdscr.refresh()
+        
+        # Final cleanup
+        curses.endwin()
+    
+    try:
+        curses.wrapper(create_menu)
+    except Exception as e:
+        print(f"Menu error: {e}")
+        print("Falling back to text menu...")
+        _show_text_menu_fallback()
+
+def _show_text_menu_fallback():
+    """Fallback text menu if curses fails"""
     while True:
         print("\n" + "="*60)
         print("              othertales Datasets Tools")
         print("="*60)
         print()
-        print("DATA COLLECTION PIPELINES:")
-        print("  1. othertales Dynamic Pipeline (Any URL)")
-        print("  2. HMRC Tax Documentation Scraper")
-        print("  3. Housing Legislation & Case Law Pipeline") 
-        print("  4. BAILII Case Law Scraper")
-        print("  5. Copyright Law Pipeline")
-        print("  6. Complete Data Collection Pipeline")
-        print()
-        print("DATASET ENHANCEMENT (for LLM Training):")
-        print("  7. Legal Reasoning Enhancer")
-        print("  8. Tax Scenario Generator")
-        print("  9. Advanced Q&A Generator")
-        print(" 10. Legal Llama Training Optimiser")
-        print()
-        print("COMPLETE WORKFLOWS:")
-        print(" 11. Enhanced Complete Pipeline (All Steps)")
-        print(" 12. Production Legal AI Pipeline")
-        print(" 13. Q&A Generation Only")
-        print(" 14. Database Ingestion")
-        print()
-        print("OTHER OPTIONS:")
-        print(" 15. Show Pipeline Status")
-        print(" 16. View Documentation")
-        print(" 17. Manage Credentials")
-        print("  0. Exit")
+        print("1. Dynamic Pipeline (Any URL)")
+        print("2. HMRC Tax Documentation Scraper")
+        print("3. Housing Legislation & Case Law Pipeline")
+        print("4. BAILII Case Law Scraper")
+        print("5. Copyright Law Pipeline")
+        print("6. Complete Data Collection Pipeline")
+        print("7. Legal Reasoning Enhancer")
+        print("8. Tax Scenario Generator")
+        print("9. Advanced Q&A Generator")
+        print("10. Legal Llama Training Optimizer")
+        print("11. Enhanced Complete Pipeline")
+        print("12. Production Legal AI Pipeline")
+        print("13. Q&A Generation Only")
+        print("14. Database Ingestion")
+        print("15. Show Pipeline Status")
+        print("16. View Documentation")
+        print("17. Manage Credentials")
+        print("0. Exit")
         print()
         
         try:
-            choice = input("Select an option (0-16): ").strip()
+            choice = input("Select an option (0-17): ").strip()
             
             if choice == "0":
                 print("Goodbye!")
                 break
             elif choice == "1":
-                _run_with_menu_args(run_dynamic_pipeline, "othertales Dynamic Pipeline")
+                _run_with_menu_args(run_dynamic_pipeline, "Dynamic Pipeline")
             elif choice == "2":
                 _run_with_menu_args(run_hmrc_scraper, "HMRC Scraper")
             elif choice == "3":
@@ -437,7 +538,7 @@ def show_interactive_menu():
             elif choice == "9":
                 _run_with_menu_args(run_advanced_qa_generator, "Advanced Q&A Generator")
             elif choice == "10":
-                _run_with_menu_args(run_llama_training_optimizer, "Legal Llama Training Optimiser")
+                _run_with_menu_args(run_llama_training_optimizer, "Legal Llama Training Optimizer")
             elif choice == "11":
                 _run_with_menu_args(run_enhanced_complete_pipeline, "Enhanced Complete Pipeline")
             elif choice == "12":
@@ -450,8 +551,10 @@ def show_interactive_menu():
                 _show_pipeline_status()
             elif choice == "16":
                 _show_documentation()
+            elif choice == "17":
+                _manage_credentials()
             else:
-                print("Invalid choice. Please select a number between 0-16.")
+                print("Invalid choice. Please select a number between 0-17.")
                 
         except KeyboardInterrupt:
             print("\n\nExiting...")
