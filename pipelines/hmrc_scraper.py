@@ -18,6 +18,14 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from collections import deque
 import xml.etree.ElementTree as ET
+import sys
+
+# Add parent directory to path for imports
+sys.path.append(str(Path(__file__).parent.parent))
+from utils.hmrc_metadata import (
+    HMRCMetadata, HMRCDocumentProcessor, save_hmrc_metadata,
+    HMRCDocumentType, TaxAuthority, TaxDomain
+)
 
 # Setup logging
 script_dir = Path(__file__).parent.parent
@@ -46,20 +54,29 @@ class HMRCScraper:
         self.html_dir = self.output_dir / "html"
         self.metadata_dir = self.output_dir / "metadata"
         self.forms_dir = self.output_dir / "forms"
+        self.enhanced_metadata_dir = self.output_dir / "enhanced_metadata"
         
-        for dir_path in [self.text_dir, self.html_dir, self.metadata_dir, self.forms_dir]:
+        for dir_path in [self.text_dir, self.html_dir, self.metadata_dir, self.forms_dir, self.enhanced_metadata_dir]:
             dir_path.mkdir(exist_ok=True)
         
         # Session for connection pooling
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'HMRC-Documentation-Scraper/1.0 (Educational/Research Purpose)'
+            'User-Agent': 'HMRC-Documentation-Scraper/2.0 (Legal AI Training Dataset)'
         })
+        
+        # Initialize HMRC document processor
+        self.hmrc_processor = HMRCDocumentProcessor()
         
         # Tracking sets
         self.discovered_urls = set()
         self.downloaded_urls = set()
         self.failed_urls = set()
+        
+        # Enhanced tracking for tax metadata
+        self.processed_documents = {}
+        self.tax_domain_stats = {domain.value: 0 for domain in TaxDomain}
+        self.document_type_stats = {doc_type.value: 0 for doc_type in HMRCDocumentType}
         
         # Tax-specific keywords for filtering
         self.tax_keywords = {
@@ -437,7 +454,7 @@ class HMRCScraper:
         return html_result
     
     def download_document(self, url: str) -> bool:
-        """Download a single document"""
+        """Download a single document with enhanced HMRC metadata processing"""
         try:
             # Generate filename from URL
             url_path = urlparse(url).path
@@ -450,10 +467,47 @@ class HMRCScraper:
             if not doc_data:
                 return False
             
+            content = doc_data['content']
+            title = doc_data['metadata'].get('title', 'Unknown Title')
+            
+            # Extract manual code if this is an HMRC manual
+            manual_code = self._extract_manual_code(url, title, content)
+            
+            # Process with HMRC-specific metadata extraction
+            try:
+                hmrc_metadata = self.hmrc_processor.process_hmrc_document(
+                    text=content,
+                    title=title,
+                    url=url,
+                    manual_code=manual_code
+                )
+                
+                # Update statistics
+                self.tax_domain_stats[hmrc_metadata.tax_domain.value] += 1
+                self.document_type_stats[hmrc_metadata.document_type.value] += 1
+                
+                # Store processed document info
+                self.processed_documents[filename] = {
+                    'url': url,
+                    'title': title,
+                    'tax_domain': hmrc_metadata.tax_domain.value,
+                    'document_type': hmrc_metadata.document_type.value,
+                    'authority_level': hmrc_metadata.authority_level.value,
+                    'manual_code': manual_code,
+                    'legislation_refs': len(hmrc_metadata.legislation_references),
+                    'hmrc_refs': len(hmrc_metadata.hmrc_cross_references)
+                }
+                
+                logger.info(f"Processed HMRC document: {title} [{hmrc_metadata.tax_domain.value}]")
+                
+            except Exception as e:
+                logger.warning(f"Failed to process HMRC metadata for {url}: {e}")
+                hmrc_metadata = None
+            
             # Save text content
             text_file = self.text_dir / f"{filename}.txt"
             with open(text_file, 'w', encoding='utf-8') as f:
-                f.write(doc_data['content'])
+                f.write(content)
             
             # Save HTML content (if available) or API data
             if 'html' in doc_data:
@@ -465,19 +519,43 @@ class HMRCScraper:
                 with open(api_file, 'w', encoding='utf-8') as f:
                     json.dump(doc_data['api_data'], f, indent=2)
             
-            # Save metadata
+            # Save original metadata
             metadata_file = self.metadata_dir / f"{filename}.json"
             with open(metadata_file, 'w', encoding='utf-8') as f:
                 json.dump(doc_data['metadata'], f, indent=2)
             
+            # Save enhanced HMRC metadata
+            if hmrc_metadata:
+                enhanced_metadata_file = self.enhanced_metadata_dir / f"{filename}.json"
+                save_hmrc_metadata(hmrc_metadata, enhanced_metadata_file)
+            
             self.downloaded_urls.add(url)
-            logger.info(f"Downloaded: {doc_data['metadata']['title']}")
+            logger.info(f"Downloaded: {title}")
             return True
             
         except Exception as e:
             logger.error(f"Error downloading {url}: {e}")
             self.failed_urls.add(url)
             return False
+    
+    def _extract_manual_code(self, url: str, title: str, content: str) -> Optional[str]:
+        """Extract HMRC manual code from URL, title, or content"""
+        # Try to extract from URL first
+        url_match = re.search(r'/([A-Z]{2,4}\d{5}[A-Z]*)(?:/|$)', url)
+        if url_match:
+            return url_match.group(1)
+        
+        # Try to extract from title
+        title_match = re.search(r'\b([A-Z]{2,4}\d{5}[A-Z]*)\b', title)
+        if title_match:
+            return title_match.group(1)
+        
+        # Try to extract from early content
+        content_match = re.search(r'\b([A-Z]{2,4}\d{5}[A-Z]*)\b', content[:500])
+        if content_match:
+            return content_match.group(1)
+        
+        return None
     
     def run_comprehensive_discovery(self):
         """Run comprehensive discovery of all HMRC documentation"""
@@ -573,14 +651,22 @@ class HMRCScraper:
             logger.info(f"Loaded progress: {len(self.downloaded_urls)} downloaded, {len(self.failed_urls)} failed")
     
     def generate_summary(self):
-        """Generate summary of downloaded HMRC documentation"""
+        """Generate comprehensive summary of downloaded HMRC documentation"""
         summary = {
             'total_discovered': len(self.discovered_urls),
             'total_downloaded': len(self.downloaded_urls),
             'total_failed': len(self.failed_urls),
             'content_types': {},
             'tax_categories': {},
-            'file_stats': {}
+            'file_stats': {},
+            'enhanced_analysis': {
+                'tax_domains': self.tax_domain_stats.copy(),
+                'document_types': self.document_type_stats.copy(),
+                'processed_documents': len(self.processed_documents),
+                'manual_coverage': self._analyze_manual_coverage(),
+                'legislation_references': self._count_legislation_references(),
+                'authority_distribution': self._analyze_authority_distribution()
+            }
         }
         
         # Analyze downloaded content
@@ -595,14 +681,65 @@ class HMRCScraper:
         summary['file_stats'] = {
             'text_files': len(list(self.text_dir.glob('*.txt'))),
             'html_files': len(list(self.html_dir.glob('*.html'))),
-            'metadata_files': len(list(self.metadata_dir.glob('*.json')))
+            'metadata_files': len(list(self.metadata_dir.glob('*.json'))),
+            'enhanced_metadata_files': len(list(self.enhanced_metadata_dir.glob('*.json')))
         }
         
         # Save summary
         with open(self.output_dir / "summary.json", 'w') as f:
             json.dump(summary, f, indent=2)
         
+        # Save enhanced processing report
+        from datetime import datetime
+        processing_report = {
+            'processed_documents': self.processed_documents,
+            'statistics': summary['enhanced_analysis'],
+            'generated_at': datetime.now().isoformat()
+        }
+        
+        with open(self.output_dir / "hmrc_processing_report.json", 'w') as f:
+            json.dump(processing_report, f, indent=2, ensure_ascii=False)
+        
         return summary
+    
+    def _analyze_manual_coverage(self) -> Dict[str, int]:
+        """Analyze coverage of different HMRC manuals"""
+        manual_coverage = {}
+        
+        for doc_info in self.processed_documents.values():
+            manual_code = doc_info.get('manual_code')
+            if manual_code:
+                # Extract manual prefix (e.g., "CG" from "CG12345")
+                prefix_match = re.match(r'^([A-Z]+)', manual_code)
+                if prefix_match:
+                    prefix = prefix_match.group(1)
+                    manual_coverage[prefix] = manual_coverage.get(prefix, 0) + 1
+        
+        return manual_coverage
+    
+    def _count_legislation_references(self) -> Dict[str, int]:
+        """Count total legislation references across all documents"""
+        total_refs = 0
+        unique_acts = set()
+        
+        for doc_info in self.processed_documents.values():
+            total_refs += doc_info.get('legislation_refs', 0)
+        
+        # Could be enhanced to track specific acts referenced
+        return {
+            'total_references': total_refs,
+            'average_per_document': total_refs / len(self.processed_documents) if self.processed_documents else 0
+        }
+    
+    def _analyze_authority_distribution(self) -> Dict[str, int]:
+        """Analyze distribution of authority levels"""
+        authority_dist = {}
+        
+        for doc_info in self.processed_documents.values():
+            authority = doc_info.get('authority_level', 'unknown')
+            authority_dist[authority] = authority_dist.get(authority, 0) + 1
+        
+        return authority_dist
 
 def main():
     """Main function to run the HMRC scraper"""

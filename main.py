@@ -345,6 +345,36 @@ def run_enhanced_complete_pipeline(args):
     print("\n=== Enhanced Complete Pipeline Complete ===")
     print("Your datasets are now ready for training domain-specialist Legal Llama models!")
 
+def run_enhanced_legal_pipeline(args):
+    """Run the new enhanced legal pipeline with GUIDANCE.md implementation"""
+    from pipelines.enhanced_legal_pipeline import main as enhanced_main
+    
+    # Set up arguments for enhanced legal pipeline
+    enhanced_args = []
+    
+    if args.input_dir:
+        enhanced_args.extend(['--input-dir', args.input_dir])
+    else:
+        enhanced_args.extend(['--input-dir', args.output_dir or 'generated'])
+    
+    if args.output_dir:
+        enhanced_args.extend(['--output-dir', args.output_dir])
+    
+    if args.max_documents:
+        enhanced_args.extend(['--max-documents', str(args.max_documents)])
+    
+    # Override sys.argv for the enhanced pipeline
+    original_argv = sys.argv
+    sys.argv = ['enhanced_legal_pipeline.py'] + enhanced_args
+    
+    try:
+        enhanced_main()
+    except ImportError:
+        print("Enhanced legal pipeline main function not found. Running enhanced pipeline directly...")
+        import pipelines.enhanced_legal_pipeline
+    finally:
+        sys.argv = original_argv
+
 def show_interactive_menu():
     """Show interactive menu for pipeline selection"""
     while True:
@@ -368,17 +398,18 @@ def show_interactive_menu():
         print()
         print("COMPLETE WORKFLOWS:")
         print(" 11. Enhanced Complete Pipeline (All Steps)")
-        print(" 12. Q&A Generation Only")
-        print(" 13. Database Ingestion")
+        print(" 12. Production Legal AI Pipeline")
+        print(" 13. Q&A Generation Only")
+        print(" 14. Database Ingestion")
         print()
         print("OTHER OPTIONS:")
-        print(" 14. Show Pipeline Status")
-        print(" 15. View Documentation")
+        print(" 15. Show Pipeline Status")
+        print(" 16. View Documentation")
         print("  0. Exit")
         print()
         
         try:
-            choice = input("Select an option (0-15): ").strip()
+            choice = input("Select an option (0-16): ").strip()
             
             if choice == "0":
                 print("Goodbye!")
@@ -406,15 +437,17 @@ def show_interactive_menu():
             elif choice == "11":
                 _run_with_menu_args(run_enhanced_complete_pipeline, "Enhanced Complete Pipeline")
             elif choice == "12":
-                _run_with_menu_args(run_qa_generator, "Q&A Generator")
+                _run_with_menu_args(run_enhanced_legal_pipeline, "Production Legal AI Pipeline")
             elif choice == "13":
-                _run_with_menu_args(run_database_ingestion, "Database Ingestion")
+                _run_with_menu_args(run_qa_generator, "Q&A Generator")
             elif choice == "14":
-                _show_pipeline_status()
+                _run_with_menu_args(run_database_ingestion, "Database Ingestion")
             elif choice == "15":
+                _show_pipeline_status()
+            elif choice == "16":
                 _show_documentation()
             else:
-                print("Invalid choice. Please select a number between 0-15.")
+                print("Invalid choice. Please select a number between 0-16.")
                 
         except KeyboardInterrupt:
             print("\n\nExiting...")
@@ -586,6 +619,12 @@ Examples:
     enhanced_parser.add_argument('--output-dir', help='Output directory for enhanced data')
     enhanced_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
     
+    # Production Legal AI Pipeline
+    legal_ai_parser = subparsers.add_parser('legal-ai', help='Run production legal AI pipeline (GUIDANCE.md implementation)')
+    legal_ai_parser.add_argument('--input-dir', default='generated', help='Input directory containing collected data')
+    legal_ai_parser.add_argument('--output-dir', help='Output directory for legal AI system')
+    legal_ai_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to process')
+    
     legal_enhancer_parser = subparsers.add_parser('legal-enhancer', help='Enhance legal datasets with reasoning patterns')
     legal_enhancer_parser.add_argument('--input-dir', default='generated', help='Input directory containing legal data')
     legal_enhancer_parser.add_argument('--output-dir', help='Output directory for enhanced data')
@@ -643,6 +682,8 @@ Examples:
         run_complete_pipeline(args)
     elif args.pipeline == 'enhanced-complete':
         run_enhanced_complete_pipeline(args)
+    elif args.pipeline == 'legal-ai':
+        run_enhanced_legal_pipeline(args)
     elif args.pipeline == 'legal-enhancer':
         run_legal_reasoning_enhancer(args)
     elif args.pipeline == 'tax-scenarios':
