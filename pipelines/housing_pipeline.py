@@ -81,6 +81,10 @@ class LegalLlamaHousingLawPipeline:
                 logger.warning(f"Could not initialize pause controls: {e}")
                 self.controller = None
         
+        # Show control message if pause controls are enabled
+        if enable_pause_controls and self.controller:
+            logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
+        
         # Initialize components
         self.legislation_downloader = HousingLegislationDownloader(legislation_dir)
         self.case_law_scraper = HousingBailiiScraper(case_law_dir) if HousingBailiiScraper else None

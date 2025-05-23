@@ -22,7 +22,16 @@ logger = logging.getLogger(__name__)
 
 class HousingBailiiScraper(BailiiScraper):
     def __init__(self, output_dir: str = "housing_case_law"):
-        super().__init__(output_dir)
+        super().__init__(output_dir, enable_pause_controls=True)
+        
+        # Initialize additional pipeline controller for housing-specific features
+        self.housing_controller = PipelineController()
+        
+        # Register pause functionality callbacks
+        self.housing_controller.register_callback('database_update', create_database_update_callback(self))
+        self.housing_controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         # Housing-specific case law keywords
         self.housing_keywords = {

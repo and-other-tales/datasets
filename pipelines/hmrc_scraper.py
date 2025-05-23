@@ -135,6 +135,10 @@ class HMRCScraper:
             '/search/news-and-communications?organisations%5B%5D=hm-revenue-customs'
         ]
         
+        # Show control message if pause controls are enabled
+        if enable_pause_controls and self.controller:
+            logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
+        
     def is_tax_related(self, title: str, summary: str = "") -> bool:
         """Check if content is tax-related"""
         text = (title + " " + summary).lower()
