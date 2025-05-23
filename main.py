@@ -131,6 +131,7 @@ def run_bailii_scraper(args):
 
 def run_complete_pipeline(args):
     """Run the complete data collection pipeline"""
+    print("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
     from pipelines.complete_pipeline import main as complete_main
     
     # Set up arguments for complete pipeline

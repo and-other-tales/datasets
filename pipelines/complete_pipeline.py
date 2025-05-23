@@ -14,6 +14,11 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
+# Add utils directory to path
+sys.path.append(str(Path(__file__).parent.parent / 'utils'))
+
+from pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+
 # Import our custom modules
 from improved_downloader import ImprovedUKLegislationDownloader
 from dataset_creator import UKLegislationDatasetCreator
@@ -47,6 +52,9 @@ class LegalLlamaUKLegislationPipeline:
         self.skip_qa_generation = skip_qa_generation
         self.tokenizer_name = tokenizer_name
         
+        # Initialize pipeline controller for pause functionality
+        self.controller = PipelineController()
+        
         # Initialize components
         self.downloader = ImprovedUKLegislationDownloader(output_dir)
         self.dataset_creator = UKLegislationDatasetCreator(
@@ -55,6 +63,10 @@ class LegalLlamaUKLegislationPipeline:
             tokenizer_name=tokenizer_name
         )
         self.qa_generator = UKLegislationQAGenerator()
+        
+        # Register pause functionality callbacks
+        self.controller.register_callback('database_update', create_database_update_callback(self))
+        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
     
     def run_download_phase(self) -> bool:
         """Run the legislation download phase"""
@@ -63,6 +75,8 @@ class LegalLlamaUKLegislationPipeline:
             return True
         
         logger.info("=== STARTING DOWNLOAD PHASE ===")
+        logger.info("Press P to pause, Q to quit at any time")
+        self.controller.set_current_phase('download', {'phase': 'starting'})
         
         try:
             # Load any previous progress
@@ -70,14 +84,26 @@ class LegalLlamaUKLegislationPipeline:
             
             # Discover all legislation
             logger.info("Discovering legislation...")
+            self.controller.set_current_phase('download', {'step': 'discovery'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             self.downloader.discover_legislation_systematically()
             
             # Download all legislation
             logger.info("Downloading legislation...")
+            self.controller.set_current_phase('download', {'step': 'downloading'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             self.downloader.download_all_legislation()
             
             # Verify downloads
             logger.info("Verifying downloads...")
+            self.controller.set_current_phase('download', {'step': 'verification'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             stats = self.downloader.verify_downloads()
             
             logger.info("Download phase completed successfully!")
@@ -102,6 +128,9 @@ class LegalLlamaUKLegislationPipeline:
             return True
         
         logger.info("=== STARTING DATASET CREATION PHASE ===")
+        self.controller.set_current_phase('dataset_creation', {'phase': 'starting'})
+        self.controller.check_for_commands()
+        self.controller.wait_while_paused()
         
         try:
             # Check if source data exists
@@ -122,6 +151,10 @@ class LegalLlamaUKLegislationPipeline:
             
             # Create datasets
             logger.info("Creating comprehensive datasets...")
+            self.controller.set_current_phase('dataset_creation', {'step': 'creating_datasets'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             datasets = self.dataset_creator.create_all_datasets()
             
             logger.info("Dataset creation phase completed successfully!")
@@ -143,6 +176,9 @@ class LegalLlamaUKLegislationPipeline:
             return True
         
         logger.info("=== STARTING Q&A GENERATION PHASE ===")
+        self.controller.set_current_phase('qa_generation', {'phase': 'starting'})
+        self.controller.check_for_commands()
+        self.controller.wait_while_paused()
         
         try:
             # Check if source data exists
@@ -164,6 +200,11 @@ class LegalLlamaUKLegislationPipeline:
             logger.info(f"Found {len(text_files)} text files for Q&A generation")
             
             # Generate Q&A pairs
+            logger.info("Generating Q&A pairs...")
+            self.controller.set_current_phase('qa_generation', {'step': 'generating_qa'})
+            self.controller.check_for_commands()
+            self.controller.wait_while_paused()
+            
             qa_output_file = Path(self.dataset_dir) / "qa_pairs_dataset.json"
             qa_pairs = self.qa_generator.process_all_legislation(
                 self.output_dir, 
@@ -186,7 +227,10 @@ class LegalLlamaUKLegislationPipeline:
     def run_complete_pipeline(self) -> bool:
         """Run the complete pipeline from download to dataset creation"""
         logger.info("=== STARTING COMPLETE LEGAL LLAMA UK LEGISLATION PIPELINE ===")
+        logger.info("🔶 KEYBOARD CONTROLS: P=Pause/Resume, A=Update Databases (when paused), D=Create Dataset (when paused), Q=Quit")
         start_time = time.time()
+        
+        try:
         
         try:
             # Phase 1: Download legislation
@@ -219,6 +263,9 @@ class LegalLlamaUKLegislationPipeline:
         except Exception as e:
             logger.error(f"Complete pipeline failed: {e}")
             return False
+        finally:
+            # Cleanup controller
+            self.controller.cleanup()
     
     def print_final_summary(self):
         """Print final summary of pipeline results"""
