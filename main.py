@@ -55,9 +55,13 @@ def run_hmrc_scraper(args):
     """Run ParaLlama HMRC tax documentation scraper"""
     from pipelines.hmrc_scraper import main as hmrc_main
     
+    # Ensure output directory exists
+    output_dir = args.output_dir or 'generated/hmrc_documentation'
+    os.makedirs(output_dir, exist_ok=True)
+    
     # Set up arguments for hmrc_scraper
     hmrc_args = [
-        '--output-dir', args.output_dir or 'generated/hmrc_documentation'
+        '--output-dir', output_dir
     ]
     
     if args.max_documents:
