@@ -45,15 +45,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class HMRCScraper:
-    def __init__(self, output_dir: str = "hmrc_documentation"):
+    def __init__(self, output_dir: str = "hmrc_documentation", enable_pause_controls: bool = True):
         self.base_url = "https://www.gov.uk"
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
         
-        # Initialize pipeline controller
-        self.controller = PipelineController()
-        self.controller.register_callback('database_update', create_database_update_callback(self))
-        self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+        # Initialize pipeline controller only if requested
+        self.controller = None
+        if enable_pause_controls:
+            try:
+                self.controller = PipelineController()
+                self.controller.register_callback('database_update', create_database_update_callback(self))
+                self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+            except Exception as e:
+                logger.warning(f"Could not initialize pause controls: {e}")
+                self.controller = None
         
         # Create subdirectories for different content types
         self.text_dir = self.output_dir / "text"
@@ -192,10 +198,11 @@ class HMRCScraper:
                                     logger.info(f"Found: {title}")
                                     
                                     # Check for pause/quit commands
-                                    command = self.controller.check_for_commands()
-                                    if command == 'quit':
-                                        return guidance_urls
-                                    self.controller.wait_while_paused()
+                                    if self.controller:
+                                        command = self.controller.check_for_commands()
+                                        if command == 'quit':
+                                            return guidance_urls
+                                        self.controller.wait_while_paused()
                     
                     if found_documents == 0:
                         logger.info(f"No more documents found on page {page} for {endpoint}")
@@ -248,10 +255,11 @@ class HMRCScraper:
                             logger.info(f"Found form: {title}")
                             
                             # Check for pause/quit commands
-                            command = self.controller.check_for_commands()
-                            if command == 'quit':
-                                return form_urls
-                            self.controller.wait_while_paused()
+                            if self.controller:
+                                command = self.controller.check_for_commands()
+                                if command == 'quit':
+                                    return form_urls
+                                self.controller.wait_while_paused()
                 
                 time.sleep(0.1)
                 
@@ -291,10 +299,11 @@ class HMRCScraper:
                             logger.info(f"Found manual: {title}")
                             
                             # Check for pause/quit commands
-                            command = self.controller.check_for_commands()
-                            if command == 'quit':
-                                return manual_urls
-                            self.controller.wait_while_paused()
+                            if self.controller:
+                                command = self.controller.check_for_commands()
+                                if command == 'quit':
+                                    return manual_urls
+                                self.controller.wait_while_paused()
                 
                 time.sleep(0.1)
                 
@@ -631,17 +640,18 @@ class HMRCScraper:
             logger.info(f"Progress: {i}/{len(urls_to_download)}")
             
             # Check for pause/quit commands before downloading
-            command = self.controller.check_for_commands()
-            if command == 'quit':
-                break
-            self.controller.wait_while_paused()
-            
-            # Set current phase for pause state tracking
-            self.controller.set_current_phase(f"Downloading documents", {
-                'current_document': i,
-                'total_documents': len(urls_to_download),
-                'current_url': url
-            })
+            if self.controller:
+                command = self.controller.check_for_commands()
+                if command == 'quit':
+                    break
+                self.controller.wait_while_paused()
+                
+                # Set current phase for pause state tracking
+                self.controller.set_current_phase(f"Downloading documents", {
+                    'current_document': i,
+                    'total_documents': len(urls_to_download),
+                    'current_url': url
+                })
             
             success = self.download_document(url)
             
@@ -821,7 +831,8 @@ def main():
         scraper.save_progress()
     finally:
         # Cleanup controller
-        scraper.controller.cleanup()
+        if scraper.controller:
+            scraper.controller.cleanup()
 
 if __name__ == "__main__":
     main()

@@ -26,29 +26,64 @@ class PipelineController:
         self.pause_point_data = {}
         self.callbacks = {}
         
+        # Save original terminal settings
+        self.old_settings = None
+        if sys.stdin.isatty():
+            try:
+                self.old_settings = termios.tcgetattr(sys.stdin)
+                # Set non-blocking input without breaking terminal output
+                self._setup_non_blocking_input()
+            except Exception:
+                pass
+        
         # Start input monitoring thread
         self.input_thread = threading.Thread(target=self._monitor_input, daemon=True)
         self.input_thread.start()
+    
+    def _setup_non_blocking_input(self):
+        """Setup non-blocking input without breaking terminal output"""
+        if not sys.stdin.isatty():
+            return
         
-        # Save original terminal settings
-        if sys.stdin.isatty():
-            self.old_settings = termios.tcgetattr(sys.stdin)
-            tty.setraw(sys.stdin.fileno())
+        try:
+            # Get current terminal attributes
+            attrs = termios.tcgetattr(sys.stdin)
+            
+            # Modify only what we need: disable canonical mode and echo for input
+            attrs[3] &= ~(termios.ICANON | termios.ECHO)
+            
+            # Set minimum bytes to read and timeout
+            attrs[6][termios.VMIN] = 0
+            attrs[6][termios.VTIME] = 0
+            
+            # Apply the changes
+            termios.tcsetattr(sys.stdin, termios.TCSANOW, attrs)
+        except Exception:
+            pass
     
     def _monitor_input(self):
         """Monitor keyboard input in a separate thread"""
         while self.is_running:
-            if sys.stdin.isatty() and select.select([sys.stdin], [], [], 0.1)[0]:
+            if sys.stdin.isatty():
                 try:
-                    key = sys.stdin.read(1).lower()
-                    self.input_queue.put(key)
-                except:
+                    # Use select with a timeout to avoid blocking
+                    if select.select([sys.stdin], [], [], 0.1)[0]:
+                        key = sys.stdin.read(1)
+                        if key:
+                            self.input_queue.put(key.lower())
+                except Exception:
                     continue
+            else:
+                # If not a TTY, just sleep to avoid busy waiting
+                threading.Event().wait(0.1)
     
     def _restore_terminal(self):
         """Restore original terminal settings"""
-        if sys.stdin.isatty() and hasattr(self, 'old_settings'):
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
+        if sys.stdin.isatty() and self.old_settings:
+            try:
+                termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self.old_settings)
+            except Exception:
+                pass
     
     def register_callback(self, action: str, callback: Callable):
         """Register callback functions for actions"""
