@@ -231,8 +231,6 @@ class LegalLlamaUKLegislationPipeline:
         start_time = time.time()
         
         try:
-        
-        try:
             # Phase 1: Download legislation
             if not self.run_download_phase():
                 logger.error("Download phase failed")
