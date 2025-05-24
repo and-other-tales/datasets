@@ -86,11 +86,11 @@ class HMRCScraper:
         # Initialize HMRC document processor
         self.hmrc_processor = HMRCDocumentProcessor()
         
-        # Initialize rate limiter for GOV.UK API (20 requests per second)
-        self.api_rate_limiter = RateLimiter(max_requests=20, time_window=1, delay_between_requests=0.1)
+        # Initialize rate limiter for GOV.UK API (5 requests per minute)
+        self.api_rate_limiter = RateLimiter(max_requests=5, time_window=60, delay_between_requests=1.0)
         
-        # Initialize separate rate limiter for web scraping (10 requests per second)
-        self.web_rate_limiter = RateLimiter(max_requests=10, time_window=1, delay_between_requests=0.2)
+        # Initialize separate rate limiter for web scraping (3 requests per minute)
+        self.web_rate_limiter = RateLimiter(max_requests=3, time_window=60, delay_between_requests=2.0)
         
         # Session for connection pooling
         self.session = requests.Session()
@@ -1023,12 +1023,12 @@ class HMRCScraper:
     def create_training_datasets(self):
         """Create training datasets from downloaded HMRC content"""
         try:
-            from utils.dataset_creator import DatasetCreator
+            from utils.dataset_creator import UKLegislationDatasetCreator
             
             logger.info("Creating training datasets from HMRC content...")
             
             # Initialize dataset creator
-            dataset_creator = DatasetCreator(
+            dataset_creator = UKLegislationDatasetCreator(
                 input_dir=str(self.output_dir),
                 output_dir=str(self.output_dir / "datasets")
             )

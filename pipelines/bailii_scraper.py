@@ -74,8 +74,8 @@ class BailiiScraper:
                 logger.warning(f"Could not initialize pause controls: {e}")
                 self.controller = None
         
-        # Initialize rate limiter (10 requests per minute to be respectful)
-        self.rate_limiter = RateLimiter(max_requests=10, time_window=60, delay_between_requests=1.0)
+        # Initialize rate limiter (5 requests per minute to be respectful)
+        self.rate_limiter = RateLimiter(max_requests=5, time_window=60, delay_between_requests=1.0)
         
         # Session for connection pooling
         self.session = requests.Session()

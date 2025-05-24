@@ -44,15 +44,13 @@ class SimpleRateLimiter:
             
             # Record this request
             self.requests.append(now)
-try:
-    from utils.rate_limiter import RateLimiter
-except ImportError:
-    # Fallback implementation if rate_limiter is not available
-    class RateLimiter:
-        def __init__(self, max_requests=10, time_window=60, delay_between_requests=1.0):
-            self.delay = delay_between_requests
-        def wait_if_needed(self):
-            time.sleep(self.delay)
+
+# Fallback implementation if rate_limiter is not available
+class FallbackRateLimiter:
+    def __init__(self, max_requests=10, time_window=60, delay_between_requests=1.0):
+        self.delay = delay_between_requests
+    def wait_if_needed(self):
+        time.sleep(self.delay)
 
 # Constants
 EULA_TEMPLATE_URL = "https://www.apple.com/legal/sla/docs/macOSSequoia.pdf"
@@ -306,6 +304,9 @@ def extract_imports_from_code(base_dir):
 def fetch_github_repo(package_name):
     try:
         response = make_request_with_retry(f"https://pypi.org/pypi/{package_name}/json")
+        if response is None:
+            return None
+            
         data = response.json()
         
         # Try multiple sources for GitHub URL
@@ -338,14 +339,16 @@ def fetch_github_license(repo):
         headers = {'Accept': 'application/vnd.github.v3+json'}
         response = make_request_with_retry(url, headers=headers)
         
-        if response and response.ok:
-            data = response.json()
-            license_type = data['license']['spdx_id']
-            # Get license text with retry
-            license_response = make_request_with_retry(data['download_url'])
-            if license_response:
-                license_text = license_response.text
-                return normalize_license_name(license_type), license_text
+        if response is None or not response.ok:
+            return None, None
+            
+        data = response.json()
+        license_type = data['license']['spdx_id']
+        # Get license text with retry
+        license_response = make_request_with_retry(data['download_url'])
+        if license_response:
+            license_text = license_response.text
+            return normalize_license_name(license_type), license_text
     except Exception as e:
         print(f"    GitHub API error: {str(e)}")
         return None, None
@@ -461,6 +464,9 @@ def fetch_pypi_license(package_name):
     """Fetch license information directly from PyPI."""
     try:
         response = make_request_with_retry(f"https://pypi.org/pypi/{package_name}/json")
+        if response is None:
+            return None, None
+            
         data = response.json()
         
         info = data['info']

@@ -96,5 +96,22 @@ def print_version_info():
         print(f"Git Commit: {info['commit_hash']}")
     print(f"Build Timestamp: {info['timestamp']}")
 
+def write_version_file(version_file=None):
+    """Write version to VERSION file"""
+    if version_file is None:
+        # Default to project root
+        root_dir = Path(__file__).parent.parent
+        version_file = root_dir / "VERSION"
+    
+    version = get_version_string()
+    
+    with open(version_file, 'w') as f:
+        f.write(version)
+    
+    return version
+
 if __name__ == "__main__":
     print_version_info()
+    # When run directly, write the version file
+    version = write_version_file()
+    print(f"Version file updated: {version}")

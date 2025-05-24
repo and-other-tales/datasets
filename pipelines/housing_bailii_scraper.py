@@ -1,23 +1,7 @@
 #!/usr/bin/env python3
 """
 Housing-Specific Bailli Case Law Scraper
-Scrapes housing, tenancy, landlord-tenant, and evic    def search_housing_cases_by_court(self, court: str, max_pages: int = 5) -> List[Dict]:
-        """Search for housing cases in a specific court"""
-        housing_cases = []
-        
-        logger.info(f"Searching {court} for housing cases...")
-        
-        # Search each housing term in the court
-        for search_term in self.housing_search_terms:
-            try:
-                # Construct search URL for the court and term
-                search_url = f"https://www.bailii.org/cgi-bin/markup.cgi?doc=/databases/{court.lower().replace(' ', '_')}/&query={search_term}"
-                
-                # Apply rate limiting
-                self.rate_limiter.wait_if_needed()
-                
-                # Get search results
-                response = self.session.get(search_url, timeout=30)m Bailli
+Scrapes housing, tenancy, landlord-tenant, and eviction cases from Bailli
 """
 
 import re
@@ -135,7 +119,7 @@ class HousingBailiiScraper(BailiiScraper):
             'upper tribunal (lands chamber)' in combined_text
         )
     
-    def search_housing_cases_by_court(self, court: str, max_pages: int = None) -> List[Dict]:
+    def search_housing_cases_by_court(self, court: str, max_pages: int = 5) -> List[Dict]:
         """Search for housing cases in a specific court"""
         housing_cases = []
         
@@ -146,6 +130,9 @@ class HousingBailiiScraper(BailiiScraper):
             try:
                 # Construct search URL for the court and term
                 search_url = f"https://www.bailii.org/cgi-bin/markup.cgi?doc=/databases/{court.lower().replace(' ', '_')}/&query={search_term}"
+                
+                # Apply rate limiting
+                self.rate_limiter.wait_if_needed()
                 
                 # Get search results
                 response = self.session.get(search_url, timeout=30)
@@ -228,7 +215,7 @@ class HousingBailiiScraper(BailiiScraper):
         
         return property_cases
     
-    def discover_housing_cases(self, max_cases_per_court: int = None) -> List[Dict]:
+    def discover_housing_cases(self, max_cases_per_court: int = 20) -> List[Dict]:
         """Discover housing cases across all relevant courts"""
         logger.info("=== DISCOVERING HOUSING CASES ===")
         
@@ -236,7 +223,7 @@ class HousingBailiiScraper(BailiiScraper):
         
         # Search property tribunal first (most relevant)
         property_cases = self.search_property_tribunal_cases()
-        if max_cases_per_court:
+        if max_cases_per_court > 0:
             all_housing_cases.extend(property_cases[:max_cases_per_court])
         else:
             all_housing_cases.extend(property_cases)  # Take ALL cases
@@ -250,8 +237,8 @@ class HousingBailiiScraper(BailiiScraper):
         ]
         
         for court in other_courts:
-            court_cases = self.search_housing_cases_by_court(court, max_pages=None)
-            if max_cases_per_court:
+            court_cases = self.search_housing_cases_by_court(court, max_pages=5)
+            if max_cases_per_court > 0:
                 all_housing_cases.extend(court_cases[:max_cases_per_court//4])
             else:
                 all_housing_cases.extend(court_cases)  # Take ALL cases
@@ -295,7 +282,7 @@ class HousingBailiiScraper(BailiiScraper):
         
         return None
     
-    def scrape_all_housing_cases(self, max_cases: int = None) -> List[Dict]:
+    def scrape_all_housing_cases(self, max_cases: int = 100) -> List[Dict]:
         """Scrape all discovered housing cases"""
         logger.info("=== STARTING HOUSING CASE LAW SCRAPING ===")
         
@@ -313,7 +300,7 @@ class HousingBailiiScraper(BailiiScraper):
                 return []
             
             # Limit number of cases if specified
-            if max_cases:
+            if max_cases > 0:
                 housing_cases = housing_cases[:max_cases]
                 logger.info(f"Limited to {max_cases} cases out of {len(housing_cases)} discovered")
             else:

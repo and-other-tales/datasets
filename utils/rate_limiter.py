@@ -22,12 +22,11 @@ class RateLimiter:
     - Provides configurable delay between individual requests
     - Thread-safe implementation for concurrent scrapers
     """
-    
     def __init__(
         self, 
-        max_requests: int = 20, 
+        max_requests: int = 5, 
         time_window: int = 60,  # 60 seconds = 1 minute
-        delay_between_requests: float = 0.5  # Half second delay between requests
+        delay_between_requests: float = 1.0  # One second delay between requests
     ):
         """
         Initialize the rate limiter.

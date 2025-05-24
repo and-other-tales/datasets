@@ -19,9 +19,9 @@ A reusable `RateLimiter` class has been implemented in `utils/rate_limiter.py` w
 class RateLimiter:
     def __init__(
         self, 
-        max_requests: int = 20, 
+        max_requests: int = 5, 
         time_window: int = 60,  # 60 seconds = 1 minute
-        delay_between_requests: float = 0.5  # Half second delay between requests
+        delay_between_requests: float = 1.0  # One second delay between requests
     ):
         # Implementation...
     
@@ -35,16 +35,16 @@ class RateLimiter:
 
 The HMRC scraper uses two different rate limiters:
 
-1. `api_rate_limiter`: For GOV.UK API requests (20 requests per second)
-2. `web_rate_limiter`: For general web page scraping (10 requests per second)
+1. `api_rate_limiter`: For GOV.UK API requests (5 requests per minute)
+2. `web_rate_limiter`: For general web page scraping (3 requests per minute)
 
 These rate limits ensure we don't overload the GOV.UK servers while still allowing for efficient data collection.
 
 ### Bailii Scraper
 
-The Bailii scraper uses a more conservative rate limiter:
+The Bailii scraper uses a conservative rate limiter:
 
-- 10 requests per minute with a 1-second delay between requests
+- 5 requests per minute with a 1-second delay between requests
 
 For housing-specific Bailii scraping, an even more conservative approach is used:
 

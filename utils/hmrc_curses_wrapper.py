@@ -13,6 +13,7 @@ import queue
 import time
 import re
 import locale
+import os
 from collections import deque
 from typing import Callable, Any, Dict, Optional, List
 
@@ -248,6 +249,11 @@ class HMRCCursesWrapper:
         self.log_handler = None
         self.log_processor_thread = None
         self.stop_event = threading.Event()
+        self.lock = threading.Lock()  # Initialize the lock
+        
+        # Store terminal dimensions as instance variables
+        self.terminal_height = 0
+        self.terminal_width = 0
         
         # Progress tracking
         self.total_discovered = 0
@@ -326,12 +332,11 @@ class HMRCCursesWrapper:
         if self.log_processor_thread:
             self.log_processor_thread.join(timeout=1)
             
-        # Reset terminal to normal mode
-        curses.nocbreak()
+        # Reset terminal to normal mode        curses.nocbreak()
         stdscr.keypad(False)
         curses.echo()
         curses.endwin()
-    
+        
     def _setup_windows(self):
         """Setup all curses windows with proper dimensions"""
         try:
@@ -341,6 +346,10 @@ class HMRCCursesWrapper:
             
             # Get terminal dimensions
             height, width = self.stdscr.getmaxyx()
+            
+            # Set these as instance variables so they're accessible in error handlers
+            self.terminal_height = height
+            self.terminal_width = width
             
             # Ensure minimum dimensions
             if height < 10 or width < 40:
@@ -391,16 +400,20 @@ class HMRCCursesWrapper:
         except Exception as e:
             # If window setup fails, log the error and continue with minimal setup
             try:
-                # Fallback to just using stdscr for everything
-                self.stdscr.erase()
-                self.stdscr.addnstr(0, 0, f"Window setup error: {e}", width - 1)
-                self.stdscr.addnstr(1, 0, "Continuing with simplified display...", width - 1)
-                self.stdscr.refresh()
+                if self.stdscr is not None:
+                    self.stdscr.erase()
+                    # Use the instance variables we set earlier to avoid unbound errors
+                    if self.terminal_width > 0:
+                        self.stdscr.addnstr(0, 0, f"Window setup error: {e}", self.terminal_width - 1)
+                        self.stdscr.addnstr(1, 0, "Continuing with simplified display...", self.terminal_width - 1)
+                        self.stdscr.refresh()
                 
-                # Minimal windows - just use the main screen for logs
-                self.log_win = self.stdscr.subwin(height - 4, width, 2, 0)
-                self.log_win.scrollok(True)
-            except:
+                # Minimal windows - if stdscr is available, create a subwindow for logs
+                if self.stdscr is not None and self.terminal_height > 4 and self.terminal_width > 0:
+                    self.log_win = self.stdscr.subwin(self.terminal_height - 4, self.terminal_width, 2, 0)
+                    if self.log_win is not None:
+                        self.log_win.scrollok(True)
+            except Exception:
                 # If even this fails, we'll have no windows but the app will still run
                 pass
     
@@ -575,19 +588,21 @@ class HMRCCursesWrapper:
             curses.doupdate()
         except Exception as e:
             import traceback
-            error_msg = f"Failed: {str(e)}"
-            # Log the full traceback to file for debugging
+            error_msg = f"Failed: {str(e)}"            # Log the full traceback to file for debugging
             with open('hmrc_scraper_error.log', 'w') as f:
                 f.write(traceback.format_exc())
             self._update_status(error_msg, is_error=True)
-    
+            
     def _event_loop(self, pipeline_thread):
         """Main event loop handling user input"""
         paused = False
         
-        while pipeline_thread.is_alive() or not self.log_handler.pending_logs.empty():
+        while pipeline_thread.is_alive() and self.log_handler and not self.log_handler.pending_logs.empty():
             try:
                 # Check for user input
+                if self.stdscr is None:
+                    break
+                    
                 key = self.stdscr.getch()
                 
                 if key == ord('q') or key == ord('Q'):
@@ -616,11 +631,15 @@ class HMRCCursesWrapper:
                 
             except KeyboardInterrupt:
                 break
+            except Exception:
+                # Handle any other exceptions gracefully
+                break
         
         # Wait for user before exiting
         self._update_status("Press any key to exit...")
-        self.stdscr.nodelay(False)
-        self.stdscr.getch()
+        if self.stdscr is not None:
+            self.stdscr.nodelay(False)
+            self.stdscr.getch()
     
     def _sanitize_text(self, text):
         """Utility method to sanitize text for display"""
