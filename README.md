@@ -234,7 +234,7 @@ def get_api_url(self, web_url: str) -> str:
 
 - **Content API Priority**: 10 requests/second vs 0.5-1 requests/second for HTML scraping
 - **Intelligent Fallback**: Automatic fallback to HTML parsing when API fails
-- **Rate Limiting**: Compliant with government API usage guidelines
+- **Rate Limiting**: Compliant with government API usage guidelines (see [RATE_LIMITING.md](RATE_LIMITING.md))
 - **Progress Persistence**: Automatic resume capability for interrupted collections
 
 #### 4.1.3 Tax Domain Classification
@@ -347,9 +347,13 @@ def _manage_credentials():
 
 ## 6. Data Collection Methodologies
 
-### 6.1 Government Content API Integration
+### 6.1 Ethical Scraping and Rate Limiting
 
-#### 6.1.1 API Endpoint Strategy
+All data collection pipelines implement responsible rate limiting to ensure compliance with website terms of service and to prevent overloading target servers. See [RATE_LIMITING.md](RATE_LIMITING.md) for detailed implementation information.
+
+### 6.2 Government Content API Integration
+
+#### 6.2.1 API Endpoint Strategy
 
 The system implements a comprehensive API endpoint strategy:
 
@@ -363,7 +367,7 @@ search_endpoints = [
 ]
 ```
 
-#### 6.1.2 Content Extraction Pipeline
+#### 6.2.2 Content Extraction Pipeline
 
 1. **URL Discovery**: Systematic crawling of government search endpoints
 2. **API Content Extraction**: Structured data retrieval using Content API
@@ -371,9 +375,9 @@ search_endpoints = [
 4. **Metadata Enhancement**: HMRC-specific metadata extraction and classification
 5. **Quality Validation**: Content quality checks and filtering
 
-### 6.2 Legal Citation Network Analysis
+### 6.3 Legal Citation Network Analysis
 
-#### 6.2.1 Citation Graph Construction
+#### 6.3.1 Citation Graph Construction
 
 The system builds comprehensive legal citation networks:
 
@@ -388,7 +392,7 @@ def build_citation_graph(self, cases: List[Case]) -> nx.DiGraph:
     return G
 ```
 
-#### 6.2.2 Precedent Analysis
+#### 6.3.2 Precedent Analysis
 
 - **Authority Ranking**: PageRank-based importance scoring for legal precedents
 - **Citation Clusters**: Community detection for related case law groups

@@ -9,7 +9,50 @@ import importlib.metadata
 import importlib.util
 from datetime import datetime
 from pathlib import Path
+from collections import deque
+import threading
 from utils.version import get_version_string
+
+# Simple rate limiter for API requests
+class SimpleRateLimiter:
+    """Basic rate limiter for API requests"""
+    def __init__(self, max_requests=15, time_window=60):
+        self.max_requests = max_requests
+        self.time_window = time_window
+        self.requests = deque()
+        self.lock = threading.Lock()
+    
+    def wait_if_needed(self):
+        """Wait if we would exceed the rate limit"""
+        with self.lock:
+            now = time.time()
+            
+            # Remove requests older than time_window
+            while self.requests and self.requests[0] < now - self.time_window:
+                self.requests.popleft()
+            
+            # If we're at the limit, wait until we can make another request
+            if len(self.requests) >= self.max_requests:
+                sleep_time = self.requests[0] + self.time_window - now + 0.1
+                if sleep_time > 0:
+                    print(f"    Rate limited, waiting {sleep_time:.1f} seconds...")
+                    time.sleep(sleep_time)
+                    # Clean up again after waiting
+                    now = time.time()
+                    while self.requests and self.requests[0] < now - self.time_window:
+                        self.requests.popleft()
+            
+            # Record this request
+            self.requests.append(now)
+try:
+    from utils.rate_limiter import RateLimiter
+except ImportError:
+    # Fallback implementation if rate_limiter is not available
+    class RateLimiter:
+        def __init__(self, max_requests=10, time_window=60, delay_between_requests=1.0):
+            self.delay = delay_between_requests
+        def wait_if_needed(self):
+            time.sleep(self.delay)
 
 # Constants
 EULA_TEMPLATE_URL = "https://www.apple.com/legal/sla/docs/macOSSequoia.pdf"
@@ -17,6 +60,9 @@ MIT_LICENSE_URL = "https://raw.githubusercontent.com/github/choosealicense.com/g
 GITHUB_API_BASE = "https://api.github.com/repos"
 MAX_RETRIES = 3
 RETRY_DELAY = 1  # seconds
+# Rate limiting constants
+MAX_REQUESTS = 15  # 15 requests
+TIME_WINDOW = 60   # per minute
 
 # Common license file names to check
 LICENSE_FILE_NAMES = [
@@ -29,6 +75,8 @@ LICENSE_FILE_NAMES = [
 
 # Cache for license lookups to avoid repeated API calls
 license_cache = {}
+# Request timestamp queue for rate limiting
+request_timestamps = deque()
 
 # License verification mappings
 LICENSE_MAPPINGS = {
@@ -44,10 +92,16 @@ LICENSE_MAPPINGS = {
     'Zope Public License': 'ZPL-2.1'
 }
 
+# Create a global rate limiter instance for all API requests
+github_rate_limiter = SimpleRateLimiter(max_requests=MAX_REQUESTS, time_window=TIME_WINDOW)
+
 def make_request_with_retry(url, headers=None, timeout=5):
     """Make HTTP request with retry logic."""
     for attempt in range(MAX_RETRIES):
         try:
+            # Apply rate limiting before making the request
+            github_rate_limiter.wait_if_needed()
+            
             response = requests.get(url, headers=headers, timeout=timeout)
             if response.status_code == 429:  # Rate limited
                 wait_time = RETRY_DELAY * (2 ** attempt)  # Exponential backoff

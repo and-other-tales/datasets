@@ -22,11 +22,13 @@ import xml.etree.ElementTree as ET
 # Import HMRC metadata framework
 try:
     from utils.hmrc_metadata import HMRCDocumentProcessor, HMRCMetadata, TaxDomain, save_hmrc_metadata
+    from utils.rate_limiter import RateLimiter
 except ImportError:
     # Fallback if not in package context
     import sys
-    sys.path.append(str(Path(__file__).parent / 'utils'))
-    from hmrc_metadata import HMRCDocumentProcessor, HMRCMetadata, TaxDomain, save_hmrc_metadata
+    sys.path.append(str(Path(__file__).parent.parent))
+    from utils.hmrc_metadata import HMRCDocumentProcessor, HMRCMetadata, TaxDomain, save_hmrc_metadata
+    from utils.rate_limiter import RateLimiter
 
 # Setup logging
 def setup_logging():
@@ -83,6 +85,12 @@ class HMRCScraper:
         
         # Initialize HMRC document processor
         self.hmrc_processor = HMRCDocumentProcessor()
+        
+        # Initialize rate limiter for GOV.UK API (20 requests per second)
+        self.api_rate_limiter = RateLimiter(max_requests=20, time_window=1, delay_between_requests=0.1)
+        
+        # Initialize separate rate limiter for web scraping (10 requests per second)
+        self.web_rate_limiter = RateLimiter(max_requests=10, time_window=1, delay_between_requests=0.2)
         
         # Session for connection pooling
         self.session = requests.Session()
@@ -245,6 +253,10 @@ class HMRCScraper:
                 # We'll filter results manually after retrieval
                 
                 logger.info(f"Making API request to {self.search_api_base} with params: {params}")
+                
+                # Apply rate limiting before making the request
+                self.api_rate_limiter.wait_if_needed()
+                
                 response = self.session.get(self.search_api_base, params=params, timeout=30)
                 response.raise_for_status()
                 
@@ -351,6 +363,10 @@ class HMRCScraper:
                 }
                 
                 logger.info(f"Searching for: {search_term}")
+                
+                # Apply rate limiting before making the request
+                self.api_rate_limiter.wait_if_needed()
+                
                 response = self.session.get(self.search_api_base, params=params, timeout=30)
                 response.raise_for_status()
                 
@@ -391,6 +407,10 @@ class HMRCScraper:
         for search_term in forms_search_terms:
             try:
                 search_url = f"{self.base_url}/search/all?keywords={search_term}&organisations%5B%5D=hm-revenue-customs"
+                
+                # Apply rate limiting before making the request
+                self.web_rate_limiter.wait_if_needed()
+                
                 response = self.session.get(search_url, timeout=30)
                 
                 if response.status_code == 200:
@@ -431,6 +451,10 @@ class HMRCScraper:
         for search_term in manual_search_terms:
             try:
                 search_url = f"{self.base_url}/search/guidance-and-regulation?keywords={search_term}&organisations%5B%5D=hm-revenue-customs"
+                
+                # Apply rate limiting before making the request
+                self.web_rate_limiter.wait_if_needed()
+                
                 response = self.session.get(search_url, timeout=30)
                 
                 if response.status_code == 200:
@@ -467,6 +491,9 @@ class HMRCScraper:
     def extract_content_from_api(self, api_url: str) -> Optional[Dict]:
         """Extract content using the GOV.UK Content API"""
         try:
+            # Apply rate limiting before making the request
+            self.api_rate_limiter.wait_if_needed()
+            
             response = self.session.get(api_url, timeout=30)
             response.raise_for_status()
             
@@ -542,6 +569,9 @@ class HMRCScraper:
     def extract_content_from_html(self, url: str) -> Optional[Dict]:
         """Extract content using traditional HTML scraping (fallback method)"""
         try:
+            # Apply rate limiting before making the request
+            self.web_rate_limiter.wait_if_needed()
+            
             response = self.session.get(url, timeout=30)
             response.raise_for_status()
             
@@ -635,7 +665,7 @@ class HMRCScraper:
             if not filename or filename == '_':
                 filename = re.sub(r'[^\w\-_.]', '_', url_path)
             
-            # Extract document content
+            # Extract document content - rate limiting handled in extraction methods
             doc_data = self.extract_document_content(url)
             if not doc_data:
                 return False
@@ -783,8 +813,8 @@ class HMRCScraper:
                     logger.error(f"Error downloading document {i}: {e}")
                     self.failed_urls.add(url)
                 
-                # Rate limiting for Content API (10 req/sec)
-                time.sleep(0.1)
+                # Rate limiting is handled by the RateLimiter in download_document
+                # No need for additional sleep here
                 
                 # Save progress more frequently for large downloads
                 if i % 25 == 0:  # Save every 25 documents instead of 50

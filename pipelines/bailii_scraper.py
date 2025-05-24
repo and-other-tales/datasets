@@ -17,6 +17,7 @@ from collections import deque
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+from utils.rate_limiter import RateLimiter
 
 BASE_URL = "https://www.bailii.org"
 CHUNK_CHAR_LIMIT = 4000  # Adjust for token limits (4k characters ~ 1000 tokens)
@@ -73,6 +74,9 @@ class BailiiScraper:
                 logger.warning(f"Could not initialize pause controls: {e}")
                 self.controller = None
         
+        # Initialize rate limiter (10 requests per minute to be respectful)
+        self.rate_limiter = RateLimiter(max_requests=10, time_window=60, delay_between_requests=1.0)
+        
         # Session for connection pooling
         self.session = requests.Session()
         self.session.headers.update({
@@ -92,6 +96,9 @@ class BailiiScraper:
     def get_all_links_from_page(self, url: str) -> List[str]:
         """Extract all relevant links from a page"""
         try:
+            # Apply rate limiting before making the request
+            self.rate_limiter.wait_if_needed()
+            
             response = self.session.get(url, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')

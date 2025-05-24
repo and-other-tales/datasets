@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from pipelines.hmrc_scraper import HMRCScraper
 from utils.hmrc_curses_wrapper import run_hmrc_scraper_with_curses
+from utils.rate_limiter import RateLimiter
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

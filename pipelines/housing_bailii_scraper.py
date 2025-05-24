@@ -1,7 +1,23 @@
 #!/usr/bin/env python3
 """
 Housing-Specific Bailli Case Law Scraper
-Scrapes housing, tenancy, landlord-tenant, and eviction cases from Bailli
+Scrapes housing, tenancy, landlord-tenant, and evic    def search_housing_cases_by_court(self, court: str, max_pages: int = 5) -> List[Dict]:
+        """Search for housing cases in a specific court"""
+        housing_cases = []
+        
+        logger.info(f"Searching {court} for housing cases...")
+        
+        # Search each housing term in the court
+        for search_term in self.housing_search_terms:
+            try:
+                # Construct search URL for the court and term
+                search_url = f"https://www.bailii.org/cgi-bin/markup.cgi?doc=/databases/{court.lower().replace(' ', '_')}/&query={search_term}"
+                
+                # Apply rate limiting
+                self.rate_limiter.wait_if_needed()
+                
+                # Get search results
+                response = self.session.get(search_url, timeout=30)m Bailli
 """
 
 import re
@@ -10,12 +26,13 @@ import json
 import time
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Union
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
 from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+from utils.rate_limiter import RateLimiter
 from pipelines.bailii_scraper import BailiiScraper
 
 logger = logging.getLogger(__name__)
@@ -31,6 +48,8 @@ class HousingBailiiScraper(BailiiScraper):
         self.housing_controller.register_callback('database_update', create_database_update_callback(self))
         self.housing_controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
         
+        # Housing rate limiter - more conservative to prevent overloading Bailii
+        self.rate_limiter = RateLimiter(max_requests=5, time_window=60, delay_between_requests=2.0)
         
         # Housing-specific case law keywords
         self.housing_keywords = {

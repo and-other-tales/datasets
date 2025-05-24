@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from pipelines.hmrc_scraper import HMRCScraper
+from utils.rate_limiter import RateLimiter
 
 def run_hmrc_scraper():
     """Run HMRC scraper with sensible defaults"""
