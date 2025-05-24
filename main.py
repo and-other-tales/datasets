@@ -18,6 +18,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from utils.version import get_version_info, print_version_info
+from utils.dataset_manager import DatasetManager
 
 def run_dynamic_pipeline(args):
     """Run othertales Dynamic Pipeline for any URL"""
@@ -297,6 +298,307 @@ def run_advanced_qa_generator(args):
     finally:
         sys.argv = original_argv
 
+def run_dataset_manager(args):
+    """Run interactive dataset management system"""
+    from utils.dataset_manager import DatasetManager
+    import curses
+    import json
+    
+    def dataset_manager_menu(stdscr):
+        """Dataset management menu interface"""
+        manager = DatasetManager()
+        menu = CursesMenu(stdscr)
+        
+        # Current dataset selection
+        current_dataset = None
+        
+        def refresh_menu():
+            """Refresh the menu with current dataset info"""
+            menu.menu_items.clear()
+            menu.current_row = 0
+            
+            # Dataset selection
+            menu.add_category("DATASET SELECTION")
+            
+            # List available datasets
+            datasets = manager.list_datasets()
+            if datasets:
+                for ds in datasets:
+                    name = ds['name']
+                    format_type = ds.get('format', 'unknown')
+                    rows = ds.get('num_rows', 'unknown')
+                    size = ds.get('size_bytes', 0)
+                    size_mb = size / (1024 * 1024) if size else 0
+                    
+                    title = f"{name} ({format_type})"
+                    desc = f"{rows} rows, {size_mb:.1f} MB"
+                    
+                    def select_dataset(ds_name=name):
+                        nonlocal current_dataset
+                        current_dataset = ds_name
+                        curses.endwin()
+                        print(f"Selected dataset: {ds_name}")
+                        input("Press Enter to continue...")
+                        stdscr.clear()
+                        stdscr.refresh()
+                        refresh_menu()
+                    
+                    menu.add_item(title, desc, select_dataset)
+            else:
+                menu.add_item("No datasets found", "Create datasets using pipelines first", lambda: None)
+            
+            menu.add_separator()
+            
+            # Dataset operations
+            menu.add_category("DATASET OPERATIONS")
+            
+            if current_dataset:
+                menu.add_item(f"Current: {current_dataset}", "Selected dataset", lambda: None)
+                menu.add_separator()
+                
+                # View metadata
+                def view_metadata():
+                    curses.endwin()
+                    try:
+                        metadata = manager.get_dataset_metadata(current_dataset)
+                        print(f"\n=== Metadata for {current_dataset} ===")
+                        import json
+                        print(json.dumps(metadata, indent=2))
+                    except Exception as e:
+                        print(f"Error: {e}")
+                    input("\nPress Enter to continue...")
+                    stdscr.clear()
+                    stdscr.refresh()
+                
+                menu.add_item("View Metadata", "Display dataset metadata and statistics", view_metadata)
+                
+                # Add data
+                def add_data():
+                    curses.endwin()
+                    print(f"\n=== Add Data to {current_dataset} ===")
+                    print("1. Add from JSON file")
+                    print("2. Add manual entry")
+                    choice = input("Select option (1-2): ").strip()
+                    
+                    try:
+                        if choice == "1":
+                            json_path = input("Enter JSON file path: ").strip()
+                            import json
+                            with open(json_path, 'r') as f:
+                                new_data = json.load(f)
+                            manager.add_to_dataset(current_dataset, new_data)
+                            print("Data added successfully!")
+                        elif choice == "2":
+                            print("Enter data as JSON (single object or array):")
+                            json_str = input().strip()
+                            new_data = json.loads(json_str)
+                            manager.add_to_dataset(current_dataset, new_data)
+                            print("Data added successfully!")
+                    except Exception as e:
+                        print(f"Error: {e}")
+                    
+                    input("\nPress Enter to continue...")
+                    stdscr.clear()
+                    stdscr.refresh()
+                
+                menu.add_item("Add Data", "Add new data to the dataset", add_data)
+                
+                # Edit fields
+                def edit_fields():
+                    curses.endwin()
+                    print(f"\n=== Edit Fields in {current_dataset} ===")
+                    try:
+                        # Load dataset to show fields
+                        dataset = manager.load_dataset(manager.datasets_dir / current_dataset)
+                        print("Available fields:", dataset.column_names)
+                        
+                        print("\n1. Add new field")
+                        print("2. Remove field")
+                        print("3. Transform existing field")
+                        choice = input("Select option (1-3): ").strip()
+                        
+                        if choice == "1":
+                            field_name = input("Enter new field name: ").strip()
+                            default_value = input("Enter default value for all rows: ").strip()
+                            manager.add_dataset_field(current_dataset, field_name, 
+                                                    lambda row: default_value)
+                            print(f"Added field '{field_name}'")
+                        elif choice == "2":
+                            field_name = input("Enter field name to remove: ").strip()
+                            manager.remove_dataset_field(current_dataset, field_name)
+                            print(f"Removed field '{field_name}'")
+                        elif choice == "3":
+                            field_name = input("Enter field name to transform: ").strip()
+                            print("Enter Python expression to transform (use 'x' for current value):")
+                            transform_expr = input("Transform: ").strip()
+                            transform_func = eval(f"lambda x: {transform_expr}")
+                            manager.edit_dataset_field(current_dataset, field_name, transform_func)
+                            print(f"Transformed field '{field_name}'")
+                    except Exception as e:
+                        print(f"Error: {e}")
+                    
+                    input("\nPress Enter to continue...")
+                    stdscr.clear()
+                    stdscr.refresh()
+                    refresh_menu()
+                
+                menu.add_item("Edit Fields", "Add, remove, or transform dataset fields", edit_fields)
+                
+                # Update metadata
+                def update_metadata():
+                    curses.endwin()
+                    print(f"\n=== Update Metadata for {current_dataset} ===")
+                    print("Enter metadata as JSON object:")
+                    try:
+                        json_str = input().strip()
+                        metadata = json.loads(json_str)
+                        manager.update_dataset_metadata(current_dataset, metadata)
+                        print("Metadata updated successfully!")
+                    except Exception as e:
+                        print(f"Error: {e}")
+                    
+                    input("\nPress Enter to continue...")
+                    stdscr.clear()
+                    stdscr.refresh()
+                
+                menu.add_item("Update Metadata", "Update custom metadata for the dataset", update_metadata)
+                
+                # Export dataset
+                def export_dataset():
+                    curses.endwin()
+                    print(f"\n=== Export {current_dataset} ===")
+                    print("1. Export as Parquet")
+                    print("2. Export as JSON")
+                    print("3. Export as CSV")
+                    choice = input("Select format (1-3): ").strip()
+                    
+                    try:
+                        format_map = {"1": "parquet", "2": "json", "3": "csv"}
+                        if choice in format_map:
+                            export_format = format_map[choice]
+                            output_path = manager.export_dataset(current_dataset, export_format)
+                            print(f"Exported to: {output_path}")
+                    except Exception as e:
+                        print(f"Error: {e}")
+                    
+                    input("\nPress Enter to continue...")
+                    stdscr.clear()
+                    stdscr.refresh()
+                
+                menu.add_item("Export Dataset", "Export dataset to different formats", export_dataset)
+                
+                # Delete dataset
+                def delete_dataset():
+                    nonlocal current_dataset
+                    curses.endwin()
+                    try:
+                        if manager.delete_dataset(current_dataset, confirm=True):
+                            print(f"Dataset '{current_dataset}' deleted")
+                            current_dataset = None
+                    except Exception as e:
+                        print(f"Error: {e}")
+                    
+                    input("\nPress Enter to continue...")
+                    stdscr.clear()
+                    stdscr.refresh()
+                    refresh_menu()
+                
+                menu.add_item("Delete Dataset", "Delete the current dataset", delete_dataset)
+                
+            else:
+                menu.add_item("Select a dataset first", "Choose a dataset from the list above", lambda: None)
+            
+            menu.add_separator()
+            
+            # Cache operations
+            menu.add_category("CACHE MANAGEMENT")
+            
+            def clear_all_cache():
+                curses.endwin()
+                response = input("Clear all dataset cache? (y/N): ").strip().lower()
+                if response == 'y':
+                    try:
+                        manager.clear_cache()
+                        print("Cache cleared successfully!")
+                    except Exception as e:
+                        print(f"Error: {e}")
+                
+                input("\nPress Enter to continue...")
+                stdscr.clear()
+                stdscr.refresh()
+            
+            menu.add_item("Clear All Cache", "Remove all cached dataset files", clear_all_cache)
+            
+            if current_dataset:
+                def clear_dataset_cache():
+                    curses.endwin()
+                    try:
+                        manager.clear_cache(current_dataset)
+                        print(f"Cache cleared for {current_dataset}")
+                    except Exception as e:
+                        print(f"Error: {e}")
+                    
+                    input("\nPress Enter to continue...")
+                    stdscr.clear()
+                    stdscr.refresh()
+                
+                menu.add_item(f"Clear Cache for {current_dataset}", 
+                            "Remove cached files for current dataset", clear_dataset_cache)
+            
+            menu.add_separator()
+            
+            # Create new dataset
+            menu.add_category("CREATE DATASET")
+            
+            def create_dataset():
+                curses.endwin()
+                print("\n=== Create New Dataset ===")
+                name = input("Enter dataset name: ").strip()
+                if not name:
+                    print("Dataset name required")
+                else:
+                    print("Enter initial data as JSON array:")
+                    try:
+                        json_str = input().strip()
+                        data = json.loads(json_str)
+                        from datasets import Dataset
+                        dataset = Dataset.from_list(data if isinstance(data, list) else [data])
+                        manager.save_dataset(dataset, name)
+                        print(f"Created dataset '{name}'")
+                        nonlocal current_dataset
+                        current_dataset = name
+                    except Exception as e:
+                        print(f"Error: {e}")
+                
+                input("\nPress Enter to continue...")
+                stdscr.clear()
+                stdscr.refresh()
+                refresh_menu()
+            
+            menu.add_item("Create New Dataset", "Create a new empty dataset", create_dataset)
+            
+            menu.add_separator()
+            menu.add_item("Back to Main Menu", "Return to main menu", lambda: "exit")
+        
+        # Initial menu setup
+        refresh_menu()
+        
+        while True:
+            action = menu.run()
+            if action == "exit" or action is None:
+                break
+            elif callable(action):
+                result = action()
+                if result == "exit":
+                    break
+    
+    # Run the dataset manager menu
+    try:
+        curses.wrapper(dataset_manager_menu)
+    except Exception as e:
+        print(f"Dataset manager error: {e}")
+        input("Press Enter to continue...")
+
 def run_llama_training_optimizer(args):
     """Run Legal Llama training dataset optimizer"""
     from utils.llama_training_optimizer import main as optimizer_main
@@ -442,6 +744,14 @@ def show_interactive_menu():
         
         menu.add_separator()
         
+        # Dataset Management
+        menu.add_category("DATASET MANAGEMENT")
+        menu.add_item("Dataset Manager", 
+                     "Manage existing datasets - add, delete, edit, export", 
+                     lambda: _run_with_menu_args(run_dataset_manager, "Dataset Manager"))
+        
+        menu.add_separator()
+        
         # Other Options
         menu.add_category("OTHER OPTIONS")
         menu.add_item("Show Pipeline Status", 
@@ -492,7 +802,8 @@ def _show_text_menu_fallback():
     """Fallback text menu if curses fails"""
     while True:
         print("\n" + "="*60)
-        print("              othertales Datasets Tools")
+        print("    ░█▀▄▒▄▀▄░▀█▀▒▄▀▄░▄▀▀▒██▀░▀█▀░▄▀▀")
+        print("    ▒█▄▀░█▀█░▒█▒░█▀█▒▄██░█▄▄░▒█▒▒▄██")
         print("="*60)
         print()
         print("1. Dynamic Pipeline (Any URL)")
@@ -509,14 +820,15 @@ def _show_text_menu_fallback():
         print("12. Production Legal AI Pipeline")
         print("13. Q&A Generation Only")
         print("14. Database Ingestion")
-        print("15. Show Pipeline Status")
-        print("16. View Documentation")
-        print("17. Manage Credentials")
+        print("15. Dataset Manager")
+        print("16. Show Pipeline Status")
+        print("17. View Documentation")
+        print("18. Manage Credentials")
         print("0. Exit")
         print()
         
         try:
-            choice = input("Select an option (0-17): ").strip()
+            choice = input("Select an option (0-18): ").strip()
             
             if choice == "0":
                 print("Goodbye!")
@@ -550,13 +862,15 @@ def _show_text_menu_fallback():
             elif choice == "14":
                 _run_with_menu_args(run_database_ingestion, "Database Ingestion")
             elif choice == "15":
-                _show_pipeline_status()
+                _run_with_menu_args(run_dataset_manager, "Dataset Manager")
             elif choice == "16":
-                _show_documentation()
+                _show_pipeline_status()
             elif choice == "17":
+                _show_documentation()
+            elif choice == "18":
                 _manage_credentials()
             else:
-                print("Invalid choice. Please select a number between 0-17.")
+                print("Invalid choice. Please select a number between 0-18.")
                 
         except KeyboardInterrupt:
             print("\n\nExiting...")
@@ -640,6 +954,9 @@ def _run_with_menu_args(pipeline_func, pipeline_name):
             if output_dir:
                 args.output_dir = output_dir
         
+        elif pipeline_name == "Dataset Manager":
+            # No special arguments needed for dataset manager
+            pass
         else:
             # Get common arguments with bounds checking
             if pipeline_name in ["HMRC Scraper", "Housing Pipeline", "BAILII Scraper", "Complete Pipeline", "Copyright Pipeline"]:
@@ -874,28 +1191,32 @@ class CursesMenu:
         height, width = self.stdscr.getmaxyx()
         
         # Clear header area
-        for i in range(5):
+        for i in range(6):
             self.stdscr.move(i, 0)
             self.stdscr.clrtoeol()
         
-        # Title
-        title = "othertales Datasets Tools"
-        self.stdscr.addstr(1, (width - len(title)) // 2, title, curses.A_BOLD)
+        # ASCII Art Title
+        ascii_title_line1 = "░█▀▄▒▄▀▄░▀█▀▒▄▀▄░▄▀▀▒██▀░▀█▀░▄▀▀"
+        ascii_title_line2 = "▒█▄▀░█▀█░▒█▒░█▀█▒▄██░█▄▄░▒█▒▒▄██"
+        
+        # Center the ASCII art
+        self.stdscr.addstr(1, (width - len(ascii_title_line1)) // 2, ascii_title_line1, curses.A_BOLD)
+        self.stdscr.addstr(2, (width - len(ascii_title_line2)) // 2, ascii_title_line2, curses.A_BOLD)
         
         # Subtitle
-        subtitle = "Legal AI Training Dataset Pipeline"
-        self.stdscr.addstr(2, (width - len(subtitle)) // 2, subtitle, curses.color_pair(4))
+        subtitle = "Other Tales Datasets Generation Tool"
+        self.stdscr.addstr(3, (width - len(subtitle)) // 2, subtitle, curses.color_pair(4))
         
         # Controls
         controls = "↑↓: Navigate  ENTER: Select  Q: Quit"
-        self.stdscr.addstr(4, (width - len(controls)) // 2, controls, curses.color_pair(4))
+        self.stdscr.addstr(5, (width - len(controls)) // 2, controls, curses.color_pair(4))
         
     def draw_menu(self):
         """Draw the menu items"""
         height, width = self.stdscr.getmaxyx()
         self.max_visible_items = height - 8  # Reserve space for header and footer
         
-        menu_start_y = 6
+        menu_start_y = 7
         
         # Clear menu area
         for i in range(menu_start_y, height - 2):
@@ -1131,6 +1452,7 @@ Available pipelines:
   tax-scenarios           - Generate tax calculation and optimization scenarios
   llama-optimizer         - Optimize datasets for Legal Llama 3.1 training
   db-ingestion            - Ingest data into databases
+  dataset-manager         - Manage existing datasets (add, delete, edit, export)
   menu                    - Show interactive menu
 
 Examples:
@@ -1214,6 +1536,9 @@ Examples:
     copyright_parser.add_argument('--output-dir', help='Output directory for copyright data')
     copyright_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
     
+    # Dataset manager
+    dataset_manager_parser = subparsers.add_parser('dataset-manager', help='Manage existing datasets')
+    
     # Interactive menu
     menu_parser = subparsers.add_parser('menu', help='Show interactive menu')
     
@@ -1265,6 +1590,8 @@ Examples:
         run_database_ingestion(args)
     elif args.pipeline == 'copyright':
         run_copyright_pipeline(args)
+    elif args.pipeline == 'dataset-manager':
+        run_dataset_manager(args)
     else:
         print(f"Unknown pipeline: {args.pipeline}")
         parser.print_help()

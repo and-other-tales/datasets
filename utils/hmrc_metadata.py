@@ -58,6 +58,24 @@ class TaxDomain(Enum):
     COMPLIANCE = "compliance"
     PENALTIES = "penalties"
     APPEALS = "appeals"
+    
+    # New categories identified from API analysis
+    MAKING_TAX_DIGITAL = "making_tax_digital"
+    EMPLOYEE_BENEFITS = "employee_benefits"
+    FUEL_DUTIES = "fuel_duties"
+    ALCOHOL_TOBACCO_DUTIES = "alcohol_tobacco_duties"
+    CUSTOMS_IMPORT_DUTIES = "customs_import_duties"
+    MONEY_LAUNDERING_SUPERVISION = "money_laundering_supervision"
+    TAX_AVOIDANCE_SCHEMES = "tax_avoidance_schemes"
+    RESEARCH_DEVELOPMENT_RELIEFS = "research_development_reliefs"
+    SERVICE_AVAILABILITY = "service_availability"
+    DIGITAL_SERVICES = "digital_services"
+    TRADE_PROCEDURES = "trade_procedures"
+    ECONOMIC_CRIME = "economic_crime"
+    TAX_CREDITS = "tax_credits"
+    BUSINESS_RATES = "business_rates"
+    ENVIRONMENTAL_TAXES = "environmental_taxes"
+    
     GENERAL = "general"
 
 @dataclass
@@ -340,6 +358,68 @@ class HMRCDocumentProcessor:
             TaxDomain.PAYE: [
                 'paye', 'pay as you earn', 'payroll', 'p45', 'p46', 'p60',
                 'p11d', 'benefits in kind', 'real time information'
+            ],
+            
+            # New categories with keywords
+            TaxDomain.MAKING_TAX_DIGITAL: [
+                'making tax digital', 'mtd', 'digital reporting', 'digital tax',
+                'quarterly reporting', 'software', 'api'
+            ],
+            TaxDomain.EMPLOYEE_BENEFITS: [
+                'benefits in kind', 'company car', 'fuel benefit', 'advisory fuel rates',
+                'taxable benefits', 'p11d', 'benefit charge', 'employee benefit'
+            ],
+            TaxDomain.FUEL_DUTIES: [
+                'fuel duty', 'advisory fuel rates', 'vehicle excise duty',
+                'company car fuel', 'fuel benefit'
+            ],
+            TaxDomain.ALCOHOL_TOBACCO_DUTIES: [
+                'alcohol duty', 'tobacco duty', 'spirits duty', 'beer duty',
+                'wine duty', 'cigarette duty', 'alcoholic products'
+            ],
+            TaxDomain.CUSTOMS_IMPORT_DUTIES: [
+                'customs duty', 'import duty', 'customs clearance', 'cds',
+                'customs declaration service', 'tariff', 'import'
+            ],
+            TaxDomain.MONEY_LAUNDERING_SUPERVISION: [
+                'money laundering', 'aml supervision', 'economic crime',
+                'supervision handbook', 'aml', 'terrorist financing'
+            ],
+            TaxDomain.TAX_AVOIDANCE_SCHEMES: [
+                'tax avoidance schemes', 'dotas', 'disclosure', 'promoter',
+                'notifiable arrangements', 'named schemes'
+            ],
+            TaxDomain.RESEARCH_DEVELOPMENT_RELIEFS: [
+                'research and development', 'r&d relief', 'r&d tax credits',
+                'corporate intangibles', 'innovation', 'sme r&d'
+            ],
+            TaxDomain.SERVICE_AVAILABILITY: [
+                'service availability', 'online service', 'system issues',
+                'service disruption', 'planned maintenance'
+            ],
+            TaxDomain.DIGITAL_SERVICES: [
+                'digital services tax', 'online services', 'digital platform',
+                'digital economy', 'digital transformation'
+            ],
+            TaxDomain.TRADE_PROCEDURES: [
+                'trade procedures', 'export', 'import procedures',
+                'customs procedures', 'trade facilitation'
+            ],
+            TaxDomain.ECONOMIC_CRIME: [
+                'economic crime', 'financial crime', 'fraud', 'sanctions',
+                'terrorist financing', 'proceeds of crime'
+            ],
+            TaxDomain.TAX_CREDITS: [
+                'tax credits', 'working tax credit', 'child tax credit',
+                'universal credit', 'credits system'
+            ],
+            TaxDomain.BUSINESS_RATES: [
+                'business rates', 'non-domestic rates', 'rateable value',
+                'rating list', 'rate relief'
+            ],
+            TaxDomain.ENVIRONMENTAL_TAXES: [
+                'climate change levy', 'landfill tax', 'aggregates levy',
+                'carbon price', 'environmental tax', 'green tax'
             ]
         }
         
