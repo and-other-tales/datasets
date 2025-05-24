@@ -11,7 +11,8 @@ import sys
 import argparse
 import curses
 from pathlib import Path
-from typing import Dict, Optional, List, Tuple, Callable
+from typing import Dict, Optional, List, Tuple, Callable, Any
+import json  # Fix: Import missing json module
 
 # Add project root to Python path
 project_root = Path(__file__).parent
@@ -19,6 +20,153 @@ sys.path.insert(0, str(project_root))
 
 from utils.version import get_version_info, print_version_info
 from utils.dataset_manager import DatasetManager
+
+# Add CursesMenu class definition
+class CursesMenu:
+    """Simple curses-based menu implementation"""
+    
+    def __init__(self, stdscr):
+        self.stdscr = stdscr
+        self.menu_items = []
+        self.current_row = 0
+        
+        # Initialize colors if available
+        if curses.has_colors():
+            curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Selected item
+            curses.init_pair(2, curses.COLOR_CYAN, -1)                   # Category headers
+            curses.init_pair(3, curses.COLOR_GREEN, -1)                  # Active items
+            curses.init_pair(4, curses.COLOR_YELLOW, -1)                 # Descriptions
+            curses.init_pair(5, curses.COLOR_RED, -1)                    # Exit items
+    
+    def add_item(self, title, description, action):
+        """Add a menu item"""
+        self.menu_items.append({
+            'type': 'item',
+            'title': title,
+            'description': description,
+            'action': action
+        })
+    
+    def add_category(self, title):
+        """Add a category header"""
+        self.menu_items.append({
+            'type': 'category',
+            'title': title
+        })
+    
+    def add_separator(self):
+        """Add a separator line"""
+        self.menu_items.append({
+            'type': 'separator'
+        })
+    
+    def run(self):
+        """Run the menu loop"""
+        # Hide cursor
+        curses.curs_set(0)
+        
+        # Enable key input
+        self.stdscr.keypad(True)
+        
+        while True:
+            # Clear screen
+            self.stdscr.clear()
+            
+            # Get terminal dimensions
+            height, width = self.stdscr.getmaxyx()
+            
+            # Display menu items
+            max_display_items = height - 3  # Leave room for status line
+            start_row = max(0, self.current_row - max_display_items // 2)
+            
+            # Ensure current_row is valid
+            if self.current_row >= len(self.menu_items):
+                self.current_row = len(self.menu_items) - 1
+            if self.current_row < 0:
+                self.current_row = 0
+            
+            # Display items
+            for i, item in enumerate(self.menu_items[start_row:start_row + max_display_items]):
+                y = i + 1  # Start at row 1
+                
+                if item['type'] == 'category':
+                    # Display category header
+                    attr = curses.color_pair(2) | curses.A_BOLD
+                    self.stdscr.addstr(y, 1, item['title'].upper(), attr)
+                
+                elif item['type'] == 'separator':
+                    # Display separator line
+                    self.stdscr.addstr(y, 1, "-" * (width - 2))
+                
+                elif item['type'] == 'item':
+                    # Display menu item
+                    title = item['title']
+                    
+                    # Highlight current row
+                    if start_row + i == self.current_row:
+                        attr = curses.color_pair(1)
+                        self.stdscr.addstr(y, 1, title[:width-2], attr)
+                        
+                        # Display description at bottom
+                        desc = item['description']
+                        if desc:
+                            desc_y = height - 1
+                            self.stdscr.addstr(desc_y, 1, desc[:width-2], curses.color_pair(4))
+                    else:
+                        # Normal item
+                        if title.lower() == "exit":
+                            attr = curses.color_pair(5)
+                        else:
+                            attr = curses.A_NORMAL
+                        self.stdscr.addstr(y, 1, title[:width-2], attr)
+            
+            # Refresh screen
+            self.stdscr.refresh()
+            
+            # Handle key presses
+            key = self.stdscr.getch()
+            
+            if key == curses.KEY_UP:
+                # Move up
+                self.current_row = max(0, self.current_row - 1)
+                # Skip non-selectable items
+                while (self.current_row > 0 and 
+                       self.menu_items[self.current_row]['type'] != 'item'):
+                    self.current_row -= 1
+            
+            elif key == curses.KEY_DOWN:
+                # Move down
+                self.current_row = min(len(self.menu_items) - 1, self.current_row + 1)
+                # Skip non-selectable items
+                while (self.current_row < len(self.menu_items) - 1 and 
+                       self.menu_items[self.current_row]['type'] != 'item'):
+                    self.current_row += 1
+            
+            elif key == curses.KEY_ENTER or key in [10, 13]:
+                # Execute action if it's a valid item
+                if (0 <= self.current_row < len(self.menu_items) and 
+                    self.menu_items[self.current_row]['type'] == 'item'):
+                    action = self.menu_items[self.current_row]['action']
+                    if action:
+                        return action
+            
+            elif key == ord('q') or key == ord('Q'):
+                # Quit
+                return None
+
+# Function to check if curses is active - fixes the sys._curses_active issue
+def is_curses_active():
+    """Check if curses is active without using sys._curses_active"""
+    try:
+        # If curses is active, this should throw an exception
+        # if we're already in a curses environment
+        import curses
+        curses.initscr()
+        curses.endwin()
+        return False
+    except Exception:
+        # An exception likely means curses is already active
+        return True
 
 def run_dynamic_pipeline(args):
     """Run othertales Dynamic Pipeline for any URL"""
@@ -72,8 +220,7 @@ def run_hmrc_scraper(args):
     use_curses = not (hasattr(args, 'no_curses') and args.no_curses)
     
     # Check if we're already in a curses context
-    import sys
-    if hasattr(sys, '_curses_active') and sys._curses_active:
+    if is_curses_active():
         use_curses = False  # Don't use nested curses
     
     output_dir = args.output_dir or 'generated/hmrc_documentation'
@@ -394,7 +541,7 @@ def run_dataset_manager(args):
                     
                     menu.add_item(title, desc, select_dataset)
             else:
-                menu.add_item("No datasets found", "Create datasets using pipelines first", lambda: None)
+                menu.add_item("No datasets found", "Create datasets using pipelines first", lambda x=None: x)
             
             menu.add_separator()
             
@@ -409,10 +556,11 @@ def run_dataset_manager(args):
                 def view_metadata():
                     curses.endwin()
                     try:
-                        metadata = manager.get_dataset_metadata(current_dataset)
-                        print(f"\n=== Metadata for {current_dataset} ===")
-                        import json
-                        print(json.dumps(metadata, indent=2))
+                        # Fix: Ensure current_dataset is not None before passing to function
+                        if current_dataset:
+                            metadata = manager.get_dataset_metadata(current_dataset)
+                            print(f"\n=== Metadata for {current_dataset} ===")
+                            print(json.dumps(metadata, indent=2))
                     except Exception as e:
                         print(f"Error: {e}")
                     input("\nPress Enter to continue...")
@@ -432,17 +580,21 @@ def run_dataset_manager(args):
                     try:
                         if choice == "1":
                             json_path = input("Enter JSON file path: ").strip()
-                            import json
                             with open(json_path, 'r') as f:
                                 new_data = json.load(f)
-                            manager.add_to_dataset(current_dataset, new_data)
-                            print("Data added successfully!")
+                            # Fix: Ensure current_dataset is not None
+                            if current_dataset:
+                                manager.add_to_dataset(current_dataset, new_data)
+                                print("Data added successfully!")
                         elif choice == "2":
                             print("Enter data as JSON (single object or array):")
                             json_str = input().strip()
+                            # Fix: Import json module
                             new_data = json.loads(json_str)
-                            manager.add_to_dataset(current_dataset, new_data)
-                            print("Data added successfully!")
+                            # Fix: Ensure current_dataset is not None
+                            if current_dataset:
+                                manager.add_to_dataset(current_dataset, new_data)
+                                print("Data added successfully!")
                     except Exception as e:
                         print(f"Error: {e}")
                     
@@ -458,31 +610,37 @@ def run_dataset_manager(args):
                     print(f"\n=== Edit Fields in {current_dataset} ===")
                     try:
                         # Load dataset to show fields
-                        dataset = manager.load_dataset(manager.datasets_dir / current_dataset)
-                        print("Available fields:", dataset.column_names)
-                        
-                        print("\n1. Add new field")
-                        print("2. Remove field")
-                        print("3. Transform existing field")
-                        choice = input("Select option (1-3): ").strip()
-                        
-                        if choice == "1":
-                            field_name = input("Enter new field name: ").strip()
-                            default_value = input("Enter default value for all rows: ").strip()
-                            manager.add_dataset_field(current_dataset, field_name, 
-                                                    lambda row: default_value)
-                            print(f"Added field '{field_name}'")
-                        elif choice == "2":
-                            field_name = input("Enter field name to remove: ").strip()
-                            manager.remove_dataset_field(current_dataset, field_name)
-                            print(f"Removed field '{field_name}'")
-                        elif choice == "3":
-                            field_name = input("Enter field name to transform: ").strip()
-                            print("Enter Python expression to transform (use 'x' for current value):")
-                            transform_expr = input("Transform: ").strip()
-                            transform_func = eval(f"lambda x: {transform_expr}")
-                            manager.edit_dataset_field(current_dataset, field_name, transform_func)
-                            print(f"Transformed field '{field_name}'")
+                        # Fix: Ensure dataset_path construction is safe
+                        if current_dataset:
+                            dataset_path = manager.datasets_dir / current_dataset
+                            dataset = manager.load_dataset(dataset_path)
+                            print("Available fields:", dataset.column_names)
+                            
+                            print("\n1. Add new field")
+                            print("2. Remove field")
+                            print("3. Transform existing field")
+                            choice = input("Select option (1-3): ").strip()
+                            
+                            if choice == "1":
+                                field_name = input("Enter new field name: ").strip()
+                                default_value = input("Enter default value for all rows: ").strip()
+                                # Fix: Ensure current_dataset is not None
+                                manager.add_dataset_field(current_dataset, field_name, 
+                                                        lambda row: default_value)
+                                print(f"Added field '{field_name}'")
+                            elif choice == "2":
+                                field_name = input("Enter field name to remove: ").strip()
+                                # Fix: Ensure current_dataset is not None
+                                manager.remove_dataset_field(current_dataset, field_name)
+                                print(f"Removed field '{field_name}'")
+                            elif choice == "3":
+                                field_name = input("Enter field name to transform: ").strip()
+                                print("Enter Python expression to transform (use 'x' for current value):")
+                                transform_expr = input("Transform: ").strip()
+                                transform_func = eval(f"lambda x: {transform_expr}")
+                                # Fix: Ensure current_dataset is not None
+                                manager.edit_dataset_field(current_dataset, field_name, transform_func)
+                                print(f"Transformed field '{field_name}'")
                     except Exception as e:
                         print(f"Error: {e}")
                     
@@ -499,10 +657,13 @@ def run_dataset_manager(args):
                     print(f"\n=== Update Metadata for {current_dataset} ===")
                     print("Enter metadata as JSON object:")
                     try:
+                        # Fix: Import json module
                         json_str = input().strip()
                         metadata = json.loads(json_str)
-                        manager.update_dataset_metadata(current_dataset, metadata)
-                        print("Metadata updated successfully!")
+                        # Fix: Ensure current_dataset is not None
+                        if current_dataset:
+                            manager.update_dataset_metadata(current_dataset, metadata)
+                            print("Metadata updated successfully!")
                     except Exception as e:
                         print(f"Error: {e}")
                     
@@ -525,8 +686,10 @@ def run_dataset_manager(args):
                         format_map = {"1": "parquet", "2": "json", "3": "csv"}
                         if choice in format_map:
                             export_format = format_map[choice]
-                            output_path = manager.export_dataset(current_dataset, export_format)
-                            print(f"Exported to: {output_path}")
+                            # Fix: Ensure current_dataset is not None
+                            if current_dataset:
+                                output_path = manager.export_dataset(current_dataset, export_format)
+                                print(f"Exported to: {output_path}")
                     except Exception as e:
                         print(f"Error: {e}")
                     
@@ -541,9 +704,11 @@ def run_dataset_manager(args):
                     nonlocal current_dataset
                     curses.endwin()
                     try:
-                        if manager.delete_dataset(current_dataset, confirm=True):
-                            print(f"Dataset '{current_dataset}' deleted")
-                            current_dataset = None
+                        # Fix: Ensure current_dataset is not None
+                        if current_dataset:
+                            if manager.delete_dataset(current_dataset, confirm=True):
+                                print(f"Dataset '{current_dataset}' deleted")
+                                current_dataset = None
                     except Exception as e:
                         print(f"Error: {e}")
                     
@@ -610,7 +775,17 @@ def run_dataset_manager(args):
                     try:
                         json_str = input().strip()
                         data = json.loads(json_str)
-                        from datasets import Dataset
+                        # Try to import datasets with graceful fallback
+                        try:
+                            from datasets import Dataset
+                        except ImportError:
+                            print("Warning: 'datasets' module not found. Creating minimal dataset.")
+                            
+                            class Dataset:
+                                @staticmethod
+                                def from_list(data_list):
+                                    return {"data": data_list}
+                        
                         dataset = Dataset.from_list(data if isinstance(data, list) else [data])
                         manager.save_dataset(dataset, name)
                         print(f"Created dataset '{name}'")
@@ -648,88 +823,162 @@ def run_dataset_manager(args):
         print(f"Dataset manager error: {e}")
         input("Press Enter to continue...")
 
-def run_llama_training_optimizer(args):
-    """Run Legal Llama training dataset optimizer"""
-    from utils.llama_training_optimizer import main as optimizer_main
+# Define missing helper functions
+def _run_with_menu_args(func: Callable, description: str, **kwargs) -> Any:
+    """Helper function to run a pipeline function from the menu with proper arguments"""
+    print(f"Running {description}...")
     
-    # Set up arguments
-    optimizer_args = []
+    # Create a minimal args object with default values
+    class Args:
+        def __init__(self, **kwargs):
+            self.output_dir = kwargs.get('output_dir', None)
+            self.input_dir = kwargs.get('input_dir', None)
+            self.max_documents = kwargs.get('max_documents', None)
+            self.discover_only = kwargs.get('discover_only', False)
+            self.resume = kwargs.get('resume', False)
+            self.no_curses = kwargs.get('no_curses', False)
+            self.url = kwargs.get('url', None)
+            self.quick = kwargs.get('quick', False)
     
-    if args.input_dir:
-        optimizer_args.extend(['--input-dir', args.input_dir])
+    # Add user input for common options
+    print("\nOptions (press Enter for defaults):")
+    output_dir = input("Output directory: ").strip() or kwargs.get('output_dir', None)
+    max_docs = input("Max documents (Enter for all): ").strip()
     
-    if args.output_dir:
-        optimizer_args.extend(['--output-dir', args.output_dir])
-    
-    # Override sys.argv
-    original_argv = sys.argv
-    sys.argv = ['llama_training_optimizer.py'] + optimizer_args
+    args = Args(
+        output_dir=output_dir,
+        max_documents=int(max_docs) if max_docs.isdigit() else None,
+        **kwargs
+    )
     
     try:
-        optimizer_main()
-    finally:
-        sys.argv = original_argv
+        result = func(args)
+        return result
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
 
-def run_enhanced_complete_pipeline(args):
-    """Run complete enhanced pipeline for Legal Llama training"""
-    print("=== Running Enhanced Complete Pipeline for Legal Llama Training ===")
+def _show_pipeline_status():
+    """Show status of data directories and files"""
+    print("\n=== PIPELINE STATUS ===")
     
-    # Step 1: Collect base data
-    print("\n1. Collecting HMRC tax documentation...")
-    run_hmrc_scraper(args)
+    base_dir = Path("generated")
+    if not base_dir.exists():
+        print("No 'generated' directory found. No pipelines have been run yet.")
+        return
     
-    print("\n2. Collecting housing legislation and case law...")
-    run_housing_pipeline(args)
+    # List all subdirectories
+    subdirs = [d for d in base_dir.iterdir() if d.is_dir()]
+    if not subdirs:
+        print("No pipeline data found in the 'generated' directory.")
+        return
     
-    print("\n3. Collecting additional case law from BAILII...")
-    run_bailii_scraper(args)
-    
-    # Step 2: Generate enhanced datasets
-    print("\n4. Enhancing legal reasoning datasets...")
-    run_legal_reasoning_enhancer(args)
-    
-    print("\n5. Generating tax scenarios...")
-    run_tax_scenario_generator(args)
-    
-    print("\n6. Creating advanced Q&A pairs...")
-    run_advanced_qa_generator(args)
-    
-    # Step 3: Optimize for Legal Llama training
-    print("\n7. Optimizing datasets for Legal Llama 3.1 training...")
-    run_llama_training_optimizer(args)
-    
-    print("\n=== Enhanced Complete Pipeline Complete ===")
-    print("Your datasets are now ready for training domain-specialist Legal Llama models!")
+    for subdir in sorted(subdirs):
+        print(f"\n• {subdir.name}:")
+        
+        # Count files by type
+        file_counts = {}
+        total_size = 0
+        
+        for ext in ['.json', '.txt', '.html', '.md', '.csv', '.parquet']:
+            files = list(subdir.glob(f"**/*{ext}"))
+            if files:
+                file_counts[ext] = len(files)
+                total_size += sum(f.stat().st_size for f in files)
+        
+        if file_counts:
+            for ext, count in file_counts.items():
+                print(f"  - {count} {ext} files")
+            
+            # Show size in MB
+            size_mb = total_size / (1024 * 1024)
+            print(f"  - Total size: {size_mb:.1f} MB")
+        else:
+            print("  - No data files found")
 
-def run_enhanced_legal_pipeline(args):
-    """Run the new enhanced legal pipeline with GUIDANCE.md implementation"""
-    from pipelines.enhanced_legal_pipeline import main as enhanced_main
+def _show_documentation():
+    """Show quick documentation and help"""
+    print("\n=== Legal Llama Documentation ===")
+    print("\nThis tool provides a unified interface for legal data collection and processing.")
+    print("\nKey Components:")
+    print("1. Data Collection Pipelines - Collect legal documents from various sources")
+    print("2. Dataset Enhancement - Process and enhance legal texts for training")
+    print("3. Training Optimization - Prepare datasets for Legal Llama training")
     
-    # Set up arguments for enhanced legal pipeline
-    enhanced_args = []
+    print("\nUsage Examples:")
+    print("• HMRC Tax Documentation: Collects tax guidance from the UK government")
+    print("• Housing Legislation: Collects housing and tenancy legislation")
+    print("• Case Law: Collects legal precedents from BAILII and other sources")
     
-    if args.input_dir:
-        enhanced_args.extend(['--input-dir', args.input_dir])
+    print("\nFor more detailed documentation, see README.md")
+
+def _manage_credentials():
+    """Edit database and API credentials"""
+    print("\n=== Credential Management ===")
+    
+    # Define credential locations
+    env_file = Path(".env")
+    
+    # Define credentials to manage
+    credential_definitions = {
+        'MONGODB_CONNECTION_STRING': 'MongoDB Atlas connection string',
+        'NEO4J_URI': 'Neo4j connection URI',
+        'NEO4J_USERNAME': 'Neo4j username',
+        'NEO4J_PASSWORD': 'Neo4j password',
+        'PINECONE_API_KEY': 'Pinecone API key',
+        'PINECONE_ENVIRONMENT': 'Pinecone environment',
+        'ANTHROPIC_API_KEY': 'Anthropic API key for Claude integration',
+        'OPENAI_API_KEY': 'OpenAI API key'
+    }
+    
+    # Load current credentials
+    current_values = {}
+    if env_file.exists():
+        with open(env_file, 'r') as f:
+            for line in f:
+                if '=' in line and not line.strip().startswith('#'):
+                    key, value = line.strip().split('=', 1)
+                    current_values[key] = value.strip('"\'')
+    
+    # List current credentials
+    print("\nCurrent Credentials:")
+    for key, description in credential_definitions.items():
+        current_value = current_values.get(key, 'Not set')
+        
+        # Mask sensitive values for display
+        if 'PASSWORD' in key or 'KEY' in key:
+            display_value = '***Hidden***' if current_value != 'Not set' else 'Not set'
+        else:
+            display_value = current_value[:10] + '...' if len(current_value) > 10 else current_value
+        
+        print(f"{key}: {display_value} - {description}")
+    
+    # Edit credentials
+    print("\nEnter credential key to edit (or 'q' to quit):")
+    key = input("> ").strip().upper()
+    
+    if key.lower() == 'q':
+        return
+    
+    if key in credential_definitions:
+        new_value = input(f"Enter new value for {key} (leave empty to keep current): ").strip()
+        if new_value:
+            current_values[key] = new_value
+            
+            # Save credentials to .env file
+            with open(env_file, 'w') as f:
+                for k, v in current_values.items():
+                    f.write(f"{k}={v}\n")
+            
+            print(f"Updated {key} successfully.")
+        else:
+            print("No changes made.")
     else:
-        enhanced_args.extend(['--input-dir', args.output_dir or 'generated'])
+        print(f"Unknown credential: {key}")
     
-    if args.output_dir:
-        enhanced_args.extend(['--output-dir', args.output_dir])
-    
-    if args.max_documents:
-        enhanced_args.extend(['--max-documents', str(args.max_documents)])
-    
-    # Override sys.argv for the enhanced pipeline
-    original_argv = sys.argv
-    sys.argv = ['enhanced_legal_pipeline.py'] + enhanced_args
-    
-    try:
-        enhanced_main()
-    except ImportError:
-        print("Enhanced legal pipeline main function not found. Running enhanced pipeline directly...")
-        import pipelines.enhanced_legal_pipeline
-    finally:
-        sys.argv = original_argv
+    # Ask if user wants to continue editing
+    if input("\nEdit another credential? (y/N): ").strip().lower() == 'y':
+        _manage_credentials()
 
 def show_interactive_menu():
     """Show interactive curses-based menu for pipeline selection"""
@@ -880,795 +1129,105 @@ def _show_text_menu_fallback():
             choice = input("Select an option (0-18): ").strip()
             
             if choice == "0":
-                print("Goodbye!")
+                print("Exiting...")
                 break
-            elif choice == "1":
+            
+            # Convert to integer and call the corresponding function
+            choice_num = int(choice)
+            
+            # Map the choice to the corresponding function
+            if choice_num == 1:
                 _run_with_menu_args(run_dynamic_pipeline, "Dynamic Pipeline")
-            elif choice == "2":
+            elif choice_num == 2:
                 _run_with_menu_args(run_hmrc_scraper, "HMRC Scraper")
-            elif choice == "3":
+            elif choice_num == 3:
                 _run_with_menu_args(run_housing_pipeline, "Housing Pipeline")
-            elif choice == "4":
+            elif choice_num == 4:
                 _run_with_menu_args(run_bailii_scraper, "BAILII Scraper")
-            elif choice == "5":
+            elif choice_num == 5:
                 _run_with_menu_args(run_copyright_pipeline, "Copyright Pipeline")
-            elif choice == "6":
+            elif choice_num == 6:
                 _run_with_menu_args(run_complete_pipeline, "Complete Pipeline")
-            elif choice == "7":
+            elif choice_num == 7:
                 _run_with_menu_args(run_legal_reasoning_enhancer, "Legal Reasoning Enhancer")
-            elif choice == "8":
+            elif choice_num == 8:
                 _run_with_menu_args(run_tax_scenario_generator, "Tax Scenario Generator")
-            elif choice == "9":
+            elif choice_num == 9:
                 _run_with_menu_args(run_advanced_qa_generator, "Advanced Q&A Generator")
-            elif choice == "10":
+            elif choice_num == 10:
                 _run_with_menu_args(run_llama_training_optimizer, "Legal Llama Training Optimizer")
-            elif choice == "11":
+            elif choice_num == 11:
                 _run_with_menu_args(run_enhanced_complete_pipeline, "Enhanced Complete Pipeline")
-            elif choice == "12":
+            elif choice_num == 12:
                 _run_with_menu_args(run_enhanced_legal_pipeline, "Production Legal AI Pipeline")
-            elif choice == "13":
+            elif choice_num == 13:
                 _run_with_menu_args(run_qa_generator, "Q&A Generator")
-            elif choice == "14":
+            elif choice_num == 14:
                 _run_with_menu_args(run_database_ingestion, "Database Ingestion")
-            elif choice == "15":
+            elif choice_num == 15:
                 _run_with_menu_args(run_dataset_manager, "Dataset Manager")
-            elif choice == "16":
+            elif choice_num == 16:
                 _show_pipeline_status()
-            elif choice == "17":
+            elif choice_num == 17:
                 _show_documentation()
-            elif choice == "18":
+            elif choice_num == 18:
                 _manage_credentials()
             else:
-                print("Invalid choice. Please select a number between 0-18.")
+                print("Invalid choice, please try again.")
                 
-        except KeyboardInterrupt:
-            print("\n\nExiting...")
-            break
+        except ValueError:
+            print("Please enter a number between 0 and 18.")
         except Exception as e:
             print(f"Error: {e}")
-
-def _run_with_menu_args(pipeline_func, pipeline_name):
-    """Run a pipeline with interactive argument collection in curses"""
-    # Special handling for HMRC scraper
-    if pipeline_name == "HMRC Tax Documentation Scraper":
-        # Set flag to indicate we're in curses
-        sys._curses_active = True
-        from utils.curses_pipeline_runner import run_pipeline_in_curses
-    else:
-        from utils.curses_pipeline_runner import run_pipeline_in_curses
-    
-    def args_collector(input_win):
-        """Collect arguments within curses interface"""
-        curses.curs_set(1)  # Show cursor for input
-        
-        class Args:
-            def __init__(self):
-                self.input_dir = None
-                self.output_dir = None
-                self.max_documents = None
-                self.discover_only = False
-                self.url = None
-                self.quick = False
-                self.no_curses = False
-        
-        args = Args()
-        y_pos = 2
-        
-        # Special handling for Dynamic Pipeline
-        if pipeline_name == "Dynamic Pipeline":
-            try:
-                max_y, max_x = input_win.getmaxyx()
-                if y_pos < max_y - 2 and max_x > 40:
-                    input_win.addstr(y_pos, 2, "Enter URL to create datasets from:"[:max_x-4])
-                    y_pos += 1
-                    input_win.addstr(y_pos, 2, "URL: ")
-                    input_win.refresh()
-            except curses.error:
-                # Fallback without colors if there's an issue
-                max_y, max_x = input_win.getmaxyx()
-                if y_pos < max_y - 2 and max_x > 10:
-                    input_win.addstr(y_pos, 2, "Enter URL:"[:max_x-4])
-                    y_pos += 1
-                    input_win.addstr(y_pos, 2, "URL: ")
-                    input_win.refresh()
             
-            # Get URL input with bounds checking
-            try:
-                curses.echo()
-                max_y, max_x = input_win.getmaxyx()
-                if y_pos < max_y - 1 and max_x > 10:
-                    url = input_win.getstr(y_pos, 7, min(50, max_x - 10)).decode('utf-8').strip()
-                else:
-                    url = ""
-                curses.noecho()
-                
-                if not url:
-                    raise ValueError("URL is required for dynamic pipeline")
-                args.url = url
-                y_pos += 2
-            except (curses.error, ValueError) as e:
-                curses.noecho()
-                raise e
-            
-            # Output directory input with bounds checking
-            try:
-                max_y, max_x = input_win.getmaxyx()
-                if y_pos < max_y - 2 and max_x > 20:
-                    input_win.addstr(y_pos, 2, "Output dir (Enter=default):"[:max_x-4])
-                    y_pos += 1
-                    input_win.addstr(y_pos, 2, "Dir: ")
-                    input_win.refresh()
-                    
-                    curses.echo()
-                    output_dir = input_win.getstr(y_pos, 7, min(30, max_x - 10)).decode('utf-8').strip()
-                    curses.noecho()
-                else:
-                    output_dir = ""
-            except curses.error:
-                curses.noecho()
-                output_dir = ""
-            
-            if output_dir:
-                args.output_dir = output_dir
-        
-        elif pipeline_name == "Dataset Manager":
-            # No special arguments needed for dataset manager
-            pass
-        else:
-            # Get common arguments with bounds checking
-            if pipeline_name in ["HMRC Scraper", "Housing Pipeline", "BAILII Scraper", "Complete Pipeline", "Copyright Pipeline"]:
-                try:
-                    max_y, max_x = input_win.getmaxyx()
-                    if y_pos < max_y - 2 and max_x > 25:
-                        input_win.addstr(y_pos, 2, "Max documents (Enter=all):"[:max_x-4])
-                        y_pos += 1
-                        input_win.addstr(y_pos, 2, "Max: ")
-                        input_win.refresh()
-                        
-                        curses.echo()
-                        max_docs = input_win.getstr(y_pos, 7, min(10, max_x - 10)).decode('utf-8').strip()
-                        curses.noecho()
-                        
-                        if max_docs:
-                            try:
-                                args.max_documents = int(max_docs)
-                            except ValueError:
-                                pass  # Use default
-                        y_pos += 2
-                except curses.error:
-                    pass
-                
-                if pipeline_name == "HMRC Scraper":
-                    try:
-                        # Quick mode option
-                        max_y, max_x = input_win.getmaxyx()
-                        if y_pos < max_y - 2 and max_x > 20:
-                            input_win.addstr(y_pos, 2, "Quick mode (limited discovery)? (y/N):"[:max_x-4])
-                            y_pos += 1
-                            input_win.addstr(y_pos, 2, "Quick: ")
-                            input_win.refresh()
-                            
-                            curses.echo()
-                            quick = input_win.getstr(y_pos, 8, 1).decode('utf-8').strip().lower()
-                            curses.noecho()
-                            
-                            args.quick = quick == 'y'
-                            y_pos += 2
-                            
-                        # Discovery only option
-                        if y_pos < max_y - 2 and max_x > 20:
-                            input_win.addstr(y_pos, 2, "Discovery only? (y/N):"[:max_x-4])
-                            y_pos += 1
-                            input_win.addstr(y_pos, 2, "Discover: ")
-                            input_win.refresh()
-                            
-                            curses.echo()
-                            discover = input_win.getstr(y_pos, 11, 1).decode('utf-8').strip().lower()
-                            curses.noecho()
-                            
-                            args.discover_only = discover == 'y'
-                            y_pos += 2
-                    except curses.error:
-                        pass
-            
-            # Output directory with bounds checking
-            try:
-                max_y, max_x = input_win.getmaxyx()
-                if y_pos < max_y - 2 and max_x > 20:
-                    input_win.addstr(y_pos, 2, "Output dir (Enter=default):"[:max_x-4])
-                    y_pos += 1
-                    input_win.addstr(y_pos, 2, "Output: ")
-                    input_win.refresh()
-                    
-                    curses.echo()
-                    output_dir = input_win.getstr(y_pos, 9, min(30, max_x - 12)).decode('utf-8').strip()
-                    curses.noecho()
-                    
-                    if output_dir:
-                        args.output_dir = output_dir
-                    y_pos += 2
-            except curses.error:
-                pass
-            
-            # Input directory with bounds checking
-            try:
-                max_y, max_x = input_win.getmaxyx()
-                if y_pos < max_y - 2 and max_x > 20:
-                    input_win.addstr(y_pos, 2, "Input dir (Enter=default):"[:max_x-4])
-                    y_pos += 1
-                    input_win.addstr(y_pos, 2, "Input: ")
-                    input_win.refresh()
-                    
-                    curses.echo()
-                    input_dir = input_win.getstr(y_pos, 8, min(30, max_x - 11)).decode('utf-8').strip()
-                    curses.noecho()
-                    
-                    if input_dir:
-                        args.input_dir = input_dir
-            except curses.error:
-                pass
-        
-        curses.curs_set(0)  # Hide cursor
-        return args
-    
-    # Run the pipeline in curses
-    run_pipeline_in_curses(pipeline_name, pipeline_func, args_collector)
+        input("\nPress Enter to continue...")
 
-def _show_pipeline_status():
-    """Show status of data directories"""
-    print("\n=== Pipeline Status ===")
-    
-    generated_dir = Path("generated")
-    if not generated_dir.exists():
-        print("No generated data found.")
-        return
-    
-    for subdir in generated_dir.iterdir():
-        if subdir.is_dir():
-            file_count = len(list(subdir.rglob("*")))
-            print(f"{subdir.name}: {file_count} files")
-    
-    input("\nPress Enter to continue...")
-
-def _show_documentation():
-    """Show quick documentation"""
-    print("""
-=== LEGAL LLAMA DATASETS DOCUMENTATION ===
-
-PURPOSE:
-Train domain-specialist Legal Llama models for UK legal and tax expertise.
-
-RECOMMENDED WORKFLOW:
-1. Run Enhanced Complete Pipeline (#9) for full data collection and enhancement
-2. Use Legal Llama Training Optimiser (#8) output with HuggingFace AutoTrain Advanced
-3. Train separate Legal Llama models for legal and tax specialisation
-
-KEY FEATURES:
-- UK Government Content API integration for reliable data extraction
-- Multi-step reasoning enhancement for complex legal analysis
-- Tax calculation and optimisation scenario generation
-- Adversarial training data for robust argument handling
-- Progressive training phases for building expertise
-
-TARGET MODELS:
-- Legal Specialist: Counter arguments, provide legal analysis
-- Tax Specialist: Ensure compliance, maximise legitimate savings
-
-For detailed documentation, see README.md
-""")
-    input("\nPress Enter to continue...")
-
-def _load_env_credentials() -> Dict[str, str]:
-    """Load credentials from .env file"""
-    env_file = Path('.env')
-    credentials = {}
-    
-    if env_file.exists():
-        try:
-            with open(env_file, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith('#') and '=' in line:
-                        key, value = line.split('=', 1)
-                        credentials[key.strip()] = value.strip()
-        except Exception as e:
-            print(f"Error reading .env file: {e}")
-    
-    return credentials
-
-def _save_env_credentials(credentials: Dict[str, str]):
-    """Save credentials to .env file"""
-    env_file = Path('.env')
-    
-    try:
-        # Read existing file to preserve comments and structure
-        existing_lines = []
-        if env_file.exists():
-            with open(env_file, 'r') as f:
-                existing_lines = f.readlines()
-        
-        # Write updated credentials
-        with open(env_file, 'w') as f:
-            for line in existing_lines:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key = line.split('=', 1)[0].strip()
-                    if key in credentials:
-                        f.write(f"{key}={credentials[key]}\n")
-                    else:
-                        f.write(line + '\n')
-                else:
-                    f.write(line + '\n')
-            
-            # Add any new credentials that weren't in the original file
-            existing_keys = set()
-            for line in existing_lines:
-                if '=' in line and not line.strip().startswith('#'):
-                    existing_keys.add(line.split('=', 1)[0].strip())
-            
-            for key, value in credentials.items():
-                if key not in existing_keys:
-                    f.write(f"{key}={value}\n")
-        
-        print("✅ Credentials saved successfully!")
-        
-    except Exception as e:
-        print(f"❌ Error saving credentials: {e}")
-
-class MenuItem:
-    """Represents a menu item with title, description, and action"""
-    def __init__(self, title: str, description: str, action: Callable, category: str = ""):
-        self.title = title
-        self.description = description
-        self.action = action
-        self.category = category
-
-class CursesMenu:
-    """Modern curses-based menu interface"""
-    def __init__(self, stdscr):
-        self.stdscr = stdscr
-        self.current_row = 0
-        self.top_row = 0
-        self.menu_items = []
-        self.categories = []
-        self.max_visible_items = 0
-        
-        # Initialize colors
-        curses.start_color()
-        curses.use_default_colors()
-        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Selected item
-        curses.init_pair(2, curses.COLOR_CYAN, -1)    # Category headers
-        curses.init_pair(3, curses.COLOR_GREEN, -1)   # Active items
-        curses.init_pair(4, curses.COLOR_YELLOW, -1)  # Descriptions
-        curses.init_pair(5, curses.COLOR_RED, -1)     # Exit items
-        
-        # Hide cursor
-        curses.curs_set(0)
-        
-    def add_category(self, category_name: str):
-        """Add a category separator"""
-        self.categories.append(len(self.menu_items))
-        self.menu_items.append(MenuItem(f"=== {category_name} ===", "", None, "category"))
-        
-    def add_item(self, title: str, description: str, action: Callable, category: str = ""):
-        """Add a menu item"""
-        self.menu_items.append(MenuItem(title, description, action, category))
-        
-    def add_separator(self):
-        """Add a visual separator"""
-        self.menu_items.append(MenuItem("", "", None, "separator"))
-        
-    def draw_header(self):
-        """Draw the header"""
-        height, width = self.stdscr.getmaxyx()
-        
-        # Clear header area
-        for i in range(6):
-            self.stdscr.move(i, 0)
-            self.stdscr.clrtoeol()
-        
-        # ASCII Art Title
-        ascii_title_line1 = "░█▀▄▒▄▀▄░▀█▀▒▄▀▄░▄▀▀▒██▀░▀█▀░▄▀▀"
-        ascii_title_line2 = "▒█▄▀░█▀█░▒█▒░█▀█▒▄██░█▄▄░▒█▒▒▄██"
-        
-        # Center the ASCII art
-        self.stdscr.addstr(1, (width - len(ascii_title_line1)) // 2, ascii_title_line1, curses.A_BOLD)
-        self.stdscr.addstr(2, (width - len(ascii_title_line2)) // 2, ascii_title_line2, curses.A_BOLD)
-        
-        # Subtitle
-        subtitle = "Other Tales Datasets Generation Tool"
-        self.stdscr.addstr(3, (width - len(subtitle)) // 2, subtitle, curses.color_pair(4))
-        
-        # Controls
-        controls = "↑↓: Navigate  ENTER: Select  Q: Quit"
-        self.stdscr.addstr(5, (width - len(controls)) // 2, controls, curses.color_pair(4))
-        
-    def draw_menu(self):
-        """Draw the menu items"""
-        height, width = self.stdscr.getmaxyx()
-        self.max_visible_items = height - 8  # Reserve space for header and footer
-        
-        menu_start_y = 7
-        
-        # Clear menu area
-        for i in range(menu_start_y, height - 2):
-            self.stdscr.move(i, 0)
-            self.stdscr.clrtoeol()
-        
-        # Determine visible range
-        if self.current_row >= self.top_row + self.max_visible_items:
-            self.top_row = self.current_row - self.max_visible_items + 1
-        elif self.current_row < self.top_row:
-            self.top_row = self.current_row
-            
-        # Draw visible menu items
-        for i, item_idx in enumerate(range(self.top_row, min(self.top_row + self.max_visible_items, len(self.menu_items)))):
-            y = menu_start_y + i
-            item = self.menu_items[item_idx]
-            
-            if item.category == "category":
-                # Category header
-                self.stdscr.addstr(y, 2, item.title, curses.color_pair(2) | curses.A_BOLD)
-            elif item.category == "separator":
-                # Separator line
-                self.stdscr.addstr(y, 2, "─" * (width - 4))
-            else:
-                # Regular menu item
-                is_selected = item_idx == self.current_row
-                
-                if is_selected:
-                    # Highlight selected item
-                    self.stdscr.addstr(y, 0, " " * width, curses.color_pair(1))
-                    self.stdscr.addstr(y, 2, f"▶ {item.title}", curses.color_pair(1) | curses.A_BOLD)
-                    
-                    # Show description at bottom
-                    if item.description:
-                        desc_y = height - 2
-                        self.stdscr.move(desc_y, 0)
-                        self.stdscr.clrtoeol()
-                        desc_text = f"Info: {item.description}"
-                        if len(desc_text) > width - 2:
-                            desc_text = desc_text[:width - 5] + "..."
-                        self.stdscr.addstr(desc_y, 2, desc_text, curses.color_pair(4))
-                else:
-                    # Regular item
-                    color = curses.color_pair(3)
-                    if "exit" in item.title.lower() or "quit" in item.title.lower():
-                        color = curses.color_pair(5)
-                    
-                    self.stdscr.addstr(y, 4, item.title, color)
-        
-        # Draw scrollbar if needed
-        if len(self.menu_items) > self.max_visible_items:
-            self.draw_scrollbar(menu_start_y, self.max_visible_items)
-            
-    def draw_scrollbar(self, start_y: int, visible_items: int):
-        """Draw a scrollbar on the right side"""
-        height, width = self.stdscr.getmaxyx()
-        scrollbar_x = width - 2
-        
-        # Calculate scrollbar position
-        total_items = len(self.menu_items)
-        thumb_size = max(1, (visible_items * visible_items) // total_items)
-        thumb_pos = (self.top_row * visible_items) // total_items
-        
-        # Draw scrollbar track
-        for i in range(visible_items):
-            self.stdscr.addstr(start_y + i, scrollbar_x, "│", curses.color_pair(4))
-        
-        # Draw scrollbar thumb
-        for i in range(thumb_size):
-            if thumb_pos + i < visible_items:
-                self.stdscr.addstr(start_y + thumb_pos + i, scrollbar_x, "█", curses.color_pair(2))
-    
-    def find_next_selectable(self, start_idx: int, direction: int) -> int:
-        """Find the next selectable menu item"""
-        items_count = len(self.menu_items)
-        if items_count == 0:
-            return 0
-            
-        # Handle initial case where start_idx is -1
-        if start_idx == -1:
-            start_idx = 0 if direction > 0 else items_count - 1
-        
-        idx = start_idx
-        visited = set()
-        
-        while idx not in visited:
-            visited.add(idx)
-            idx = (idx + direction) % items_count
-            
-            if 0 <= idx < items_count:
-                item = self.menu_items[idx]
-                if item.action is not None and item.category not in ["category", "separator"]:
-                    return idx
-        
-        # If no selectable items found, return the first valid index
-        for i, item in enumerate(self.menu_items):
-            if item.action is not None and item.category not in ["category", "separator"]:
-                return i
-                
-        return 0
-    
-    def run(self) -> Optional[Callable]:
-        """Run the menu and return selected action"""
-        # Find first selectable item
-        self.current_row = self.find_next_selectable(-1, 1)
-        
-        while True:
-            self.stdscr.clear()
-            self.draw_header()
-            self.draw_menu()
-            self.stdscr.refresh()
-            
-            try:
-                key = self.stdscr.getch()
-                
-                if key == curses.KEY_UP:
-                    self.current_row = self.find_next_selectable(self.current_row, -1)
-                elif key == curses.KEY_DOWN:
-                    self.current_row = self.find_next_selectable(self.current_row, 1)
-                elif key == ord('\n') or key == curses.KEY_ENTER:
-                    # Return selected action
-                    if self.current_row < len(self.menu_items):
-                        item = self.menu_items[self.current_row]
-                        if item.action:
-                            return item.action
-                elif key == ord('q') or key == ord('Q'):
-                    return None
-                    
-            except KeyboardInterrupt:
-                return None
-
-def _manage_credentials():
-    """Interactive credential management"""
-    def manage_credentials_curses(stdscr):
-        menu = CursesMenu(stdscr)
-        
-        # Load current credentials
-        credentials = _load_env_credentials()
-        
-        # Define expected credentials with descriptions
-        credential_definitions = {
-            'MONGODB_CONNECTION_STRING': 'MongoDB Atlas connection string (mongodb+srv://...)',
-            'MONGODB_DATABASE': 'MongoDB database name (default: legal_datasets)',
-            'NEO4J_URI': 'Neo4j connection URI (bolt://...)',
-            'NEO4J_USERNAME': 'Neo4j username (default: neo4j)',
-            'NEO4J_PASSWORD': 'Neo4j password',
-            'PINECONE_API_KEY': 'Pinecone API key',
-            'PINECONE_ENVIRONMENT': 'Pinecone environment (default: us-west1-gcp)',
-            'ANTHROPIC_API_KEY': 'Anthropic API key for Claude integration'
-        }
-        
-        menu.add_category("DATABASE CREDENTIALS")
-        
-        def create_edit_action(key):
-            def edit_credential():
-                # Switch back to normal mode to get input
-                curses.endwin()
-                description = credential_definitions[key]
-                current_value = credentials.get(key, '')
-                print(f"\nEditing: {key}")
-                print(f"Description: {description}")
-                print(f"Current value: {'***Hidden***' if ('PASSWORD' in key or 'KEY' in key) and current_value else current_value}")
-                
-                new_value = input("Enter new value (press Enter to keep current): ").strip()
-                if new_value:
-                    credentials[key] = new_value
-                    print(f"✅ Updated {key}")
-                else:
-                    print("Value unchanged")
-                
-                input("\nPress Enter to continue...")
-                # Restart curses
-                stdscr.clear()
-                stdscr.refresh()
-            return edit_credential
-        
-        # Add credential items
-        for key, description in credential_definitions.items():
-            current_value = credentials.get(key, 'Not set')
-            if 'PASSWORD' in key or 'KEY' in key:
-                display_value = '***Hidden***' if current_value != 'Not set' else 'Not set'
-            else:
-                display_value = current_value[:50] + '...' if len(current_value) > 50 else current_value
-            
-            title = f"{key}: {display_value}"
-            menu.add_item(title, description, create_edit_action(key))
-        
-        menu.add_separator()
-        
-        def save_and_exit():
-            curses.endwin()
-            _save_env_credentials(credentials)
-            print("Credentials saved. Restart applications to use new credentials.")
-            input("Press Enter to continue...")
-            stdscr.clear()
-            stdscr.refresh()
-            return "exit"
-        
-        def exit_without_saving():
-            return "exit"
-        
-        menu.add_item("Save and Exit", "Save credentials to .env file and return to main menu", save_and_exit)
-        menu.add_item("Exit without Saving", "Return to main menu without saving changes", exit_without_saving)
-        
-        while True:
-            action = menu.run()
-            if action is None or (callable(action) and action() == "exit"):
-                break
-    
-    # Run the curses interface
-    curses.wrapper(manage_credentials_curses)
-
-def main():
-    """Main entry point"""
-    # Check if running in interactive mode (no command line arguments)
-    if len(sys.argv) == 1:
-        show_interactive_menu()
-        return
-    
-    parser = argparse.ArgumentParser(
-        description="Legal Llama Datasets - Unified Legal Data Collection and Enhancement Pipeline",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Available pipelines:
-  hmrc                    - Scrape HMRC tax documentation from gov.uk (with Content API)
-  housing                 - Collect housing legislation and case law
-  bailii                  - Scrape case law from BAILII
-  complete                - Run complete data collection pipeline
-  enhanced-complete       - Run enhanced complete pipeline for LLM training
-  qa-generator            - Generate Q&A pairs from collected data
-  advanced-qa             - Generate advanced multi-step Q&A for LLM training
-  legal-enhancer          - Enhance legal datasets with reasoning patterns
-  tax-scenarios           - Generate tax calculation and optimization scenarios
-  llama-optimizer         - Optimize datasets for Legal Llama 3.1 training
-  db-ingestion            - Ingest data into databases
-  dataset-manager         - Manage existing datasets (add, delete, edit, export)
-  menu                    - Show interactive menu
-
-Examples:
-  python main.py                                    # Show interactive menu
-  python main.py menu                               # Show interactive menu
-  python main.py enhanced-complete                  # Run full enhanced pipeline
-  python main.py hmrc --max-documents 100          # Collect HMRC data
-  python main.py llama-optimizer                   # Prepare for Legal Llama training
-        """
-    )
-    
-    # Add version argument
-    parser.add_argument('--version', action='version', version=f'Legal Llama Datasets {get_version_info()["version"]}')
-    
-    # Subcommands
-    subparsers = parser.add_subparsers(dest='pipeline', help='Pipeline to run')
-    
-    # Version subcommand for detailed info
-    version_parser = subparsers.add_parser('version', help='Show detailed version information')
-    version_parser.add_argument('--json', action='store_true', help='Output version info as JSON')
-    
-    # Data collection pipelines
-    dynamic_parser = subparsers.add_parser('dynamic', help='Run othertales Dynamic Pipeline for any URL')
-    dynamic_parser.add_argument('url', nargs='?', help='URL to create datasets from')
-    dynamic_parser.add_argument('--output-dir', help='Output directory for dynamic datasets')
-    
-    hmrc_parser = subparsers.add_parser('hmrc', help='Run HMRC tax documentation scraper')
-    hmrc_parser.add_argument('--output-dir', help='Output directory for HMRC documentation')
-    hmrc_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
-    hmrc_parser.add_argument('--discover-only', action='store_true', help='Only discover URLs, do not download')
-    hmrc_parser.add_argument('--quick', action='store_true', help='Quick mode: limited discovery (20 batches ~2000 docs)')
-    hmrc_parser.add_argument('--no-curses', action='store_true', help='Run without curses interface')
-    
-    housing_parser = subparsers.add_parser('housing', help='Run housing legislation and case law pipeline')
-    housing_parser.add_argument('--output-dir', help='Output directory for housing data')
-    housing_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
-    
-    bailii_parser = subparsers.add_parser('bailii', help='Run BAILII case law scraper')
-    bailii_parser.add_argument('--output-dir', help='Output directory for case law')
-    bailii_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
-    
-    complete_parser = subparsers.add_parser('complete', help='Run complete data collection pipeline')
-    complete_parser.add_argument('--output-dir', help='Output directory for all data')
-    complete_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
-    
-    # Enhanced pipelines for LLM training
-    enhanced_parser = subparsers.add_parser('enhanced-complete', help='Run enhanced complete pipeline for Legal Llama training')
-    enhanced_parser.add_argument('--output-dir', help='Output directory for enhanced data')
-    enhanced_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
-    
-    # Production Legal AI Pipeline
-    legal_ai_parser = subparsers.add_parser('legal-ai', help='Run production legal AI pipeline (GUIDANCE.md implementation)')
-    legal_ai_parser.add_argument('--input-dir', default='generated', help='Input directory containing collected data')
-    legal_ai_parser.add_argument('--output-dir', help='Output directory for legal AI system')
-    legal_ai_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to process')
-    
-    legal_enhancer_parser = subparsers.add_parser('legal-enhancer', help='Enhance legal datasets with reasoning patterns')
-    legal_enhancer_parser.add_argument('--input-dir', default='generated', help='Input directory containing legal data')
-    legal_enhancer_parser.add_argument('--output-dir', help='Output directory for enhanced data')
-    
-    tax_scenarios_parser = subparsers.add_parser('tax-scenarios', help='Generate tax calculation and optimization scenarios')
-    tax_scenarios_parser.add_argument('--input-dir', default='generated', help='Input directory containing tax data')
-    tax_scenarios_parser.add_argument('--output-dir', help='Output directory for tax scenarios')
-    
-    advanced_qa_parser = subparsers.add_parser('advanced-qa', help='Generate advanced multi-step Q&A')
-    advanced_qa_parser.add_argument('--input-dir', default='generated', help='Input directory containing legal and tax data')
-    advanced_qa_parser.add_argument('--output-dir', help='Output directory for advanced Q&A')
-    
-    llama_optimizer_parser = subparsers.add_parser('llama-optimizer', help='Optimize datasets for Legal Llama 3.1 training')
-    llama_optimizer_parser.add_argument('--input-dir', default='generated', help='Input directory containing all enhanced data')
-    llama_optimizer_parser.add_argument('--output-dir', help='Output directory for Legal Llama training data')
-    
-    # Original utilities
-    qa_parser = subparsers.add_parser('qa-generator', help='Generate Q&A pairs from collected data')
-    qa_parser.add_argument('--input-dir', help='Input directory containing legal documents')
-    qa_parser.add_argument('--output-dir', help='Output directory for Q&A pairs')
-    
-    db_parser = subparsers.add_parser('db-ingestion', help='Ingest data into databases')
-    db_parser.add_argument('--input-dir', help='Input directory containing data to ingest')
-    
-    # Copyright pipeline
-    copyright_parser = subparsers.add_parser('copyright', help='Run copyright law pipeline')
-    copyright_parser.add_argument('--output-dir', help='Output directory for copyright data')
-    copyright_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
-    
-    # Dataset manager
-    dataset_manager_parser = subparsers.add_parser('dataset-manager', help='Manage existing datasets')
-    
-    # Interactive menu
-    menu_parser = subparsers.add_parser('menu', help='Show interactive menu')
+if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Legal Llama Dataset Generation Framework")
+    parser.add_argument('pipeline', nargs='?', help='Pipeline to run')
+    parser.add_argument('--output-dir', help='Output directory for generated files')
+    parser.add_argument('--input-dir', help='Input directory for source files')
+    parser.add_argument('--max-documents', type=int, help='Maximum number of documents to process')
+    parser.add_argument('--discover-only', action='store_true', help='Only discover documents, do not download')
+    parser.add_argument('--resume', action='store_true', help='Resume from previous run')
+    parser.add_argument('--no-curses', action='store_true', help='Disable curses interface')
+    parser.add_argument('--quick', action='store_true', help='Run in quick mode (limited discovery)')
+    parser.add_argument('--url', help='URL for dynamic pipeline')
+    parser.add_argument('--version', action='store_true', help='Show version information and exit')
     
     args = parser.parse_args()
     
-    if not args.pipeline or args.pipeline == 'menu':
+    if args.version:
+        print_version_info()
+        sys.exit(0)
+    
+    if not args.pipeline:
+        # No pipeline specified - show interactive menu
         show_interactive_menu()
-        return
-    
-    # Ensure logs directory exists
-    os.makedirs('logs', exist_ok=True)
-    
-    # Ensure generated directory exists
-    os.makedirs('generated', exist_ok=True)
-    
-    # Route to appropriate pipeline
-    if args.pipeline == 'version':
-        if args.json:
-            import json
-            print(json.dumps(get_version_info(), indent=2))
-        else:
-            print_version_info()
-        return
-    elif args.pipeline == 'dynamic':
-        run_dynamic_pipeline(args)
-    elif args.pipeline == 'hmrc':
-        run_hmrc_scraper(args)
-    elif args.pipeline == 'housing':
-        run_housing_pipeline(args)
-    elif args.pipeline == 'bailii':
-        run_bailii_scraper(args)
-    elif args.pipeline == 'complete':
-        run_complete_pipeline(args)
-    elif args.pipeline == 'enhanced-complete':
-        run_enhanced_complete_pipeline(args)
-    elif args.pipeline == 'legal-ai':
-        run_enhanced_legal_pipeline(args)
-    elif args.pipeline == 'legal-enhancer':
-        run_legal_reasoning_enhancer(args)
-    elif args.pipeline == 'tax-scenarios':
-        run_tax_scenario_generator(args)
-    elif args.pipeline == 'advanced-qa':
-        run_advanced_qa_generator(args)
-    elif args.pipeline == 'llama-optimizer':
-        run_llama_training_optimizer(args)
-    elif args.pipeline == 'qa-generator':
-        run_qa_generator(args)
-    elif args.pipeline == 'db-ingestion':
-        run_database_ingestion(args)
-    elif args.pipeline == 'copyright':
-        run_copyright_pipeline(args)
-    elif args.pipeline == 'dataset-manager':
-        run_dataset_manager(args)
     else:
-        print(f"Unknown pipeline: {args.pipeline}")
-        parser.print_help()
-
-if __name__ == "__main__":
-    main()
+        # Run specified pipeline
+        pipeline_map = {
+            'dynamic': run_dynamic_pipeline,
+            'hmrc': run_hmrc_scraper,
+            'housing': run_housing_pipeline,
+            'bailii': run_bailii_scraper,
+            'copyright': run_copyright_pipeline,
+            'complete': run_complete_pipeline,
+            'legal-reasoning': run_legal_reasoning_enhancer,
+            'tax-scenarios': run_tax_scenario_generator,
+            'qa': run_qa_generator,
+            'advanced-qa': run_advanced_qa_generator,
+            'dataset-manager': run_dataset_manager,
+            'llama-optimizer': run_llama_training_optimizer,
+            'enhanced-complete': run_enhanced_complete_pipeline,
+            'legal-ai': run_enhanced_legal_pipeline,
+            'database': run_database_ingestion
+        }
+        
+        if args.pipeline in pipeline_map:
+            pipeline_map[args.pipeline](args)
+        else:
+            print(f"Unknown pipeline: {args.pipeline}")
+            print("Available pipelines:", ", ".join(pipeline_map.keys()))
+            sys.exit(1)
