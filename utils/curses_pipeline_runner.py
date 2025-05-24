@@ -202,6 +202,35 @@ class CursesPipelineRunner:
         self.log_thread = threading.Thread(target=self._log_display_thread, daemon=True)
         self.log_thread.start()
     
+    def _sanitize_text_for_curses(self, text):
+        """Sanitize text for safe curses display"""
+        if not text:
+            return ""
+        
+        # Replace problematic Unicode characters
+        replacements = {
+            '❌': '[X]',
+            '✅': '[✓]', 
+            '⚠': '[!]',
+            '🔶': '[◆]',
+            '📊': '[#]',
+            '🚀': '[>]',
+            '📁': '[D]',
+            '💾': '[S]',
+        }
+        
+        safe_text = text
+        for emoji, replacement in replacements.items():
+            safe_text = safe_text.replace(emoji, replacement)
+        
+        # Remove other non-ASCII characters that might cause issues
+        try:
+            safe_text = safe_text.encode('ascii', errors='replace').decode('ascii')
+        except:
+            safe_text = ''.join(c if ord(c) < 128 else '?' for c in safe_text)
+        
+        return safe_text
+    
     def _log_display_thread(self):
         """Thread to display logs in curses window"""
         while True:
@@ -221,10 +250,26 @@ class CursesPipelineRunner:
                         color = curses.color_pair(2)  # Cyan for status
                     
                     try:
-                        self.log_win.addstr(msg + "\n", color)
+                        # Sanitize message for curses display
+                        safe_msg = self._sanitize_text_for_curses(msg)
+                        
+                        # Check if we have space in the window
+                        max_y, max_x = self.log_win.getmaxyx()
+                        cur_y, cur_x = self.log_win.getyx()
+                        
+                        if cur_y >= max_y - 1:
+                            # Scroll window content up
+                            self.log_win.scroll()
+                            self.log_win.move(max_y - 2, 0)
+                        
+                        # Truncate message if too long for window
+                        if len(safe_msg) > max_x - 1:
+                            safe_msg = safe_msg[:max_x - 4] + "..."
+                        
+                        self.log_win.addstr(safe_msg + "\n", color)
                         self.log_win.refresh()
                     except curses.error:
-                        # Window might be too small, ignore
+                        # Window might be too small or character issues, ignore
                         pass
                         
             except queue.Empty:

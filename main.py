@@ -585,10 +585,17 @@ def _run_with_menu_args(pipeline_func, pipeline_name):
         
         # Special handling for Dynamic Pipeline
         if pipeline_name == "Dynamic Pipeline":
-            input_win.addstr(y_pos, 2, "Enter URL to create datasets from:", curses.color_pair(4))
-            y_pos += 1
-            input_win.addstr(y_pos, 2, "URL: ")
-            input_win.refresh()
+            try:
+                input_win.addstr(y_pos, 2, "Enter URL to create datasets from:", curses.color_pair(4))
+                y_pos += 1
+                input_win.addstr(y_pos, 2, "URL: ")
+                input_win.refresh()
+            except curses.error:
+                # Fallback without colors if there's an issue
+                input_win.addstr(y_pos, 2, "Enter URL to create datasets from:")
+                y_pos += 1
+                input_win.addstr(y_pos, 2, "URL: ")
+                input_win.refresh()
             
             # Get URL input
             curses.echo()
@@ -600,10 +607,17 @@ def _run_with_menu_args(pipeline_func, pipeline_name):
             args.url = url
             y_pos += 2
             
-            input_win.addstr(y_pos, 2, "Output directory (press Enter for default):")
-            y_pos += 1
-            input_win.addstr(y_pos, 2, "Dir: ")
-            input_win.refresh()
+            try:
+                input_win.addstr(y_pos, 2, "Output directory (press Enter for default):")
+                y_pos += 1
+                input_win.addstr(y_pos, 2, "Dir: ")
+                input_win.refresh()
+            except curses.error:
+                # Fallback if there's an issue
+                input_win.addstr(y_pos, 2, "Output dir:")
+                y_pos += 1
+                input_win.addstr(y_pos, 2, "Dir: ")
+                input_win.refresh()
             
             curses.echo()
             output_dir = input_win.getstr(y_pos, 7, 30).decode('utf-8').strip()

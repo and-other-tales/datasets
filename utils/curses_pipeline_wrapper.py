@@ -165,10 +165,54 @@ class CursesPipelineWrapper:
             def emit(self, record):
                 try:
                     msg = self.format(record)
-                    self.log_window.addstr(f"{msg}\n")
+                    # Sanitize message for curses display
+                    safe_msg = self._sanitize_text_for_curses(msg)
+                    
+                    # Check window size and handle scrolling
+                    max_y, max_x = self.log_window.getmaxyx()
+                    cur_y, cur_x = self.log_window.getyx()
+                    
+                    if cur_y >= max_y - 1:
+                        self.log_window.scroll()
+                        self.log_window.move(max_y - 2, 0)
+                    
+                    # Truncate if too long
+                    if len(safe_msg) > max_x - 1:
+                        safe_msg = safe_msg[:max_x - 4] + "..."
+                    
+                    self.log_window.addstr(f"{safe_msg}\n")
                     self.log_window.refresh()
                 except Exception:
                     pass
+            
+            def _sanitize_text_for_curses(self, text):
+                """Sanitize text for safe curses display"""
+                if not text:
+                    return ""
+                
+                # Replace problematic Unicode characters
+                replacements = {
+                    '❌': '[X]',
+                    '✅': '[✓]', 
+                    '⚠': '[!]',
+                    '🔶': '[◆]',
+                    '📊': '[#]',
+                    '🚀': '[>]',
+                    '📁': '[D]',
+                    '💾': '[S]',
+                }
+                
+                safe_text = text
+                for emoji, replacement in replacements.items():
+                    safe_text = safe_text.replace(emoji, replacement)
+                
+                # Remove other non-ASCII characters that might cause issues
+                try:
+                    safe_text = safe_text.encode('ascii', errors='replace').decode('ascii')
+                except:
+                    safe_text = ''.join(c if ord(c) < 128 else '?' for c in safe_text)
+                
+                return safe_text
         
         # Add the curses handler to the root logger
         curses_handler = CursesLogHandler(self.log_window)
