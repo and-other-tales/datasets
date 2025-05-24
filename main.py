@@ -937,18 +937,31 @@ class CursesMenu:
     def find_next_selectable(self, start_idx: int, direction: int) -> int:
         """Find the next selectable menu item"""
         items_count = len(self.menu_items)
-        idx = start_idx
-        
-        while True:
-            idx = (idx + direction) % items_count
-            if idx == start_idx:  # Wrapped around
-                break
+        if items_count == 0:
+            return 0
             
-            item = self.menu_items[idx]
+        # Handle initial case where start_idx is -1
+        if start_idx == -1:
+            start_idx = 0 if direction > 0 else items_count - 1
+        
+        idx = start_idx
+        visited = set()
+        
+        while idx not in visited:
+            visited.add(idx)
+            idx = (idx + direction) % items_count
+            
+            if 0 <= idx < items_count:
+                item = self.menu_items[idx]
+                if item.action is not None and item.category not in ["category", "separator"]:
+                    return idx
+        
+        # If no selectable items found, return the first valid index
+        for i, item in enumerate(self.menu_items):
             if item.action is not None and item.category not in ["category", "separator"]:
-                return idx
+                return i
                 
-        return start_idx
+        return 0
     
     def run(self) -> Optional[Callable]:
         """Run the menu and return selected action"""
