@@ -1,8 +1,12 @@
 import os
 import re
 import ast
+import sys
 import requests
 import time
+import json
+import importlib.metadata
+import importlib.util
 from datetime import datetime
 from pathlib import Path
 from utils.version import get_version_string
@@ -13,6 +17,18 @@ MIT_LICENSE_URL = "https://raw.githubusercontent.com/github/choosealicense.com/g
 GITHUB_API_BASE = "https://api.github.com/repos"
 MAX_RETRIES = 3
 RETRY_DELAY = 1  # seconds
+
+# Common license file names to check
+LICENSE_FILE_NAMES = [
+    'LICENSE', 'LICENSE.txt', 'LICENSE.md', 'LICENSE.rst',
+    'LICENCE', 'LICENCE.txt', 'LICENCE.md', 'LICENCE.rst',
+    'COPYING', 'COPYING.txt', 'COPYING.md',
+    'COPYRIGHT', 'COPYRIGHT.txt', 'COPYRIGHT.md',
+    'license', 'licence', 'copying', 'copyright'
+]
+
+# Cache for license lookups to avoid repeated API calls
+license_cache = {}
 
 # License verification mappings
 LICENSE_MAPPINGS = {
@@ -137,12 +153,48 @@ def prompt_user():
         developer_address = "85 Great Portland Street, London W1W 7LT, United Kingdom"
     return software_name, software_version, developer_name, developer_address
 
+def get_local_modules(base_dir):
+    """Get all local module names from the project."""
+    local_modules = set()
+    
+    # Get all Python files in root directory (without .py extension)
+    for file in os.listdir(base_dir):
+        if file.endswith('.py') and file != '__init__.py':
+            module_name = file[:-3]  # Remove .py extension
+            local_modules.add(module_name)
+    
+    # Get all directories with __init__.py (packages) or any .py files
+    for root, dirs, files in os.walk(base_dir):
+        # Skip virtual environment and special directories
+        dirs[:] = [d for d in dirs if d not in ['.venv', 'venv', '__pycache__', '.git', 'node_modules', '.tox']]
+        
+        # Check if directory contains Python files
+        has_py_files = any(f.endswith('.py') for f in files)
+        
+        if '__init__.py' in files or has_py_files:
+            # Convert directory path to module name
+            rel_path = os.path.relpath(root, base_dir)
+            if rel_path != '.':
+                module_name = rel_path.replace(os.path.sep, '.')
+                local_modules.add(module_name)
+                # Also add parent modules
+                parts = module_name.split('.')
+                for i in range(len(parts)):
+                    local_modules.add('.'.join(parts[:i+1]))
+    
+    return local_modules
+
 def extract_imports_from_code(base_dir):
     imports = set()
     file_count = 0
+    
+    # First, get all local modules
+    local_modules = get_local_modules(base_dir)
+    print(f"  Found {len(local_modules)} local modules: {', '.join(sorted(local_modules))}")
+    
     for root, dirs, files in os.walk(base_dir):
         # Skip virtual environment directories
-        dirs[:] = [d for d in dirs if d not in ['.venv', 'venv', '__pycache__', '.git']]
+        dirs[:] = [d for d in dirs if d not in ['.venv', 'venv', '__pycache__', '.git', 'node_modules', '.tox']]
         
         for file in files:
             if file.endswith(".py"):
@@ -155,12 +207,46 @@ def extract_imports_from_code(base_dir):
                         for node in ast.walk(tree):
                             if isinstance(node, ast.Import):
                                 for n in node.names:
-                                    imports.add(n.name.split('.')[0])
+                                    module_name = n.name.split('.')[0]
+                                    # Skip if it's a local module
+                                    if module_name not in local_modules:
+                                        imports.add(module_name)
                             elif isinstance(node, ast.ImportFrom) and node.module:
-                                imports.add(node.module.split('.')[0])
+                                module_name = node.module.split('.')[0]
+                                # Skip if it's a local module or relative import
+                                if not node.level and module_name not in local_modules:
+                                    imports.add(module_name)
                     except SyntaxError:
                         print(f"    Warning: Skipping {file_path} (syntax error)")
-    print(f"  Scanned {file_count} Python files, found {len(imports)} unique imports")
+    
+    # Also skip Python standard library modules
+    if hasattr(sys, 'stdlib_module_names'):
+        stdlib_modules = set(sys.stdlib_module_names)
+        imports = imports - stdlib_modules
+        print(f"  Excluded {len(stdlib_modules)} standard library modules")
+    else:
+        # Fallback for older Python versions - list common stdlib modules
+        common_stdlib = {
+            'os', 'sys', 're', 'json', 'time', 'datetime', 'math', 'random',
+            'collections', 'itertools', 'functools', 'operator', 'typing',
+            'pathlib', 'io', 'string', 'textwrap', 'copy', 'pickle',
+            'subprocess', 'threading', 'multiprocessing', 'asyncio',
+            'urllib', 'http', 'email', 'html', 'xml', 'csv', 'sqlite3',
+            'logging', 'warnings', 'unittest', 'doctest', 'pdb',
+            'argparse', 'configparser', 'hashlib', 'hmac', 'secrets',
+            'uuid', 'socket', 'ssl', 'select', 'platform', 'locale',
+            'codecs', 'encodings', 'base64', 'binascii', 'struct',
+            'array', 'queue', 'heapq', 'bisect', 'weakref', 'types',
+            'contextlib', 'abc', 'enum', 'dataclasses', 'importlib',
+            'pkgutil', 'inspect', 'ast', 'dis', 'traceback', 'linecache',
+            'shutil', 'tempfile', 'glob', 'fnmatch', 'stat', 'fileinput',
+            'gzip', 'bz2', 'lzma', 'zipfile', 'tarfile', 'zlib',
+            'builtins', '__future__', 'gc', 'atexit', 'signal'
+        }
+        imports = imports - common_stdlib
+        print(f"  Excluded {len(common_stdlib)} known standard library modules")
+    
+    print(f"  Scanned {file_count} Python files, found {len(imports)} third-party imports")
     return sorted(imports)
 
 def fetch_github_repo(package_name):
@@ -211,6 +297,112 @@ def fetch_github_license(repo):
         return None, None
     return None, None
 
+def fetch_local_package_license(package_name):
+    """Fetch license from locally installed package using importlib.metadata."""
+    try:
+        # Try to get distribution metadata
+        dist = importlib.metadata.distribution(package_name)
+        
+        # Try multiple metadata fields
+        license_text = dist.metadata.get('License')
+        if license_text and license_text.strip() and license_text.strip().upper() not in ['UNKNOWN', 'NONE']:
+            # Try to determine license type from classifiers
+            license_type = None
+            classifiers = dist.metadata.get_all('Classifier') or []
+            for classifier in classifiers:
+                if classifier.startswith('License ::'):
+                    parts = classifier.split(' :: ')
+                    if len(parts) >= 3:
+                        license_type = normalize_license_name(parts[2])
+                        break
+            
+            if not license_type and license_text:
+                # Try to infer from license text
+                license_type = infer_license_from_text(license_text)
+            
+            return license_type, license_text
+        
+        # Try to find LICENSE file in package location
+        if hasattr(dist, 'files') and dist.files:
+            for file in dist.files:
+                if file.name.upper() in [n.upper() for n in LICENSE_FILE_NAMES]:
+                    try:
+                        license_content = file.read_text()
+                        if license_content:
+                            license_type = infer_license_from_text(license_content)
+                            return license_type, license_content
+                    except Exception:
+                        continue
+                        
+    except Exception:
+        pass
+    
+    return None, None
+
+def infer_license_from_text(text):
+    """Infer license type from license text content."""
+    if not text:
+        return None
+        
+    text_lower = text.lower()
+    
+    # Common license detection patterns
+    patterns = {
+        'MIT': ['mit license', 'permission is hereby granted, free of charge'],
+        'Apache-2.0': ['apache license', 'version 2.0', 'www.apache.org/licenses/'],
+        'BSD-3-Clause': ['bsd 3-clause', 'redistribution and use in source and binary forms'],
+        'BSD-2-Clause': ['bsd 2-clause', 'simplified bsd license'],
+        'GPL-3.0': ['gnu general public license', 'version 3', 'gpl-3', 'gplv3'],
+        'GPL-2.0': ['gnu general public license', 'version 2', 'gpl-2', 'gplv2'],
+        'LGPL-3.0': ['gnu lesser general public license', 'lgpl', 'version 3'],
+        'ISC': ['isc license', 'permission to use, copy, modify'],
+        'MPL-2.0': ['mozilla public license', 'version 2.0', 'mpl-2.0'],
+        'CC0-1.0': ['cc0', 'public domain', 'no copyright'],
+        'Unlicense': ['unlicense', 'public domain', 'no conditions whatsoever'],
+    }
+    
+    for license_type, keywords in patterns.items():
+        if all(keyword in text_lower for keyword in keywords):
+            return license_type
+    
+    # Fallback: check for common license URLs
+    url_patterns = {
+        'opensource.org/licenses/MIT': 'MIT',
+        'opensource.org/licenses/Apache-2.0': 'Apache-2.0',
+        'opensource.org/licenses/BSD-3-Clause': 'BSD-3-Clause',
+        'gnu.org/licenses/gpl-3.0': 'GPL-3.0',
+        'mozilla.org/MPL/2.0': 'MPL-2.0',
+    }
+    
+    for url, license_type in url_patterns.items():
+        if url in text:
+            return license_type
+    
+    return None
+
+def fetch_github_raw_license(repo):
+    """Fetch license file directly from GitHub raw content."""
+    try:
+        base_url = f"https://raw.githubusercontent.com/{repo}"
+        
+        # Try main/master branch
+        for branch in ['main', 'master']:
+            for filename in LICENSE_FILE_NAMES[:8]:  # Try most common names
+                url = f"{base_url}/{branch}/{filename}"
+                try:
+                    response = make_request_with_retry(url, timeout=3)
+                    if response and response.ok:
+                        license_text = response.text
+                        license_type = infer_license_from_text(license_text)
+                        return license_type, license_text
+                except Exception:
+                    continue
+                    
+    except Exception:
+        pass
+    
+    return None, None
+
 def fetch_pypi_license(package_name):
     """Fetch license information directly from PyPI."""
     try:
@@ -218,7 +410,7 @@ def fetch_pypi_license(package_name):
         data = response.json()
         
         info = data['info']
-        license_text = info.get('license', '')
+        license_text = info.get('license', '') or ''  # Ensure it's never None
         
         # Extract license type from classifiers
         license_type = 'Unknown'
@@ -279,63 +471,125 @@ Open Source Components
     return eula
 
 def main():
+    # Load cache if available
+    global license_cache
+    cache_file = Path('.mdgen_cache.json')
+    if cache_file.exists():
+        try:
+            with open(cache_file, 'r') as f:
+                cache_data = json.load(f)
+                license_cache = {k: (v['name'], v['text'], v['source']) for k, v in cache_data.items()}
+                print(f"Loaded license cache with {len(license_cache)} entries")
+        except Exception as e:
+            print(f"Warning: Could not load cache: {e}")
+            license_cache = {}
+    
     software_name, software_version, dev_name, dev_address = prompt_user()
     print("\nScanning source files and extracting imports...")
     third_party_modules = extract_imports_from_code(".")
-
-    modules_info = {}
-    verification_warnings = []
-    print(f"\nFetching license information for {len(third_party_modules)} modules...")
     
-    for i, module in enumerate(third_party_modules, 1):
-        print(f"  [{i}/{len(third_party_modules)}] Checking {module}...")
+    if not third_party_modules:
+        print("\nNo third-party modules found. Only local modules detected.")
+        modules_info = {}
+        verification_warnings = []
+    else:
+        print(f"\nThird-party modules to check: {', '.join(third_party_modules)}")
+        modules_info = {}
+        verification_warnings = []
+        print(f"\nFetching license information for {len(third_party_modules)} modules...")
         
-        # Try both GitHub and PyPI for cross-validation
-        repo = fetch_github_repo(module)
-        github_license_name, github_license_text = None, None
-        pypi_license_name, pypi_license_text = None, None
-        
-        # Always try PyPI first (more reliable)
-        pypi_license_name, pypi_license_text = fetch_pypi_license(module)
-        
-        if repo:
-            print(f"    Found GitHub repo: {repo}")
-            github_license_name, github_license_text = fetch_github_license(repo)
+        for i, module in enumerate(third_party_modules, 1):
+            print(f"  [{i}/{len(third_party_modules)}] Checking {module}...")
             
-            # Cross-validation: compare GitHub and PyPI licenses
-            if github_license_name and pypi_license_name:
-                is_consistent = verify_license_consistency(github_license_name, pypi_license_name)
-                if is_consistent:
-                    print(f"    ✓ Verified license: {github_license_name} (GitHub + PyPI consistent)")
-                    # Prefer GitHub license text if available and longer
-                    if github_license_text and len(github_license_text) > len(pypi_license_text or ''):
-                        modules_info[module] = (github_license_name, github_license_text, f"GitHub: {repo} (verified)")
-                    else:
-                        modules_info[module] = (pypi_license_name, pypi_license_text, f"PyPI (GitHub verified)")
-                else:
-                    warning = f"License mismatch for {module}: GitHub={github_license_name}, PyPI={pypi_license_name}"
-                    verification_warnings.append(warning)
-                    print(f"    ⚠ License mismatch: GitHub={github_license_name}, PyPI={pypi_license_name}")
-                    # Use PyPI as it's generally more reliable
-                    if pypi_license_name and pypi_license_text:
-                        modules_info[module] = (pypi_license_name, pypi_license_text, f"PyPI (GitHub conflict)")
-                    else:
-                        modules_info[module] = (github_license_name, github_license_text, f"GitHub: {repo} (unverified)")
-            elif github_license_name and github_license_text:
-                print(f"    GitHub license found: {github_license_name} (PyPI unavailable)")
-                modules_info[module] = (github_license_name, github_license_text, f"GitHub: {repo}")
-            elif pypi_license_name and pypi_license_text:
-                print(f"    PyPI license found: {pypi_license_name} (GitHub inaccessible)")
-                modules_info[module] = (pypi_license_name, pypi_license_text, f"PyPI package")
-            else:
-                print(f"    No license information available from either source")
-        else:
-            print(f"    No GitHub repository found")
+            # Check cache first
+            if module in license_cache:
+                print(f"    Using cached license information")
+                modules_info[module] = license_cache[module]
+                continue
+            
+            # Try multiple sources in order of reliability
+            license_sources = []
+            
+            # 1. Try local package metadata first (most reliable for installed packages)
+            local_license_name, local_license_text = fetch_local_package_license(module)
+            if local_license_name and local_license_text:
+                license_sources.append(('local', local_license_name, local_license_text))
+                print(f"    Found local package license: {local_license_name}")
+            
+            # 2. Try PyPI API
+            pypi_license_name, pypi_license_text = fetch_pypi_license(module)
             if pypi_license_name and pypi_license_text:
-                print(f"    PyPI license found: {pypi_license_name}")
-                modules_info[module] = (pypi_license_name, pypi_license_text, f"PyPI package")
+                license_sources.append(('pypi', pypi_license_name, pypi_license_text))
+                print(f"    Found PyPI license: {pypi_license_name}")
+            
+            # 3. Try GitHub if available
+            repo = fetch_github_repo(module)
+            if repo:
+                print(f"    Found GitHub repo: {repo}")
+                
+                # Try GitHub API first
+                github_license_name, github_license_text = fetch_github_license(repo)
+                if github_license_name and github_license_text:
+                    license_sources.append(('github_api', github_license_name, github_license_text))
+                    print(f"    Found GitHub API license: {github_license_name}")
+                
+                # Try raw GitHub content as fallback
+                if not github_license_name:
+                    raw_license_name, raw_license_text = fetch_github_raw_license(repo)
+                    if raw_license_name and raw_license_text:
+                        license_sources.append(('github_raw', raw_license_name, raw_license_text))
+                        print(f"    Found GitHub raw license: {raw_license_name}")
+            
+            # Validate and choose best license
+            if license_sources:
+                # Group by license type
+                license_types = {}
+                for source, name, text in license_sources:
+                    normalized_name = normalize_license_name(name)
+                    if normalized_name:
+                        if normalized_name not in license_types:
+                            license_types[normalized_name] = []
+                        license_types[normalized_name].append((source, name, text))
+                
+                # If all sources agree, use the most complete text
+                if len(license_types) == 1:
+                    license_name = list(license_types.keys())[0]
+                    # Choose the longest/most complete text
+                    best_source = max(license_types[license_name], key=lambda x: len(x[2]))
+                    source_type, _, license_text = best_source
+                    
+                    # Determine source description
+                    sources = [s[0] for s in license_types[license_name]]
+                    if len(sources) > 1:
+                        source_desc = f"Multiple sources ({', '.join(sources)}) - verified"
+                        print(f"    ✓ Verified license: {license_name} (consistent across {len(sources)} sources)")
+                    else:
+                        source_desc = f"{source_type} package"
+                    
+                    modules_info[module] = (license_name, license_text, source_desc)
+                    license_cache[module] = (license_name, license_text, source_desc)
+                else:
+                    # Sources disagree - log warning and use most reliable source
+                    license_list = list(license_types.keys())
+                    warning = f"License mismatch for {module}: {', '.join([f'{k}({len(v)} sources)' for k, v in license_types.items()])}"
+                    verification_warnings.append(warning)
+                    print(f"    ⚠ License mismatch: {', '.join(license_list)}")
+                    
+                    # Priority order: local > pypi > github_api > github_raw
+                    for source_priority in ['local', 'pypi', 'github_api', 'github_raw']:
+                        for license_name, sources in license_types.items():
+                            for source, _, text in sources:
+                                if source == source_priority:
+                                    modules_info[module] = (license_name, text, f"{source} (conflict resolved)")
+                                    license_cache[module] = (license_name, text, f"{source} (conflict resolved)")
+                                    print(f"    Using {source} license: {license_name}")
+                                    break
+                            if module in modules_info:
+                                break
+                        if module in modules_info:
+                            break
             else:
-                print(f"    No license information available")
+                print(f"    No license information available from any source")
     
     # Report verification warnings
     if verification_warnings:
@@ -344,6 +598,18 @@ def main():
             print(f"  - {warning}")
     
     print(f"\n{len(modules_info)} third-party components found with known licenses.")
+    
+    # Save cache for future runs
+    cache_file = Path('.mdgen_cache.json')
+    try:
+        with open(cache_file, 'w') as f:
+            # Convert cache to JSON-serializable format
+            cache_data = {k: {'name': v[0], 'text': v[1], 'source': v[2]} for k, v in license_cache.items()}
+            json.dump(cache_data, f, indent=2)
+        print(f"License cache saved to {cache_file}")
+    except Exception as e:
+        print(f"Warning: Could not save cache: {e}")
+    
     eula_text = build_eula(software_name, software_version, dev_name, dev_address, modules_info)
 
     with open("LICENSE.md", "w", encoding="utf-8") as f:
