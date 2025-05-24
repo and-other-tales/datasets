@@ -1,0 +1,154 @@
+Statutory framework
+CTA09/S1042C and CTA09/S1045A prevent the making of a
+claim to the new merged scheme RDEC (“new RDEC”) and enhanced R&D intensive
+support (“ERIS”) respectively after the end of the claim notification period
+(see below), unless at least one of the following applies:
+the company
+has made an R&D claim during the period of three years ending with the last
+day of the claim notification period (ignoring any R&D claim for an
+accounting period beginning before 1 April 2023 which is made in an amendment to a
+return submitted on or after 1 April 2023).
+the company
+makes a claim notification in respect of the claim within the claim
+notification period
+the
+accounting period in respect of which the claim is made falls within the same
+period of account as another accounting period in respect of which the company
+has made an R&D claim or claim notification
+The provision relevant for ERIS applies to claims to
+Chapter 2 relief for accounting periods beginning on or after 1 April 2023,
+including claims under the old SME scheme. The new RDEC provision applies to
+claims to Chapter 1A relief for accounting periods beginning on or after 1
+April 2024. For old RDEC, CTA09/S104AA operates similarly.
+CTA09/S1142A(2) gives HMRC the power to specify by
+regulations what information should be provided with the notification, and the
+form and manner in which the notification is to be made.
+The Relief for Research and Development (Content of Claim
+Notifications, Additional Information Requirements and Miscellaneous
+Amendments) Regulations 2023 (
+SI2023/813
+) specify
+this in Schedule 1.
+Administrative Easement
+Between 8 September 2024 and 17 October 2024,
+incorrect guidance was published with regards to first bullet point above. The
+last few words of this sentence read, “after the end of the claim notifcation period”, rather than, "on or after 1 April 2023".
+This inaccurate interpretation has led to some
+companies being misinformed as to whether they needed to submit a Claim
+Notification Form when they had previously submitted a valid R&D claim during the period of three years ending with the last day of the claim notification period.
+To correct this, HMRC has implemented an
+administrative easement. HMRC will allow claims for an accounting period
+without a Claim Notification Form where the following apply.
+A company made a valid claim to R&D in an
+amendment to a return for an accounting period beginning before 1 April 2023,
+which was submitted to HMRC between 1 April 2023 and 30 November 2024
+inclusive;
+and
+The accounting period for which a Claim
+Notification was not delivered, but ought to have been, had a claim
+notification period ending between 8 September 2024 and 30 November 2024.
+Any company which considers that it has been
+disadvantaged as a result of this inaccuracy and meets the required criteria can
+apply for the easement. To apply, companies or their agents
+must
+contact the R&D Policy team at
+randd.policy@hmrc.gov.uk
+with the
+subject line "CIRD 183000 notification"
+and
+provide all of the following information.
+Evidence of authority to act on behalf of the company (for agents only).
+Company name.
+Company unique taxpayer reference.
+The date the amended return containing the R&D
+claim, which the company was relying on to meet the claim notification
+requirement, was submitted.
+The accounting period that was not notified as a
+result of the incorrect guidance.
+The period of account which the accounting period in
+(5) formed a part of.
+HMRC will review the information and, if we agree the
+conditions have been met, will invite companies to submit a claim for the
+relevant period.
+All R&D claims
+received as a result will be subject to HMRC’s normal risking processes.
+This easement does not affect
+a company’s statutory filing obligations, including
+the time limit for the making of a
+claim
+.
+Claim notification period
+The claim notification period is defined at CTA09/S1142A
+as the period:
+beginning
+with the first day of the period of account which is the same as the accounting
+period in respect of which the claim is made, or within which that accounting
+period falls, and
+ending with
+the last day of the period of six months beginning with the first day after
+that period of account
+How a claim notification is made
+A claim notification must be made via the online service,
+link here:
+https://www.gov.uk/guidance/tell-hmrc-that-youre-planning-to-claim-research-and-development-rd-tax-relief
+Information to be provided
+The information required is specified in SI2023/813/SCH1.
+Subject
+Specified information
+the
+  company
+(a)
+registered name, and
+(b)
+unique taxpayer
+  reference number.
+the company
+  officer responsible for ensuring the accuracy of the information provided
+  under this Schedule
+(a)
+name,
+(b)
+role in the company,
+(c)
+telephone number, and
+(d)
+email address.
+agent(s)
+  or tax adviser(s)
+(a)
+name (or, if the agent
+  or adviser is a registered company, its registered number if available),
+(b)
+agent reference
+  number,
+(c)
+business or trading
+  name,
+(d)
+address of principal
+  place of business,
+(e)
+email address,
+(f)
+telephone number, and
+(g)
+agent role (acting on
+  research and development claim only, or acting on both research and
+  development claim and other tax matters).
+the
+  R&D claim
+(a)
+the start date and the
+  end date of the accounting period,
+(b)
+the start date and the
+  end date of the period of account,
+(c)
+the number of research
+  and development project(s), and
+(d)
+an overview of the
+  research and development project(s) for the period of account.
+Examples
+Please see the .gov guidance – link here:
+https://www.gov.uk/guidance/tell-hmrc-that-youre-planning-to-claim-research-and-development-rd-tax-relief

@@ -1,0 +1,294 @@
+{
+  "analytics_identifier": null,
+  "base_path": "/find-hmrc-contacts/vat-overseas-repayments-for-non-uk-businesses",
+  "content_id": "c86730c3-728b-401b-8a79-9b42fc11f2cc",
+  "description": "Contact HMRC about reclaiming VAT paid in the UK if your business is based overseas.",
+  "details": {
+    "body": "<h2 id=\"email\">Email</h2>\n\n<p>Email HMRC about reclaiming VAT paid in the UK if your business is based overseas: <a href=\"mailto:newcastle.oru@hmrc.gov.uk\">newcastle.oru@hmrc.gov.uk</a></p>\n\n<p>HMRC will only correspond with you by email where you have given us permission to do so.</p>\n\n<h3 id=\"email-agreement\">Email agreement</h3>\n\n<p>When we receive your application for VAT refunds, we will send you a copy of the \u2018email disclaimer\u2019. Once you\u2019ve read this and accepted the contents, this agreement will apply to all future correspondence on that enquiry.</p>\n\n<p>For a new enquiry or if a period of 12 months or more has elapsed since the last email was sent, we will issue a further \u2018email disclaimer\u2019 and ask for email agreement again.</p>\n\n<h3 id=\"agents\">Agents</h3>\n\n<p>You must provide a letter of authority from your client agreeing that you may act on their behalf. This is in addition to the email agreement, which must be accepted by both you and your client.</p>\n\n<p>To protect your data, there are certain confidential items which HMRC is prevented from providing by email. If we need to contact you about anything confidential this will continue to be done by phone or post. Please refer to guidance on <a href=\"https://www.gov.uk/report-suspicious-emails-websites-phishing/report-hmrc-phishing-emails-texts-and-phone-call-scams\">phishing emails</a> for information on how to avoid and report suspicious emails.</p>\n\n<h2 id=\"phone\">Phone</h2>\n\n<p>Call HMRC about reclaiming VAT paid in the UK if your business is based overseas.</p>\n\n<p>If your call is not urgent, you can find out information in:</p>\n\n<ul>\n  <li>the <a href=\"https://www.gov.uk/government/publications/the-official-hmrc-app\">official HMRC app</a>\n</li>\n  <li>your personal tax account or business tax account using <a href=\"https://www.gov.uk/log-in-register-hmrc-online-services\">HMRC online services</a>\n</li>\n</ul>\n\n<p>Telephone: 0300 322 9279</p>\n\n<p>Outside UK: +44 (0) 300 322 9279</p>\n\n<p>Opening times:</p>\n\n<ul>\n  <li>Monday to Thursday: 8.30am to 5pm</li>\n  <li>Friday: 8.30am to 4.30pm</li>\n</ul>\n\n<p>Closed <a href=\"https://www.gov.uk/bank-holidays\">bank holidays</a>.</p>\n\n<p><a href=\"https://www.gov.uk/call-charges\">Find out about call charges</a></p>\n\n<h2 id=\"post\">Post</h2>\n\n<p>Write to HMRC about reclaiming VAT paid in the UK if your business is based overseas.</p>\n\n<div class=\"address\"><div class=\"adr org fn\"><p>\nHM Revenue and Customs - Compliance Centres<br>VAT Overseas Repayment Unit S1250<br>Benton Park View<br>Newcastle upon Tyne<br>NE98 1YX<br>United Kingdom\n</p></div></div>\n\n<h2 id=\"related-content\">Related content</h2>\n\n<p><a href=\"https://www.gov.uk/vat-refunds-for-non-eu-businesses-visiting-the-uk\">Refunds of VAT for non-EU businesses visiting the UK</a> <br>\n<a href=\"https://www.gov.uk/vat-eu-businesses-buying-in-the-uk-and-the-vat-refund-scheme\">Refunds of VAT paid in the UK on or before 31 December 2020 by EU businesses</a></p>\n",
+    "change_history": [
+      {
+        "note": "First published.",
+        "public_timestamp": "2025-05-14T16:51:52.254Z"
+      }
+    ],
+    "headers": [
+      {
+        "headers": [
+          {
+            "id": "email-agreement",
+            "level": 3,
+            "text": "Email agreement"
+          },
+          {
+            "id": "agents",
+            "level": 3,
+            "text": "Agents"
+          }
+        ],
+        "id": "email",
+        "level": 2,
+        "text": "Email"
+      },
+      {
+        "id": "phone",
+        "level": 2,
+        "text": "Phone"
+      },
+      {
+        "id": "post",
+        "level": 2,
+        "text": "Post"
+      },
+      {
+        "id": "related-content",
+        "level": 2,
+        "text": "Related content"
+      }
+    ],
+    "max_cache_time": 10,
+    "metadata": {
+      "topics": [
+        "nonuk-residents",
+        "vat"
+      ]
+    },
+    "temporary_update_type": false
+  },
+  "document_type": "hmrc_contact",
+  "first_published_at": "2025-05-14T17:51:52+01:00",
+  "links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/find-hmrc-contacts/vat-overseas-repayments-for-non-uk-businesses",
+        "api_url": "https://www.gov.uk/api/content/find-hmrc-contacts/vat-overseas-repayments-for-non-uk-businesses",
+        "base_path": "/find-hmrc-contacts/vat-overseas-repayments-for-non-uk-businesses",
+        "content_id": "c86730c3-728b-401b-8a79-9b42fc11f2cc",
+        "document_type": "hmrc_contact",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-14T16:51:52Z",
+        "schema_name": "specialist_document",
+        "title": "VAT: overseas repayments for non-UK businesses",
+        "web_url": "https://www.gov.uk/find-hmrc-contacts/vat-overseas-repayments-for-non-uk-businesses",
+        "withdrawn": false
+      }
+    ],
+    "finder": [
+      {
+        "api_path": "/api/content/find-hmrc-contacts",
+        "api_url": "https://www.gov.uk/api/content/find-hmrc-contacts",
+        "base_path": "/find-hmrc-contacts",
+        "content_id": "4f5d1173-1634-4c3c-b341-28679d149cae",
+        "details": {
+          "facets": [
+            {
+              "allowed_values": [
+                {
+                  "label": "Agents",
+                  "value": "agents"
+                },
+                {
+                  "label": "Bereavement",
+                  "value": "bereavement"
+                },
+                {
+                  "label": "Campaigns",
+                  "value": "campaigns"
+                },
+                {
+                  "label": "Capital Gains Tax",
+                  "value": "capital-gains-tax"
+                },
+                {
+                  "label": "Change personal details",
+                  "value": "change-personal-details"
+                },
+                {
+                  "label": "Charities and clubs",
+                  "value": "charities-and-clubs"
+                },
+                {
+                  "label": "Child Benefit and other benefits",
+                  "value": "child-benefit-and-other-benefits"
+                },
+                {
+                  "label": "Complaints",
+                  "value": "complaints"
+                },
+                {
+                  "label": "Construction Industry Scheme",
+                  "value": "construction-industry-scheme"
+                },
+                {
+                  "label": "Corporation Tax",
+                  "value": "corporation-tax"
+                },
+                {
+                  "label": "Customs and Excise",
+                  "value": "customs-and-excise"
+                },
+                {
+                  "label": "Cymraeg / Welsh",
+                  "value": "cymraeg--welsh"
+                },
+                {
+                  "label": "Employers",
+                  "value": "employers"
+                },
+                {
+                  "label": "Fraud and tax evasion",
+                  "value": "fraud-and-tax-evasion"
+                },
+                {
+                  "label": "Income Tax",
+                  "value": "income-tax"
+                },
+                {
+                  "label": "National Insurance",
+                  "value": "national-insurance"
+                },
+                {
+                  "label": "Non-UK Residents",
+                  "value": "nonuk-residents"
+                },
+                {
+                  "label": "Online Services",
+                  "value": "online-services"
+                },
+                {
+                  "label": "Paying",
+                  "value": "paying"
+                },
+                {
+                  "label": "Pension Schemes",
+                  "value": "pension-schemes"
+                },
+                {
+                  "label": "Self Assessment",
+                  "value": "self-assessment"
+                },
+                {
+                  "label": "Self-employed",
+                  "value": "selfemployed"
+                },
+                {
+                  "label": "Stamp Taxes",
+                  "value": "stamp-taxes"
+                },
+                {
+                  "label": "Tax credits",
+                  "value": "tax-credits"
+                },
+                {
+                  "label": "Tax on savings and investments",
+                  "value": "tax-on-savings-and-investments"
+                },
+                {
+                  "label": "Textphone",
+                  "value": "textphone"
+                },
+                {
+                  "label": "VAT",
+                  "value": "vat"
+                }
+              ],
+              "display_as_result_metadata": false,
+              "filterable": true,
+              "key": "topics",
+              "name": "Topics",
+              "type": "text"
+            }
+          ],
+          "show_metadata_block": false,
+          "show_table_of_contents": false
+        },
+        "document_type": "finder",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-16T15:03:36Z",
+        "schema_name": "finder",
+        "title": "Contact HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/find-hmrc-contacts",
+        "withdrawn": false
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ]
+  },
+  "locale": "en",
+  "phase": "live",
+  "public_updated_at": "2025-05-14T17:51:52+01:00",
+  "publishing_app": "specialist-publisher",
+  "publishing_request_id": "21-1747241512.319-10.13.28.60-709",
+  "publishing_scheduled_at": null,
+  "rendering_app": "frontend",
+  "scheduled_publishing_delay_seconds": null,
+  "schema_name": "specialist_document",
+  "title": "VAT: overseas repayments for non-UK businesses",
+  "updated_at": "2025-05-16T17:18:14+01:00",
+  "withdrawn_notice": {}
+}

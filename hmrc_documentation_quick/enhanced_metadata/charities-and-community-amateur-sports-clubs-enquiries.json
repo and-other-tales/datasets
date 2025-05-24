@@ -1,0 +1,42 @@
+{
+  "document_type": "guidance",
+  "title": "Charities and Community Amateur Sports Clubs: enquiries",
+  "manual_code": null,
+  "manual_name": null,
+  "content_id": "b7e161679946f58a",
+  "authority_level": 5,
+  "tax_domain": "vat",
+  "subject_areas": [],
+  "published_date": null,
+  "last_updated": "2025-05-24T13:36:33.758655",
+  "version": null,
+  "supersedes": [],
+  "superseded_by": null,
+  "legislation_references": [],
+  "case_references": [],
+  "hmrc_cross_references": [],
+  "document_length": 1270,
+  "section_count": 0,
+  "has_examples": false,
+  "has_calculations": false,
+  "language": "en-GB",
+  "source_url": "https://www.gov.uk/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+  "content_hash": null,
+  "extraction_method": "hmrc_scraper",
+  "affects_individuals": false,
+  "affects_companies": true,
+  "affects_trusts": true,
+  "affects_partnerships": false,
+  "keywords": [
+    "tax",
+    "relief",
+    "return"
+  ],
+  "tax_concepts": [
+    "allowances",
+    "charges",
+    "procedures"
+  ],
+  "completeness_score": 0.6666666666666666,
+  "reference_accuracy_score": 0.0
+}

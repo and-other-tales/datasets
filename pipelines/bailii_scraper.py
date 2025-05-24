@@ -296,6 +296,14 @@ def chunk_text(text, max_len=CHUNK_CHAR_LIMIT):
 
 def main():
     """Main execution function for comprehensive BAILII scraping"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="BAILII Case Law Scraper")
+    parser.add_argument('--max-documents', type=int, help='Maximum number of cases to download (default: ALL)')
+    parser.add_argument('--output-dir', default='bailii_cases', help='Output directory for scraped cases')
+    
+    args = parser.parse_args()
+    
     scraper = BailiiScraper(max_depth=3, delay=1.0)
     
     # Control message now handled by curses footer
@@ -311,9 +319,12 @@ def main():
         with open("discovered_case_urls.json", "w", encoding="utf-8") as f:
             json.dump(list(case_urls), f, indent=2)
         
-        # Process cases (limit for testing)
-        max_cases = 1000  # Adjust as needed
-        logger.info(f"Processing up to {max_cases} cases...")
+        # Process cases
+        max_cases = args.max_documents  # Use command line limit if provided, otherwise process ALL
+        if max_cases:
+            logger.info(f"Processing up to {max_cases} cases...")
+        else:
+            logger.info(f"Processing ALL {len(case_urls)} discovered cases...")
         
         all_cases = scraper.process_case_urls(case_urls, max_cases=max_cases)
         

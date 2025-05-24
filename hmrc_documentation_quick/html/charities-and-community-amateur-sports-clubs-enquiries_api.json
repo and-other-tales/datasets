@@ -1,0 +1,281 @@
+{
+  "analytics_identifier": null,
+  "base_path": "/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+  "content_id": "c5cc6aa3-5786-4166-9247-911f22ea565b",
+  "description": "Contact HMRC if your Charity or Community Amateur Sports Club needs help on Gift Aid, Payroll Giving, tax reliefs, VAT or completing a Company or Self Assessment tax return.",
+  "details": {
+    "body": "<h2 id=\"online\">Online</h2>\n\n<p><a rel=\"external\" href=\"https://online.hmrc.gov.uk/shortforms/form/CHYCASC\">Send a Charities and Community Amateur Sports Clubs (CASCs) query</a></p>\n\n<p><a rel=\"external\" href=\"https://online.hmrc.gov.uk/shortforms/form/CHYChaEnq\">Send a Charities and VAT query</a></p>\n\n<p><a rel=\"external\" href=\"https://online.hmrc.gov.uk/shortforms/form/CHYBusEnq\">Send a Charities and VAT query if you are a business that supplies to charities</a></p>\n\n<p><a rel=\"external\" href=\"https://online.hmrc.gov.uk/shortforms/form/VATGenEnq\">Send a VAT CASC enquiry</a> <br>\nChoose the \u2018Other VAT subjects\u2019 option on the form.</p>\n\n<p>If HMRC needs to contact you about anything they\u2019ll reply by phone or post.</p>\n\n<h2 id=\"phone\">Phone</h2>\n\n<p>Call HMRC to order ChR1 forms and continuation sheets and get advice on:</p>\n\n<ul>\n  <li>applying for recognition as a charity for tax and Gift Aid purposes</li>\n  <li>VAT reliefs for charities</li>\n  <li>VAT reliefs for disabled and older people</li>\n  <li>registering as a Community Amateur Sports Club (CASC)</li>\n  <li>completing a Company or Trust Tax Return</li>\n  <li>Gift Aid, Payroll Giving and making a repayment claim</li>\n</ul>\n\n<p>Telephone: 0300 123 1073</p>\n\n<p>Opening times: Monday to Friday, 8:30am to 5pm. Closed <a href=\"https://www.gov.uk/bank-holidays\">bank holidays</a>.</p>\n\n<p><a href=\"https://www.gov.uk/call-charges\">Find out about call charges</a></p>\n\n<h2 id=\"post\">Post</h2>\n\n<p>You do not need to include a street name or PO box when writing to this address. Include your HMRC reference number when you write, so your enquiry can be dealt with quickly.</p>\n\n<p>Couriers should use a <a href=\"https://www.gov.uk/government/organisations/hm-revenue-customs/contact/couriers\">different address</a>.</p>\n\n<div class=\"address\"><div class=\"adr org fn\"><p>\nCharities, Savings and International 2<br>HM Revenue and Customs<br>BX9 1BU<br>United Kingdom\n</p></div></div>\n\n<h2 id=\"related-content\">Related content</h2>\n\n<p><a href=\"https://www.gov.uk/government/publications/charities-detailed-guidance-notes\">Detailed tax guidance for charities</a> <br>\n<a href=\"https://www.gov.uk/government/collections/vat-reliefs-for-charities-disabled-and-older-people\">VAT reliefs for disabled and older people</a> <br>\n<a href=\"https://www.gov.uk/government/collections/charity-accounts-financial-reporting-and-tax\">Charity accounts, financial reporting and tax</a></p>\n",
+    "change_history": [
+      {
+        "note": "First published.",
+        "public_timestamp": "2025-05-14T16:51:32.715Z"
+      }
+    ],
+    "headers": [
+      {
+        "id": "online",
+        "level": 2,
+        "text": "Online"
+      },
+      {
+        "id": "phone",
+        "level": 2,
+        "text": "Phone"
+      },
+      {
+        "id": "post",
+        "level": 2,
+        "text": "Post"
+      },
+      {
+        "id": "related-content",
+        "level": 2,
+        "text": "Related content"
+      }
+    ],
+    "max_cache_time": 10,
+    "metadata": {
+      "topics": [
+        "charities-and-clubs"
+      ]
+    },
+    "temporary_update_type": false
+  },
+  "document_type": "hmrc_contact",
+  "first_published_at": "2025-05-14T17:51:32+01:00",
+  "links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+        "api_url": "https://www.gov.uk/api/content/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+        "base_path": "/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+        "content_id": "c5cc6aa3-5786-4166-9247-911f22ea565b",
+        "document_type": "hmrc_contact",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-14T16:51:32Z",
+        "schema_name": "specialist_document",
+        "title": "Charities and Community Amateur Sports Clubs: enquiries",
+        "web_url": "https://www.gov.uk/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+        "withdrawn": false
+      }
+    ],
+    "finder": [
+      {
+        "api_path": "/api/content/find-hmrc-contacts",
+        "api_url": "https://www.gov.uk/api/content/find-hmrc-contacts",
+        "base_path": "/find-hmrc-contacts",
+        "content_id": "4f5d1173-1634-4c3c-b341-28679d149cae",
+        "details": {
+          "facets": [
+            {
+              "allowed_values": [
+                {
+                  "label": "Agents",
+                  "value": "agents"
+                },
+                {
+                  "label": "Bereavement",
+                  "value": "bereavement"
+                },
+                {
+                  "label": "Campaigns",
+                  "value": "campaigns"
+                },
+                {
+                  "label": "Capital Gains Tax",
+                  "value": "capital-gains-tax"
+                },
+                {
+                  "label": "Change personal details",
+                  "value": "change-personal-details"
+                },
+                {
+                  "label": "Charities and clubs",
+                  "value": "charities-and-clubs"
+                },
+                {
+                  "label": "Child Benefit and other benefits",
+                  "value": "child-benefit-and-other-benefits"
+                },
+                {
+                  "label": "Complaints",
+                  "value": "complaints"
+                },
+                {
+                  "label": "Construction Industry Scheme",
+                  "value": "construction-industry-scheme"
+                },
+                {
+                  "label": "Corporation Tax",
+                  "value": "corporation-tax"
+                },
+                {
+                  "label": "Customs and Excise",
+                  "value": "customs-and-excise"
+                },
+                {
+                  "label": "Cymraeg / Welsh",
+                  "value": "cymraeg--welsh"
+                },
+                {
+                  "label": "Employers",
+                  "value": "employers"
+                },
+                {
+                  "label": "Fraud and tax evasion",
+                  "value": "fraud-and-tax-evasion"
+                },
+                {
+                  "label": "Income Tax",
+                  "value": "income-tax"
+                },
+                {
+                  "label": "National Insurance",
+                  "value": "national-insurance"
+                },
+                {
+                  "label": "Non-UK Residents",
+                  "value": "nonuk-residents"
+                },
+                {
+                  "label": "Online Services",
+                  "value": "online-services"
+                },
+                {
+                  "label": "Paying",
+                  "value": "paying"
+                },
+                {
+                  "label": "Pension Schemes",
+                  "value": "pension-schemes"
+                },
+                {
+                  "label": "Self Assessment",
+                  "value": "self-assessment"
+                },
+                {
+                  "label": "Self-employed",
+                  "value": "selfemployed"
+                },
+                {
+                  "label": "Stamp Taxes",
+                  "value": "stamp-taxes"
+                },
+                {
+                  "label": "Tax credits",
+                  "value": "tax-credits"
+                },
+                {
+                  "label": "Tax on savings and investments",
+                  "value": "tax-on-savings-and-investments"
+                },
+                {
+                  "label": "Textphone",
+                  "value": "textphone"
+                },
+                {
+                  "label": "VAT",
+                  "value": "vat"
+                }
+              ],
+              "display_as_result_metadata": false,
+              "filterable": true,
+              "key": "topics",
+              "name": "Topics",
+              "type": "text"
+            }
+          ],
+          "show_metadata_block": false,
+          "show_table_of_contents": false
+        },
+        "document_type": "finder",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-16T15:03:36Z",
+        "schema_name": "finder",
+        "title": "Contact HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/find-hmrc-contacts",
+        "withdrawn": false
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ]
+  },
+  "locale": "en",
+  "phase": "live",
+  "public_updated_at": "2025-05-14T17:51:32+01:00",
+  "publishing_app": "specialist-publisher",
+  "publishing_request_id": "22-1747241492.781-10.13.28.60-709",
+  "publishing_scheduled_at": null,
+  "rendering_app": "frontend",
+  "scheduled_publishing_delay_seconds": null,
+  "schema_name": "specialist_document",
+  "title": "Charities and Community Amateur Sports Clubs: enquiries",
+  "updated_at": "2025-05-16T17:18:14+01:00",
+  "withdrawn_notice": {}
+}

@@ -1,0 +1,41 @@
+{
+  "document_type": "guidance",
+  "title": "Tax credits: dispute recovery of an overpayment (TC846)",
+  "manual_code": null,
+  "manual_name": null,
+  "content_id": "853c087132e66934",
+  "authority_level": 5,
+  "tax_domain": "national_insurance",
+  "subject_areas": [],
+  "published_date": null,
+  "last_updated": "2025-05-24T13:36:32.280385",
+  "version": null,
+  "supersedes": [],
+  "superseded_by": null,
+  "legislation_references": [],
+  "case_references": [],
+  "hmrc_cross_references": [],
+  "document_length": 2077,
+  "section_count": 0,
+  "has_examples": true,
+  "has_calculations": false,
+  "language": "en-GB",
+  "source_url": "https://www.gov.uk/government/publications/tax-credits-overpayment-tc846",
+  "content_hash": null,
+  "extraction_method": "hmrc_scraper",
+  "affects_individuals": true,
+  "affects_companies": false,
+  "affects_trusts": false,
+  "affects_partnerships": true,
+  "keywords": [
+    "tax",
+    "return",
+    "appeal"
+  ],
+  "tax_concepts": [
+    "procedures",
+    "appeals"
+  ],
+  "completeness_score": 0.6666666666666666,
+  "reference_accuracy_score": 0.0
+}

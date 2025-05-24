@@ -1,0 +1,236 @@
+{
+  "url": "/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+  "content_id": "c5cc6aa3-5786-4166-9247-911f22ea565b",
+  "title": "Charities and Community Amateur Sports Clubs: enquiries",
+  "description": "Contact HMRC if your Charity or Community Amateur Sports Club needs help on Gift Aid, Payroll Giving, tax reliefs, VAT or completing a Company or Self Assessment tax return.",
+  "last_updated": "2025-05-16T17:18:14+01:00",
+  "first_published": "2025-05-14T17:51:32+01:00",
+  "organisation": "HM Revenue and Customs",
+  "content_type": "hmrc_contact",
+  "schema_name": "specialist_document",
+  "length": 1270,
+  "api_source": true,
+  "related_links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+        "api_url": "https://www.gov.uk/api/content/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+        "base_path": "/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+        "content_id": "c5cc6aa3-5786-4166-9247-911f22ea565b",
+        "document_type": "hmrc_contact",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-14T16:51:32Z",
+        "schema_name": "specialist_document",
+        "title": "Charities and Community Amateur Sports Clubs: enquiries",
+        "web_url": "https://www.gov.uk/find-hmrc-contacts/charities-and-community-amateur-sports-clubs-enquiries",
+        "withdrawn": false
+      }
+    ],
+    "finder": [
+      {
+        "api_path": "/api/content/find-hmrc-contacts",
+        "api_url": "https://www.gov.uk/api/content/find-hmrc-contacts",
+        "base_path": "/find-hmrc-contacts",
+        "content_id": "4f5d1173-1634-4c3c-b341-28679d149cae",
+        "details": {
+          "facets": [
+            {
+              "allowed_values": [
+                {
+                  "label": "Agents",
+                  "value": "agents"
+                },
+                {
+                  "label": "Bereavement",
+                  "value": "bereavement"
+                },
+                {
+                  "label": "Campaigns",
+                  "value": "campaigns"
+                },
+                {
+                  "label": "Capital Gains Tax",
+                  "value": "capital-gains-tax"
+                },
+                {
+                  "label": "Change personal details",
+                  "value": "change-personal-details"
+                },
+                {
+                  "label": "Charities and clubs",
+                  "value": "charities-and-clubs"
+                },
+                {
+                  "label": "Child Benefit and other benefits",
+                  "value": "child-benefit-and-other-benefits"
+                },
+                {
+                  "label": "Complaints",
+                  "value": "complaints"
+                },
+                {
+                  "label": "Construction Industry Scheme",
+                  "value": "construction-industry-scheme"
+                },
+                {
+                  "label": "Corporation Tax",
+                  "value": "corporation-tax"
+                },
+                {
+                  "label": "Customs and Excise",
+                  "value": "customs-and-excise"
+                },
+                {
+                  "label": "Cymraeg / Welsh",
+                  "value": "cymraeg--welsh"
+                },
+                {
+                  "label": "Employers",
+                  "value": "employers"
+                },
+                {
+                  "label": "Fraud and tax evasion",
+                  "value": "fraud-and-tax-evasion"
+                },
+                {
+                  "label": "Income Tax",
+                  "value": "income-tax"
+                },
+                {
+                  "label": "National Insurance",
+                  "value": "national-insurance"
+                },
+                {
+                  "label": "Non-UK Residents",
+                  "value": "nonuk-residents"
+                },
+                {
+                  "label": "Online Services",
+                  "value": "online-services"
+                },
+                {
+                  "label": "Paying",
+                  "value": "paying"
+                },
+                {
+                  "label": "Pension Schemes",
+                  "value": "pension-schemes"
+                },
+                {
+                  "label": "Self Assessment",
+                  "value": "self-assessment"
+                },
+                {
+                  "label": "Self-employed",
+                  "value": "selfemployed"
+                },
+                {
+                  "label": "Stamp Taxes",
+                  "value": "stamp-taxes"
+                },
+                {
+                  "label": "Tax credits",
+                  "value": "tax-credits"
+                },
+                {
+                  "label": "Tax on savings and investments",
+                  "value": "tax-on-savings-and-investments"
+                },
+                {
+                  "label": "Textphone",
+                  "value": "textphone"
+                },
+                {
+                  "label": "VAT",
+                  "value": "vat"
+                }
+              ],
+              "display_as_result_metadata": false,
+              "filterable": true,
+              "key": "topics",
+              "name": "Topics",
+              "type": "text"
+            }
+          ],
+          "show_metadata_block": false,
+          "show_table_of_contents": false
+        },
+        "document_type": "finder",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-16T15:03:36Z",
+        "schema_name": "finder",
+        "title": "Contact HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/find-hmrc-contacts",
+        "withdrawn": false
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ]
+  }
+}

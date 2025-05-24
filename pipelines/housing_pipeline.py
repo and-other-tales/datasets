@@ -58,7 +58,7 @@ class LegalLlamaHousingLawPipeline:
         skip_case_law: bool = False,
         skip_qa_generation: bool = False,
         skip_dataset_creation: bool = False,
-        max_cases: int = 500,
+        max_cases: int = None,
         enable_pause_controls: bool = True
     ):
         self.legislation_dir = legislation_dir
@@ -478,8 +478,15 @@ Examples:
     parser.add_argument(
         '--max-cases',
         type=int,
-        default=500,
-        help='Maximum number of housing cases to scrape (default: 500)'
+        default=None,
+        help='Maximum number of housing cases to scrape (default: ALL)'
+    )
+    
+    parser.add_argument(
+        '--max-documents',
+        type=int,
+        default=None,
+        help='Alias for --max-cases for consistency with other scrapers'
     )
     
     args = parser.parse_args()
@@ -498,7 +505,7 @@ Examples:
         skip_case_law=args.skip_case_law,
         skip_qa_generation=args.skip_qa,
         skip_dataset_creation=args.skip_datasets,
-        max_cases=args.max_cases
+        max_cases=args.max_documents if args.max_documents is not None else args.max_cases
     )
     
     # Run pipeline

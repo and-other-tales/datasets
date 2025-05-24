@@ -1,0 +1,497 @@
+{
+  "url": "/guidance/claiming-high-end-television-tax-relief-for-corporation-tax",
+  "content_id": "28bedb7f-c9c6-4eda-bc29-5cdb485b33bc",
+  "title": "Claiming High-end Television Tax Relief for Corporation Tax",
+  "description": "Check if your company qualifies for Corporation Tax High-end Television Tax Relief and what you can claim.",
+  "last_updated": "2025-05-21T10:34:31+01:00",
+  "first_published": "2020-02-10T00:00:00+00:00",
+  "organisation": "HM Revenue and Customs",
+  "content_type": "detailed_guide",
+  "schema_name": "detailed_guide",
+  "length": 4439,
+  "api_source": true,
+  "related_links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/guidance/claiming-high-end-television-tax-relief-for-corporation-tax.cy",
+        "api_url": "https://www.gov.uk/api/content/guidance/claiming-high-end-television-tax-relief-for-corporation-tax.cy",
+        "base_path": "/guidance/claiming-high-end-television-tax-relief-for-corporation-tax.cy",
+        "content_id": "28bedb7f-c9c6-4eda-bc29-5cdb485b33bc",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "cy",
+        "public_updated_at": "2025-05-21T09:34:31Z",
+        "schema_name": "detailed_guide",
+        "title": "Hawlio Rhyddhad Treth o ran Teledu o Safon Uchel ar gyfer Treth Gorfforaeth",
+        "web_url": "https://www.gov.uk/guidance/claiming-high-end-television-tax-relief-for-corporation-tax.cy",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/guidance/claiming-high-end-television-tax-relief-for-corporation-tax",
+        "api_url": "https://www.gov.uk/api/content/guidance/claiming-high-end-television-tax-relief-for-corporation-tax",
+        "base_path": "/guidance/claiming-high-end-television-tax-relief-for-corporation-tax",
+        "content_id": "28bedb7f-c9c6-4eda-bc29-5cdb485b33bc",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-21T09:34:31Z",
+        "schema_name": "detailed_guide",
+        "title": "Claiming High-end Television Tax Relief for Corporation Tax",
+        "web_url": "https://www.gov.uk/guidance/claiming-high-end-television-tax-relief-for-corporation-tax",
+        "withdrawn": false
+      }
+    ],
+    "government": [
+      {
+        "api_path": "/api/content/government/2019-to-2022-johnson-conservative-government",
+        "api_url": "https://www.gov.uk/api/content/government/2019-to-2022-johnson-conservative-government",
+        "base_path": "/government/2019-to-2022-johnson-conservative-government",
+        "content_id": "4ed901ec-c8ce-42d5-a2aa-6d7f462480df",
+        "details": {
+          "current": false,
+          "ended_on": "2022-09-06T00:00:00+00:00",
+          "started_on": "2019-07-24T00:00:00+00:00"
+        },
+        "document_type": "government",
+        "links": {},
+        "locale": "en",
+        "title": "2019 to 2022 Johnson Conservative government",
+        "web_url": "https://www.gov.uk/government/2019-to-2022-johnson-conservative-government"
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "original_primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "suggested_ordered_related_items": [
+      {
+        "api_path": "/api/content/guidance/claiming-childrens-television-tax-relief-for-corporation-tax",
+        "api_url": "https://www.gov.uk/api/content/guidance/claiming-childrens-television-tax-relief-for-corporation-tax",
+        "base_path": "/guidance/claiming-childrens-television-tax-relief-for-corporation-tax",
+        "content_id": "6a964fcc-f720-40b8-a3f5-fe3e95c46daa",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-21T09:33:52Z",
+        "schema_name": "detailed_guide",
+        "title": "Claiming Children\u2019s Television Tax Relief for Corporation Tax",
+        "web_url": "https://www.gov.uk/guidance/claiming-childrens-television-tax-relief-for-corporation-tax",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/guidance/claiming-video-games-tax-relief-for-corporation-tax",
+        "api_url": "https://www.gov.uk/api/content/guidance/claiming-video-games-tax-relief-for-corporation-tax",
+        "base_path": "/guidance/claiming-video-games-tax-relief-for-corporation-tax",
+        "content_id": "dda9b58c-2a13-441f-b13d-e699d8a49e11",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-21T09:32:42Z",
+        "schema_name": "detailed_guide",
+        "title": "Claiming Video Games Tax Relief for Corporation Tax",
+        "web_url": "https://www.gov.uk/guidance/claiming-video-games-tax-relief-for-corporation-tax",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/guidance/claiming-orchestra-tax-relief-for-corporation-tax",
+        "api_url": "https://www.gov.uk/api/content/guidance/claiming-orchestra-tax-relief-for-corporation-tax",
+        "base_path": "/guidance/claiming-orchestra-tax-relief-for-corporation-tax",
+        "content_id": "e0a0e773-5984-42f4-84d6-ce0274c67a46",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-21T09:30:20Z",
+        "schema_name": "detailed_guide",
+        "title": "Claiming Orchestra Tax Relief for Corporation Tax",
+        "web_url": "https://www.gov.uk/guidance/claiming-orchestra-tax-relief-for-corporation-tax",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/guidance/claiming-museums-and-galleries-exhibition-tax-relief-for-corporation-tax",
+        "api_url": "https://www.gov.uk/api/content/guidance/claiming-museums-and-galleries-exhibition-tax-relief-for-corporation-tax",
+        "base_path": "/guidance/claiming-museums-and-galleries-exhibition-tax-relief-for-corporation-tax",
+        "content_id": "9b24b3a1-805a-4d31-9694-422e37ca4bb0",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-21T09:31:10Z",
+        "schema_name": "detailed_guide",
+        "title": "Claiming Museums and Galleries Exhibition Tax Relief for Corporation Tax",
+        "web_url": "https://www.gov.uk/guidance/claiming-museums-and-galleries-exhibition-tax-relief-for-corporation-tax",
+        "withdrawn": false
+      }
+    ],
+    "taxons": [
+      {
+        "api_path": "/api/content/money/business-tax-corporation-tax-reliefs",
+        "api_url": "https://www.gov.uk/api/content/money/business-tax-corporation-tax-reliefs",
+        "base_path": "/money/business-tax-corporation-tax-reliefs",
+        "content_id": "1cfb2ddc-91d1-4a57-8ede-4719c7535bd0",
+        "details": {
+          "internal_name": "Reliefs [T]",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/money/corporation-tax",
+              "api_url": "https://www.gov.uk/api/content/money/corporation-tax",
+              "base_path": "/money/corporation-tax",
+              "content_id": "386180ca-4219-478e-8b80-a271dd5ce5f2",
+              "details": {
+                "internal_name": "Corporation Tax [T] (Level 3 money)",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/money/business-tax",
+                    "api_url": "https://www.gov.uk/api/content/money/business-tax",
+                    "base_path": "/money/business-tax",
+                    "content_id": "28262ae3-599c-4259-ae30-3c83a5ec02a1",
+                    "details": {
+                      "internal_name": "Business tax [T] (level 2, money)",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": false
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "parent_taxons": [
+                        {
+                          "api_path": "/api/content/money",
+                          "api_url": "https://www.gov.uk/api/content/money",
+                          "base_path": "/money",
+                          "content_id": "6acc9db4-780e-4a46-92b4-1812e3c2c48a",
+                          "description": "",
+                          "details": {
+                            "internal_name": "Money",
+                            "notes_for_editors": "",
+                            "visible_to_departmental_editors": true
+                          },
+                          "document_type": "taxon",
+                          "links": {
+                            "root_taxon": [
+                              {
+                                "api_path": "/api/content/",
+                                "api_url": "https://www.gov.uk/api/content/",
+                                "base_path": "/",
+                                "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                                "document_type": "homepage",
+                                "links": {},
+                                "locale": "en",
+                                "public_updated_at": "2023-06-28T09:32:34Z",
+                                "schema_name": "homepage",
+                                "title": "GOV.UK homepage",
+                                "web_url": "https://www.gov.uk/",
+                                "withdrawn": false
+                              }
+                            ]
+                          },
+                          "locale": "en",
+                          "phase": "live",
+                          "public_updated_at": "2018-09-16T20:35:25Z",
+                          "schema_name": "taxon",
+                          "title": "Money",
+                          "web_url": "https://www.gov.uk/money",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2018-09-05T16:19:49Z",
+                    "schema_name": "taxon",
+                    "title": "Business tax",
+                    "web_url": "https://www.gov.uk/money/business-tax",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-09-05T16:19:52Z",
+              "schema_name": "taxon",
+              "title": "Corporation Tax",
+              "web_url": "https://www.gov.uk/money/corporation-tax",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-09-05T16:19:52Z",
+        "schema_name": "taxon",
+        "title": "Reliefs",
+        "web_url": "https://www.gov.uk/money/business-tax-corporation-tax-reliefs",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/money/tax-agent-guidance",
+        "api_url": "https://www.gov.uk/api/content/money/tax-agent-guidance",
+        "base_path": "/money/tax-agent-guidance",
+        "content_id": "5d0b158c-7c31-41f8-84ae-8e4e950c1f0c",
+        "details": {
+          "internal_name": "Tax agent and adviser guidance [T]",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/money/dealing-with-hmrc",
+              "api_url": "https://www.gov.uk/api/content/money/dealing-with-hmrc",
+              "base_path": "/money/dealing-with-hmrc",
+              "content_id": "b20215a9-25fb-4fa6-80a3-42e23f5352c2",
+              "details": {
+                "internal_name": "Dealing with HMRC [T] (level 2, Money)",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/money",
+                    "api_url": "https://www.gov.uk/api/content/money",
+                    "base_path": "/money",
+                    "content_id": "6acc9db4-780e-4a46-92b4-1812e3c2c48a",
+                    "description": "",
+                    "details": {
+                      "internal_name": "Money",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": true
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "root_taxon": [
+                        {
+                          "api_path": "/api/content/",
+                          "api_url": "https://www.gov.uk/api/content/",
+                          "base_path": "/",
+                          "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                          "document_type": "homepage",
+                          "links": {},
+                          "locale": "en",
+                          "public_updated_at": "2023-06-28T09:32:34Z",
+                          "schema_name": "homepage",
+                          "title": "GOV.UK homepage",
+                          "web_url": "https://www.gov.uk/",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2018-09-16T20:35:25Z",
+                    "schema_name": "taxon",
+                    "title": "Money",
+                    "web_url": "https://www.gov.uk/money",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-09-05T16:19:53Z",
+              "schema_name": "taxon",
+              "title": "Dealing with HMRC",
+              "web_url": "https://www.gov.uk/money/dealing-with-hmrc",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-09-05T16:19:54Z",
+        "schema_name": "taxon",
+        "title": "Tax agent and adviser guidance",
+        "web_url": "https://www.gov.uk/money/tax-agent-guidance",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/money/corporation-tax",
+        "api_url": "https://www.gov.uk/api/content/money/corporation-tax",
+        "base_path": "/money/corporation-tax",
+        "content_id": "386180ca-4219-478e-8b80-a271dd5ce5f2",
+        "details": {
+          "internal_name": "Corporation Tax [T] (Level 3 money)",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/money/business-tax",
+              "api_url": "https://www.gov.uk/api/content/money/business-tax",
+              "base_path": "/money/business-tax",
+              "content_id": "28262ae3-599c-4259-ae30-3c83a5ec02a1",
+              "details": {
+                "internal_name": "Business tax [T] (level 2, money)",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/money",
+                    "api_url": "https://www.gov.uk/api/content/money",
+                    "base_path": "/money",
+                    "content_id": "6acc9db4-780e-4a46-92b4-1812e3c2c48a",
+                    "description": "",
+                    "details": {
+                      "internal_name": "Money",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": true
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "root_taxon": [
+                        {
+                          "api_path": "/api/content/",
+                          "api_url": "https://www.gov.uk/api/content/",
+                          "base_path": "/",
+                          "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                          "document_type": "homepage",
+                          "links": {},
+                          "locale": "en",
+                          "public_updated_at": "2023-06-28T09:32:34Z",
+                          "schema_name": "homepage",
+                          "title": "GOV.UK homepage",
+                          "web_url": "https://www.gov.uk/",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2018-09-16T20:35:25Z",
+                    "schema_name": "taxon",
+                    "title": "Money",
+                    "web_url": "https://www.gov.uk/money",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-09-05T16:19:49Z",
+              "schema_name": "taxon",
+              "title": "Business tax",
+              "web_url": "https://www.gov.uk/money/business-tax",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-09-05T16:19:52Z",
+        "schema_name": "taxon",
+        "title": "Corporation Tax",
+        "web_url": "https://www.gov.uk/money/corporation-tax",
+        "withdrawn": false
+      }
+    ]
+  }
+}

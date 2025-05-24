@@ -1,0 +1,40 @@
+{
+  "document_type": "guidance",
+  "title": "Enterprise Investment Scheme, Seed Enterprise Investment Scheme and Social Investment Tax Relief: May 2025",
+  "manual_code": null,
+  "manual_name": null,
+  "content_id": "7db175d316084463",
+  "authority_level": 5,
+  "tax_domain": "general",
+  "subject_areas": [],
+  "published_date": null,
+  "last_updated": "2025-05-24T13:36:32.574866",
+  "version": null,
+  "supersedes": [],
+  "superseded_by": null,
+  "legislation_references": [],
+  "case_references": [],
+  "hmrc_cross_references": [],
+  "document_length": 682,
+  "section_count": 0,
+  "has_examples": false,
+  "has_calculations": false,
+  "language": "en-GB",
+  "source_url": "https://www.gov.uk/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+  "content_hash": null,
+  "extraction_method": "hmrc_scraper",
+  "affects_individuals": false,
+  "affects_companies": false,
+  "affects_trusts": false,
+  "affects_partnerships": false,
+  "keywords": [
+    "tax",
+    "relief"
+  ],
+  "tax_concepts": [
+    "allowances",
+    "anti_avoidance"
+  ],
+  "completeness_score": 0.5555555555555556,
+  "reference_accuracy_score": 0.0
+}

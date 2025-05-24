@@ -116,7 +116,7 @@ class HousingBailiiScraper(BailiiScraper):
             'upper tribunal (lands chamber)' in combined_text
         )
     
-    def search_housing_cases_by_court(self, court: str, max_pages: int = 50) -> List[Dict]:
+    def search_housing_cases_by_court(self, court: str, max_pages: int = None) -> List[Dict]:
         """Search for housing cases in a specific court"""
         housing_cases = []
         
@@ -209,7 +209,7 @@ class HousingBailiiScraper(BailiiScraper):
         
         return property_cases
     
-    def discover_housing_cases(self, max_cases_per_court: int = 100) -> List[Dict]:
+    def discover_housing_cases(self, max_cases_per_court: int = None) -> List[Dict]:
         """Discover housing cases across all relevant courts"""
         logger.info("=== DISCOVERING HOUSING CASES ===")
         
@@ -217,7 +217,10 @@ class HousingBailiiScraper(BailiiScraper):
         
         # Search property tribunal first (most relevant)
         property_cases = self.search_property_tribunal_cases()
-        all_housing_cases.extend(property_cases[:max_cases_per_court])
+        if max_cases_per_court:
+            all_housing_cases.extend(property_cases[:max_cases_per_court])
+        else:
+            all_housing_cases.extend(property_cases)  # Take ALL cases
         
         # Search other courts
         other_courts = [
@@ -228,8 +231,11 @@ class HousingBailiiScraper(BailiiScraper):
         ]
         
         for court in other_courts:
-            court_cases = self.search_housing_cases_by_court(court, max_pages=10)
-            all_housing_cases.extend(court_cases[:max_cases_per_court//4])
+            court_cases = self.search_housing_cases_by_court(court, max_pages=None)
+            if max_cases_per_court:
+                all_housing_cases.extend(court_cases[:max_cases_per_court//4])
+            else:
+                all_housing_cases.extend(court_cases)  # Take ALL cases
         
         # Remove duplicates
         seen_urls = set()
@@ -270,7 +276,7 @@ class HousingBailiiScraper(BailiiScraper):
         
         return None
     
-    def scrape_all_housing_cases(self, max_cases: int = 500) -> List[Dict]:
+    def scrape_all_housing_cases(self, max_cases: int = None) -> List[Dict]:
         """Scrape all discovered housing cases"""
         logger.info("=== STARTING HOUSING CASE LAW SCRAPING ===")
         
@@ -287,8 +293,12 @@ class HousingBailiiScraper(BailiiScraper):
                 logger.warning("No housing cases discovered")
                 return []
             
-            # Limit number of cases
-            housing_cases = housing_cases[:max_cases]
+            # Limit number of cases if specified
+            if max_cases:
+                housing_cases = housing_cases[:max_cases]
+                logger.info(f"Limited to {max_cases} cases out of {len(housing_cases)} discovered")
+            else:
+                logger.info(f"Processing ALL {len(housing_cases)} discovered cases")
             
             # Phase 2: Scrape case content
             logger.info(f"Phase 2: Scraping {len(housing_cases)} housing cases...")
@@ -378,8 +388,10 @@ def main():
     parser = argparse.ArgumentParser(description="Scrape housing-related case law from Bailli")
     parser.add_argument('--output-dir', default='housing_case_law',
                        help='Directory to store housing case law')
-    parser.add_argument('--max-cases', type=int, default=500,
-                       help='Maximum number of cases to scrape')
+    parser.add_argument('--max-cases', type=int, default=None,
+                       help='Maximum number of cases to scrape (default: ALL)')
+    parser.add_argument('--max-documents', type=int, default=None,
+                       help='Alias for --max-cases for consistency with other scrapers')
     parser.add_argument('--discover-only', action='store_true',
                        help='Only discover cases, do not scrape content')
     
@@ -398,7 +410,9 @@ def main():
             cases = scraper.discover_housing_cases()
             print(f"Discovered {len(cases)} housing cases")
         else:
-            cases = scraper.scrape_all_housing_cases(args.max_cases)
+            # Use max_documents if provided, otherwise max_cases
+            max_limit = args.max_documents if args.max_documents is not None else args.max_cases
+            cases = scraper.scrape_all_housing_cases(max_limit)
             scraper.save_housing_cases(cases)
             
             print(f"\n=== HOUSING CASE LAW SCRAPING COMPLETE ===")

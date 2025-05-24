@@ -55,10 +55,13 @@ def setup_logging():
 logger = setup_logging()
 
 class HMRCScraper:
-    def __init__(self, output_dir: str = "hmrc_documentation"):
+    def __init__(self, output_dir: str = "hmrc_documentation", progress_callback=None):
         self.base_url = "https://www.gov.uk"
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+        
+        # Progress callback for UI updates
+        self.progress_callback = progress_callback
         
         # Create subdirectories for different content types
         self.text_dir = self.output_dir / "text"
@@ -145,6 +148,15 @@ class HMRCScraper:
             'require_recent_update': False  # Set to True for only recent content
         }
         
+    def update_progress_callback(self, discovered=None, downloaded=None, status=None):
+        """Update progress via callback if available"""
+        if self.progress_callback:
+            self.progress_callback({
+                'discovered': discovered if discovered is not None else len(self.discovered_urls),
+                'downloaded': downloaded if downloaded is not None else len(self.downloaded_urls),
+                'status': status
+            })
+        
     def is_tax_related(self, title: str, summary: str = "") -> bool:
         """Check if content is tax-related"""
         text = (title + " " + summary).lower()
@@ -204,14 +216,22 @@ class HMRCScraper:
         logger.debug(f"Quality score for '{title}': {score} (passed: {passed})")
         return passed
     
-    def discover_via_search_api(self) -> Set[str]:
+    def discover_via_search_api(self, max_batches: int = None) -> Set[str]:
         """Discover all HMRC documents using the GOV.UK Search API"""
         logger.info("Discovering HMRC documents via Search API...")
         
         all_urls = set()
         start = 0
+        batch_count = 0
+        
+        # If running under curses, update progress
+        self.update_progress_callback(discovered=0, status="Starting discovery...")
         
         while True:
+            if max_batches and batch_count >= max_batches:
+                logger.info(f"Reached max batches limit ({max_batches})")
+                break
+                
             try:
                 # Build API query with pagination
                 params = {
@@ -278,7 +298,15 @@ class HMRCScraper:
                 batch_end = start + len(results)
                 progress_pct = (batch_end / total_results * 100) if total_results > 0 else 0
                 logger.info(f"Batch {start:06d}-{batch_end:06d}: Found {len(batch_urls)} relevant documents out of {len(results)} total ({progress_pct:.1f}% complete)")
+                
+                # Update progress callback
+                self.update_progress_callback(
+                    discovered=len(all_urls),
+                    status=f"Discovering... {progress_pct:.1f}% complete"
+                )
+                
                 start += len(results)
+                batch_count += 1
                 
                 # API rate limiting
                 time.sleep(0.1)
@@ -291,6 +319,12 @@ class HMRCScraper:
                 break
         
         logger.info(f"Discovered {len(all_urls)} total relevant documents")
+        
+        # Update final progress
+        self.update_progress_callback(
+            discovered=len(all_urls),
+            status=f"Discovery complete: {len(all_urls)} documents found"
+        )
         
         # If no results found, try simpler search without organization filter
         if len(all_urls) == 0:
@@ -660,7 +694,7 @@ class HMRCScraper:
             self.failed_urls.add(url)
             return False
     
-    def run_comprehensive_discovery(self):
+    def run_comprehensive_discovery(self, max_batches=None):
         """Run comprehensive discovery of all HMRC documentation using Search API"""
         logger.info("=== STARTING COMPREHENSIVE HMRC DISCOVERY VIA SEARCH API ===")
         
@@ -668,7 +702,7 @@ class HMRCScraper:
         self.load_progress()
         
         # Use the new Search API method
-        all_urls = self.discover_via_search_api()
+        all_urls = self.discover_via_search_api(max_batches=max_batches)
         self.discovered_urls = all_urls
         
         logger.info(f"Total high-quality tax documents discovered: {len(all_urls)}")

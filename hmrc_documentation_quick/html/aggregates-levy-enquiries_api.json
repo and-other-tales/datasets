@@ -1,0 +1,289 @@
+{
+  "analytics_identifier": null,
+  "base_path": "/find-hmrc-contacts/aggregates-levy-enquiries",
+  "content_id": "095bcae1-1657-4a28-8ec8-5c7c51a49bf4",
+  "description": "Email, call or write to HMRC for help with the Aggregates Levy, including registering for Aggregates Levy, making payments and making returns.",
+  "details": {
+    "body": "<h2 id=\"email\">Email</h2>\n\n<p>Email HMRC for help with Aggregates Levy: <a href=\"mailto:enquiries.eeitts@hmrc.gov.uk\">enquiries.eeitts@hmrc.gov.uk</a></p>\n\n<p>Ask HMRC general questions about Aggregates Levy, including:</p>\n\n<ul>\n  <li>registrations (including changes to your registration)</li>\n  <li>returns</li>\n</ul>\n\n<p>HMRC will only email you with confidential information if you have given them your written agreement that they can do so.</p>\n\n<h2 id=\"phone\">Phone</h2>\n\n<p>Call HMRC for help with Aggregates Levy general enquiries, including if you have problems:</p>\n\n<ul>\n  <li><a href=\"https://www.gov.uk/guidance/aggregates-levy-register-or-change-your-details\">registering for Aggregates Levy</a></li>\n  <li><a href=\"https://www.gov.uk/guidance/pay-environmental-taxes\">paying Aggregates Levy</a></li>\n  <li><a href=\"https://www.gov.uk/guidance/completing-your-aggregates-levy-return\">completing your Aggregates Levy return</a></li>\n</ul>\n\n<h3 id=\"before-you-call\">Before you call</h3>\n\n<p>This helpline may ask you some security questions. Make sure your personal details and address are up to date in <a href=\"https://www.gov.uk/personal-tax-account\">your personal tax account</a> or you could fail telephone security. If you do not have a personal tax account, you can\u202fcreate one before you check your details.</p>\n\n<p>Telephone:\n0300 200 3700</p>\n\n<p>Textphone:\n0300 200 3719</p>\n\n<p>Opening times: Monday to Friday, 8am to 6pm. Closed <a href=\"https://www.gov.uk/bank-holidays\">bank holidays</a>.</p>\n\n<p><a href=\"https://www.gov.uk/call-charges\">Find out about call charges</a></p>\n\n<h2 id=\"post\">Post</h2>\n\n<p>Write to HMRC for help with Aggregates Levy general enquiries, including:</p>\n\n<ul>\n  <li>registrations (including changes to your registration)</li>\n  <li>returns</li>\n</ul>\n\n<p>You do not need to include a street name, city name or PO box when writing to this address.</p>\n\n<p>Couriers should use a <a href=\"https://www.gov.uk/government/organisations/hm-revenue-customs/contact/couriers\">different address</a>.</p>\n\n<div class=\"address\"><div class=\"adr org fn\"><p>\nHM Revenue and Customs<br>Excise Processing Teams<br>BX9 1GL<br>United Kingdom\n</p></div></div>\n\n<h2 id=\"related-content\">Related content</h2>\n\n<p><a href=\"https://www.gov.uk/green-taxes-and-reliefs/aggregates-levy\">Environmental taxes, reliefs and schemes for businesses</a> <br>\n<a href=\"https://www.gov.uk/aggregates-levy-register-or-change-your-details\">Register for Aggregates Levy</a> <br>\n<a href=\"https://www.gov.uk/aggregates-levy-returns-records-and-appeals\">Keeping records for Aggregates Levy</a></p>\n",
+    "change_history": [
+      {
+        "note": "First published.",
+        "public_timestamp": "2025-05-14T16:51:30.549Z"
+      }
+    ],
+    "headers": [
+      {
+        "id": "email",
+        "level": 2,
+        "text": "Email"
+      },
+      {
+        "headers": [
+          {
+            "id": "before-you-call",
+            "level": 3,
+            "text": "Before you call"
+          }
+        ],
+        "id": "phone",
+        "level": 2,
+        "text": "Phone"
+      },
+      {
+        "id": "post",
+        "level": 2,
+        "text": "Post"
+      },
+      {
+        "id": "related-content",
+        "level": 2,
+        "text": "Related content"
+      }
+    ],
+    "max_cache_time": 10,
+    "metadata": {
+      "topics": [
+        "paying",
+        "textphone"
+      ]
+    },
+    "temporary_update_type": false
+  },
+  "document_type": "hmrc_contact",
+  "first_published_at": "2025-05-14T17:51:30+01:00",
+  "links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/find-hmrc-contacts/aggregates-levy-enquiries",
+        "api_url": "https://www.gov.uk/api/content/find-hmrc-contacts/aggregates-levy-enquiries",
+        "base_path": "/find-hmrc-contacts/aggregates-levy-enquiries",
+        "content_id": "095bcae1-1657-4a28-8ec8-5c7c51a49bf4",
+        "document_type": "hmrc_contact",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-14T16:51:30Z",
+        "schema_name": "specialist_document",
+        "title": "Aggregates Levy: enquiries",
+        "web_url": "https://www.gov.uk/find-hmrc-contacts/aggregates-levy-enquiries",
+        "withdrawn": false
+      }
+    ],
+    "finder": [
+      {
+        "api_path": "/api/content/find-hmrc-contacts",
+        "api_url": "https://www.gov.uk/api/content/find-hmrc-contacts",
+        "base_path": "/find-hmrc-contacts",
+        "content_id": "4f5d1173-1634-4c3c-b341-28679d149cae",
+        "details": {
+          "facets": [
+            {
+              "allowed_values": [
+                {
+                  "label": "Agents",
+                  "value": "agents"
+                },
+                {
+                  "label": "Bereavement",
+                  "value": "bereavement"
+                },
+                {
+                  "label": "Campaigns",
+                  "value": "campaigns"
+                },
+                {
+                  "label": "Capital Gains Tax",
+                  "value": "capital-gains-tax"
+                },
+                {
+                  "label": "Change personal details",
+                  "value": "change-personal-details"
+                },
+                {
+                  "label": "Charities and clubs",
+                  "value": "charities-and-clubs"
+                },
+                {
+                  "label": "Child Benefit and other benefits",
+                  "value": "child-benefit-and-other-benefits"
+                },
+                {
+                  "label": "Complaints",
+                  "value": "complaints"
+                },
+                {
+                  "label": "Construction Industry Scheme",
+                  "value": "construction-industry-scheme"
+                },
+                {
+                  "label": "Corporation Tax",
+                  "value": "corporation-tax"
+                },
+                {
+                  "label": "Customs and Excise",
+                  "value": "customs-and-excise"
+                },
+                {
+                  "label": "Cymraeg / Welsh",
+                  "value": "cymraeg--welsh"
+                },
+                {
+                  "label": "Employers",
+                  "value": "employers"
+                },
+                {
+                  "label": "Fraud and tax evasion",
+                  "value": "fraud-and-tax-evasion"
+                },
+                {
+                  "label": "Income Tax",
+                  "value": "income-tax"
+                },
+                {
+                  "label": "National Insurance",
+                  "value": "national-insurance"
+                },
+                {
+                  "label": "Non-UK Residents",
+                  "value": "nonuk-residents"
+                },
+                {
+                  "label": "Online Services",
+                  "value": "online-services"
+                },
+                {
+                  "label": "Paying",
+                  "value": "paying"
+                },
+                {
+                  "label": "Pension Schemes",
+                  "value": "pension-schemes"
+                },
+                {
+                  "label": "Self Assessment",
+                  "value": "self-assessment"
+                },
+                {
+                  "label": "Self-employed",
+                  "value": "selfemployed"
+                },
+                {
+                  "label": "Stamp Taxes",
+                  "value": "stamp-taxes"
+                },
+                {
+                  "label": "Tax credits",
+                  "value": "tax-credits"
+                },
+                {
+                  "label": "Tax on savings and investments",
+                  "value": "tax-on-savings-and-investments"
+                },
+                {
+                  "label": "Textphone",
+                  "value": "textphone"
+                },
+                {
+                  "label": "VAT",
+                  "value": "vat"
+                }
+              ],
+              "display_as_result_metadata": false,
+              "filterable": true,
+              "key": "topics",
+              "name": "Topics",
+              "type": "text"
+            }
+          ],
+          "show_metadata_block": false,
+          "show_table_of_contents": false
+        },
+        "document_type": "finder",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-16T15:03:36Z",
+        "schema_name": "finder",
+        "title": "Contact HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/find-hmrc-contacts",
+        "withdrawn": false
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ]
+  },
+  "locale": "en",
+  "phase": "live",
+  "public_updated_at": "2025-05-14T17:51:30+01:00",
+  "publishing_app": "specialist-publisher",
+  "publishing_request_id": "21-1747241490.620-10.13.28.60-709",
+  "publishing_scheduled_at": null,
+  "rendering_app": "frontend",
+  "scheduled_publishing_delay_seconds": null,
+  "schema_name": "specialist_document",
+  "title": "Aggregates Levy: enquiries",
+  "updated_at": "2025-05-23T14:53:00+01:00",
+  "withdrawn_notice": {}
+}

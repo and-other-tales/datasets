@@ -1,0 +1,41 @@
+{
+  "document_type": "guidance",
+  "title": "Stamp Duty Reserve Tax: enquiries",
+  "manual_code": null,
+  "manual_name": null,
+  "content_id": "7865cc07078a0259",
+  "authority_level": 5,
+  "tax_domain": "service_availability",
+  "subject_areas": [],
+  "published_date": null,
+  "last_updated": "2025-05-24T13:36:33.170298",
+  "version": null,
+  "supersedes": [],
+  "superseded_by": null,
+  "legislation_references": [],
+  "case_references": [],
+  "hmrc_cross_references": [],
+  "document_length": 1071,
+  "section_count": 0,
+  "has_examples": false,
+  "has_calculations": true,
+  "language": "en-GB",
+  "source_url": "https://www.gov.uk/find-hmrc-contacts/stamp-duty-reserve-tax-enquiries",
+  "content_hash": null,
+  "extraction_method": "hmrc_scraper",
+  "affects_individuals": true,
+  "affects_companies": false,
+  "affects_trusts": false,
+  "affects_partnerships": false,
+  "keywords": [
+    "tax",
+    "duty",
+    "return"
+  ],
+  "tax_concepts": [
+    "charges",
+    "procedures"
+  ],
+  "completeness_score": 0.6666666666666666,
+  "reference_accuracy_score": 0.0
+}

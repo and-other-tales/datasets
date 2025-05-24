@@ -1,0 +1,97 @@
+{
+  "url": "/hmrc-internal-manuals/corporate-intangibles-research-and-development-manual/cird183000",
+  "content_id": "fee10b2c-8f47-4b81-8ce8-5bbc23c65296",
+  "title": "R&D Tax Reliefs: reformed reliefs: claims process: pre-notification of claims",
+  "description": "",
+  "last_updated": "2025-05-12T14:59:04+01:00",
+  "first_published": "2024-08-01T06:22:25+01:00",
+  "organisation": "HM Revenue and Customs",
+  "content_type": "hmrc_manual_section",
+  "schema_name": "hmrc_manual_section",
+  "length": 5707,
+  "api_source": true,
+  "related_links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/hmrc-internal-manuals/corporate-intangibles-research-and-development-manual/cird183000",
+        "api_url": "https://www.gov.uk/api/content/hmrc-internal-manuals/corporate-intangibles-research-and-development-manual/cird183000",
+        "base_path": "/hmrc-internal-manuals/corporate-intangibles-research-and-development-manual/cird183000",
+        "content_id": "fee10b2c-8f47-4b81-8ce8-5bbc23c65296",
+        "document_type": "hmrc_manual_section",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-12T06:52:10Z",
+        "schema_name": "hmrc_manual_section",
+        "title": "R&D Tax Reliefs: reformed reliefs: claims process: pre-notification of claims",
+        "web_url": "https://www.gov.uk/hmrc-internal-manuals/corporate-intangibles-research-and-development-manual/cird183000",
+        "withdrawn": false
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ]
+  }
+}

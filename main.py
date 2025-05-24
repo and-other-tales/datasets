@@ -58,47 +58,52 @@ def run_dynamic_pipeline(args):
 
 def run_hmrc_scraper(args):
     """Run ParaLlama HMRC tax documentation scraper"""
+    from pipelines.hmrc_scraper import HMRCScraper
+    
+    # Determine if running in quick mode or full mode
+    max_batches = None  # None means process ALL batches
+    if hasattr(args, 'quick') and args.quick:
+        max_batches = 20  # Quick mode: only process 20 batches (~2000 documents)
+        print("Running in QUICK mode (limited discovery)")
+    else:
+        print("Running in FULL mode (comprehensive discovery - this may take several hours)")
+    
+    # Check if we should use curses
+    use_curses = not (hasattr(args, 'no_curses') and args.no_curses)
+    
     # Check if we're already in a curses context
     import sys
     if hasattr(sys, '_curses_active') and sys._curses_active:
-        # We're already in curses, use the standard main
-        from pipelines.hmrc_scraper import main as hmrc_main
-        
-        # Ensure output directory exists
-        output_dir = args.output_dir or 'generated/hmrc_documentation'
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Set up arguments for hmrc_scraper
-        hmrc_args = [
-            '--output-dir', output_dir
-        ]
-        
-        if args.max_documents:
-            hmrc_args.extend(['--max-documents', str(args.max_documents)])
-        
+        use_curses = False  # Don't use nested curses
+    
+    output_dir = args.output_dir or 'generated/hmrc_documentation'
+    
+    if not use_curses:
+        # Run directly without curses
+        scraper = HMRCScraper(output_dir)
         if args.discover_only:
-            hmrc_args.append('--discover-only')
-        
-        # Override sys.argv for the hmrc_scraper
-        original_argv = sys.argv
-        sys.argv = ['hmrc_scraper.py'] + hmrc_args
-        
-        try:
-            hmrc_main()
-        finally:
-            sys.argv = original_argv
+            scraper.run_comprehensive_discovery(max_batches=max_batches)
+            print(f"Discovered {len(scraper.discovered_urls)} HMRC documents")
+        else:
+            scraper.run_comprehensive_discovery(max_batches=max_batches)
+            scraper.download_all_documents(args.max_documents)
+            summary = scraper.generate_summary()
+            scraper.create_training_datasets()
+            
+            print(f"\n=== HMRC DOCUMENTATION SCRAPING COMPLETE ===")
+            print(f"Total documents discovered: {summary['total_discovered']}")
+            print(f"Total documents downloaded: {summary['total_downloaded']}")
+            print(f"Total failed downloads: {summary['total_failed']}")
     else:
         # Use the enhanced HMRC curses wrapper
         from utils.hmrc_curses_wrapper import run_hmrc_scraper_with_curses
-        from pipelines.hmrc_scraper import HMRCScraper
         
         def hmrc_wrapper():
-            output_dir = args.output_dir or 'generated/hmrc_documentation'
             scraper = HMRCScraper(output_dir)
             
             try:
                 if args.discover_only:
-                    scraper.run_comprehensive_discovery()
+                    scraper.run_comprehensive_discovery(max_batches=max_batches)
                     # Return result for discover-only mode
                     return {
                         'status': 'success',
@@ -107,7 +112,7 @@ def run_hmrc_scraper(args):
                         'failed': 0
                     }
                 else:
-                    scraper.run_comprehensive_discovery()
+                    scraper.run_comprehensive_discovery(max_batches=max_batches)
                     scraper.download_all_documents(args.max_documents)
                     summary = scraper.generate_summary()
                     scraper.create_training_datasets()
@@ -943,6 +948,8 @@ def _run_with_menu_args(pipeline_func, pipeline_name):
                 self.max_documents = None
                 self.discover_only = False
                 self.url = None
+                self.quick = False
+                self.no_curses = False
         
         args = Args()
         y_pos = 2
@@ -1033,7 +1040,22 @@ def _run_with_menu_args(pipeline_func, pipeline_name):
                 
                 if pipeline_name == "HMRC Scraper":
                     try:
+                        # Quick mode option
                         max_y, max_x = input_win.getmaxyx()
+                        if y_pos < max_y - 2 and max_x > 20:
+                            input_win.addstr(y_pos, 2, "Quick mode (limited discovery)? (y/N):"[:max_x-4])
+                            y_pos += 1
+                            input_win.addstr(y_pos, 2, "Quick: ")
+                            input_win.refresh()
+                            
+                            curses.echo()
+                            quick = input_win.getstr(y_pos, 8, 1).decode('utf-8').strip().lower()
+                            curses.noecho()
+                            
+                            args.quick = quick == 'y'
+                            y_pos += 2
+                            
+                        # Discovery only option
                         if y_pos < max_y - 2 and max_x > 20:
                             input_win.addstr(y_pos, 2, "Discovery only? (y/N):"[:max_x-4])
                             y_pos += 1
@@ -1533,6 +1555,8 @@ Examples:
     hmrc_parser.add_argument('--output-dir', help='Output directory for HMRC documentation')
     hmrc_parser.add_argument('--max-documents', type=int, help='Maximum number of documents to download')
     hmrc_parser.add_argument('--discover-only', action='store_true', help='Only discover URLs, do not download')
+    hmrc_parser.add_argument('--quick', action='store_true', help='Quick mode: limited discovery (20 batches ~2000 docs)')
+    hmrc_parser.add_argument('--no-curses', action='store_true', help='Run without curses interface')
     
     housing_parser = subparsers.add_parser('housing', help='Run housing legislation and case law pipeline')
     housing_parser.add_argument('--output-dir', help='Output directory for housing data')

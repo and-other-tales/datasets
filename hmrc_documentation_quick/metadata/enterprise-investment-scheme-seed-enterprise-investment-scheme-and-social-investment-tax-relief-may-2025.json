@@ -1,0 +1,323 @@
+{
+  "url": "/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+  "content_id": "e4665190-9f98-4a1b-a657-c9311a649a9d",
+  "title": "Enterprise Investment Scheme, Seed Enterprise Investment Scheme and Social Investment Tax Relief: May 2025",
+  "description": "Information on the number of companies and investors under the venture capital schemes, along with amount of investments, covering periods up to 2023 to 2024.",
+  "last_updated": "2025-05-14T15:29:32+01:00",
+  "first_published": "2025-05-14T09:30:02+01:00",
+  "organisation": "HM Revenue and Customs",
+  "content_type": "national_statistics",
+  "schema_name": "publication",
+  "length": 682,
+  "api_source": true,
+  "related_links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+        "api_url": "https://www.gov.uk/api/content/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+        "base_path": "/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+        "content_id": "e4665190-9f98-4a1b-a657-c9311a649a9d",
+        "document_type": "national_statistics",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-14T08:30:02Z",
+        "schema_name": "publication",
+        "title": "Enterprise Investment Scheme, Seed Enterprise Investment Scheme and Social Investment Tax Relief: May 2025",
+        "web_url": "https://www.gov.uk/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+        "withdrawn": false
+      }
+    ],
+    "children": [
+      {
+        "api_path": "/api/content/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-statistics-2025",
+        "api_url": "https://www.gov.uk/api/content/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-statistics-2025",
+        "base_path": "/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-statistics-2025",
+        "content_id": "efbcaebd-394d-4b7b-923a-107427b3b5fd",
+        "document_type": "html_publication",
+        "links": {
+          "parent": [
+            {
+              "api_path": "/api/content/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+              "api_url": "https://www.gov.uk/api/content/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+              "base_path": "/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+              "content_id": "e4665190-9f98-4a1b-a657-c9311a649a9d",
+              "document_type": "national_statistics",
+              "links": {},
+              "locale": "en",
+              "public_updated_at": "2025-05-14T08:30:02Z",
+              "schema_name": "publication",
+              "title": "Enterprise Investment Scheme, Seed Enterprise Investment Scheme and Social Investment Tax Relief: May 2025",
+              "web_url": "https://www.gov.uk/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "public_updated_at": "2025-05-14T08:30:02Z",
+        "schema_name": "html_publication",
+        "title": "Enterprise Investment Scheme, Seed Enterprise Investment Scheme and Social Investment Tax Relief statistics: 2025",
+        "web_url": "https://www.gov.uk/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-statistics-2025",
+        "withdrawn": false
+      }
+    ],
+    "document_collections": [
+      {
+        "api_path": "/api/content/government/collections/enterprise-investment-scheme-and-seed-enterprise-investment-scheme-statistics",
+        "api_url": "https://www.gov.uk/api/content/government/collections/enterprise-investment-scheme-and-seed-enterprise-investment-scheme-statistics",
+        "base_path": "/government/collections/enterprise-investment-scheme-and-seed-enterprise-investment-scheme-statistics",
+        "content_id": "60262079-7631-11e4-a3cb-005056011aef",
+        "document_type": "document_collection",
+        "links": {
+          "documents": [
+            {
+              "api_path": "/api/content/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+              "api_url": "https://www.gov.uk/api/content/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+              "base_path": "/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+              "content_id": "e4665190-9f98-4a1b-a657-c9311a649a9d",
+              "document_type": "national_statistics",
+              "links": {},
+              "locale": "en",
+              "public_updated_at": "2025-05-14T08:30:02Z",
+              "schema_name": "publication",
+              "title": "Enterprise Investment Scheme, Seed Enterprise Investment Scheme and Social Investment Tax Relief: May 2025",
+              "web_url": "https://www.gov.uk/government/statistics/enterprise-investment-scheme-seed-enterprise-investment-scheme-and-social-investment-tax-relief-may-2025",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "public_updated_at": "2025-05-14T08:30:03Z",
+        "schema_name": "document_collection",
+        "title": "Enterprise Investment Scheme, Seed Enterprise Investment Scheme and Social Investment Tax Relief statistics",
+        "web_url": "https://www.gov.uk/government/collections/enterprise-investment-scheme-and-seed-enterprise-investment-scheme-statistics",
+        "withdrawn": false
+      }
+    ],
+    "government": [
+      {
+        "api_path": "/api/content/government/2024-starmer-labour-government",
+        "api_url": "https://www.gov.uk/api/content/government/2024-starmer-labour-government",
+        "base_path": "/government/2024-starmer-labour-government",
+        "content_id": "9dbff654-cdeb-4ebe-9a12-cd4cc20a033e",
+        "details": {
+          "current": true,
+          "ended_on": null,
+          "started_on": "2024-07-05T00:00:00+00:00"
+        },
+        "document_type": "government",
+        "links": {},
+        "locale": "en",
+        "title": "2024 Starmer Labour government",
+        "web_url": "https://www.gov.uk/government/2024-starmer-labour-government"
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "original_primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "taxons": [
+      {
+        "api_path": "/api/content/money/business-tax-investment-schemes-venture-capital-schemes",
+        "api_url": "https://www.gov.uk/api/content/money/business-tax-investment-schemes-venture-capital-schemes",
+        "base_path": "/money/business-tax-investment-schemes-venture-capital-schemes",
+        "content_id": "6883a521-919b-4796-8a98-d319cf354169",
+        "details": {
+          "internal_name": "Venture capital schemes [T]",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/money/investment-schemes",
+              "api_url": "https://www.gov.uk/api/content/money/investment-schemes",
+              "base_path": "/money/investment-schemes",
+              "content_id": "70487388-9db0-465b-a53c-fd96c6aedb0b",
+              "details": {
+                "internal_name": "Investment schemes [T]",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/money/business-tax",
+                    "api_url": "https://www.gov.uk/api/content/money/business-tax",
+                    "base_path": "/money/business-tax",
+                    "content_id": "28262ae3-599c-4259-ae30-3c83a5ec02a1",
+                    "details": {
+                      "internal_name": "Business tax [T] (level 2, money)",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": false
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "parent_taxons": [
+                        {
+                          "api_path": "/api/content/money",
+                          "api_url": "https://www.gov.uk/api/content/money",
+                          "base_path": "/money",
+                          "content_id": "6acc9db4-780e-4a46-92b4-1812e3c2c48a",
+                          "description": "",
+                          "details": {
+                            "internal_name": "Money",
+                            "notes_for_editors": "",
+                            "visible_to_departmental_editors": true
+                          },
+                          "document_type": "taxon",
+                          "links": {
+                            "root_taxon": [
+                              {
+                                "api_path": "/api/content/",
+                                "api_url": "https://www.gov.uk/api/content/",
+                                "base_path": "/",
+                                "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                                "document_type": "homepage",
+                                "links": {},
+                                "locale": "en",
+                                "public_updated_at": "2023-06-28T09:32:34Z",
+                                "schema_name": "homepage",
+                                "title": "GOV.UK homepage",
+                                "web_url": "https://www.gov.uk/",
+                                "withdrawn": false
+                              }
+                            ]
+                          },
+                          "locale": "en",
+                          "phase": "live",
+                          "public_updated_at": "2018-09-16T20:35:25Z",
+                          "schema_name": "taxon",
+                          "title": "Money",
+                          "web_url": "https://www.gov.uk/money",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2018-09-05T16:19:49Z",
+                    "schema_name": "taxon",
+                    "title": "Business tax",
+                    "web_url": "https://www.gov.uk/money/business-tax",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-09-05T16:19:51Z",
+              "schema_name": "taxon",
+              "title": "Investment schemes",
+              "web_url": "https://www.gov.uk/money/investment-schemes",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-09-05T16:19:51Z",
+        "schema_name": "taxon",
+        "title": "Venture capital schemes",
+        "web_url": "https://www.gov.uk/money/business-tax-investment-schemes-venture-capital-schemes",
+        "withdrawn": false
+      }
+    ]
+  }
+}

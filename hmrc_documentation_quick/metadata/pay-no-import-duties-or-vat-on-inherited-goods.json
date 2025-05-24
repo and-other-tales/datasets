@@ -1,0 +1,605 @@
+{
+  "url": "/guidance/pay-no-import-duties-or-vat-on-inherited-goods",
+  "content_id": "312f99c7-2677-40b7-a337-fb7bb337bee4",
+  "title": "Pay no import duties or VAT on inherited goods",
+  "description": "You can claim a relief to pay no Customs Duty and VAT if you're importing inherited goods into the UK.",
+  "last_updated": "2025-05-15T17:34:57+01:00",
+  "first_published": "2020-06-04T00:00:00+01:00",
+  "organisation": "HM Revenue and Customs",
+  "content_type": "detailed_guide",
+  "schema_name": "detailed_guide",
+  "length": 8184,
+  "api_source": true,
+  "related_links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/guidance/pay-no-import-duties-or-vat-on-inherited-goods",
+        "api_url": "https://www.gov.uk/api/content/guidance/pay-no-import-duties-or-vat-on-inherited-goods",
+        "base_path": "/guidance/pay-no-import-duties-or-vat-on-inherited-goods",
+        "content_id": "312f99c7-2677-40b7-a337-fb7bb337bee4",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2025-05-14T12:53:44Z",
+        "schema_name": "detailed_guide",
+        "title": "Pay no import duties or VAT on inherited goods",
+        "web_url": "https://www.gov.uk/guidance/pay-no-import-duties-or-vat-on-inherited-goods",
+        "withdrawn": false
+      }
+    ],
+    "government": [
+      {
+        "api_path": "/api/content/government/2019-to-2022-johnson-conservative-government",
+        "api_url": "https://www.gov.uk/api/content/government/2019-to-2022-johnson-conservative-government",
+        "base_path": "/government/2019-to-2022-johnson-conservative-government",
+        "content_id": "4ed901ec-c8ce-42d5-a2aa-6d7f462480df",
+        "details": {
+          "current": false,
+          "ended_on": "2022-09-06T00:00:00+00:00",
+          "started_on": "2019-07-24T00:00:00+00:00"
+        },
+        "document_type": "government",
+        "links": {},
+        "locale": "en",
+        "title": "2019 to 2022 Johnson Conservative government",
+        "web_url": "https://www.gov.uk/government/2019-to-2022-johnson-conservative-government"
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "original_primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "D25",
+        "api_path": "/api/content/government/organisations/hm-revenue-customs",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/hm-revenue-customs",
+        "base_path": "/government/organisations/hm-revenue-customs",
+        "content_id": "6667cce2-e809-4e21-ae09-cb0bdc1ddda3",
+        "details": {
+          "acronym": "HMRC",
+          "brand": "hm-revenue-customs",
+          "default_news_image": {
+            "high_resolution_url": "https://assets.publishing.service.gov.uk/media/5efdb7ace90e075c58556288/s960_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg",
+            "url": "https://assets.publishing.service.gov.uk/media/5efdb7ac3a6f4023cb365a65/s300_HMRC_sign__media_library_-_alternative__GOVUK_960.jpg"
+          },
+          "logo": {
+            "crest": "hmrc",
+            "formatted_title": "HM Revenue<br/>&amp; Customs"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "HM Revenue & Customs",
+        "web_url": "https://www.gov.uk/government/organisations/hm-revenue-customs",
+        "withdrawn": false
+      }
+    ],
+    "suggested_ordered_related_items": [
+      {
+        "api_path": "/api/content/guidance/pay-no-import-duty-and-vat-when-importing-decorations-and-awards",
+        "api_url": "https://www.gov.uk/api/content/guidance/pay-no-import-duty-and-vat-when-importing-decorations-and-awards",
+        "base_path": "/guidance/pay-no-import-duty-and-vat-when-importing-decorations-and-awards",
+        "content_id": "a9a3d372-4857-4d62-beaf-1f5cf7ae9886",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2023-04-14T13:37:41Z",
+        "schema_name": "detailed_guide",
+        "title": "Pay no import duty and VAT when importing decorations and awards",
+        "web_url": "https://www.gov.uk/guidance/pay-no-import-duty-and-vat-when-importing-decorations-and-awards",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/guidance/pay-no-import-duties-and-vat-on-miscellaneous-documents-and-related-articles",
+        "api_url": "https://www.gov.uk/api/content/guidance/pay-no-import-duties-and-vat-on-miscellaneous-documents-and-related-articles",
+        "base_path": "/guidance/pay-no-import-duties-and-vat-on-miscellaneous-documents-and-related-articles",
+        "content_id": "eed8fcf2-f768-41f9-b6ef-536beba095c4",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2020-12-31T23:00:16Z",
+        "schema_name": "detailed_guide",
+        "title": "Pay no import duties and VAT on miscellaneous documents and related articles",
+        "web_url": "https://www.gov.uk/guidance/pay-no-import-duties-and-vat-on-miscellaneous-documents-and-related-articles",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/guidance/pay-no-import-duties-on-substances-of-human-origin-for-transplant",
+        "api_url": "https://www.gov.uk/api/content/guidance/pay-no-import-duties-on-substances-of-human-origin-for-transplant",
+        "base_path": "/guidance/pay-no-import-duties-on-substances-of-human-origin-for-transplant",
+        "content_id": "10cc1f49-8e40-48f3-ae68-d0202c714a4f",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2021-05-10T12:49:00Z",
+        "schema_name": "detailed_guide",
+        "title": "Pay no import duties on substances of human origin for transplant",
+        "web_url": "https://www.gov.uk/guidance/pay-no-import-duties-on-substances-of-human-origin-for-transplant",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/guidance/pay-no-import-duties-or-vat-on-importing-goods-for-testing",
+        "api_url": "https://www.gov.uk/api/content/guidance/pay-no-import-duties-or-vat-on-importing-goods-for-testing",
+        "base_path": "/guidance/pay-no-import-duties-or-vat-on-importing-goods-for-testing",
+        "content_id": "570d75fe-4e04-418f-9056-1235383a313c",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2023-04-14T13:37:10Z",
+        "schema_name": "detailed_guide",
+        "title": "Pay no import duties or VAT on importing goods for testing",
+        "web_url": "https://www.gov.uk/guidance/pay-no-import-duties-or-vat-on-importing-goods-for-testing",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/guidance/pay-no-import-duty-or-vat-on-visual-and-auditory-goods",
+        "api_url": "https://www.gov.uk/api/content/guidance/pay-no-import-duty-or-vat-on-visual-and-auditory-goods",
+        "base_path": "/guidance/pay-no-import-duty-or-vat-on-visual-and-auditory-goods",
+        "content_id": "570c2705-d56a-4636-aa3f-fd53f42f879c",
+        "document_type": "detailed_guide",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2020-12-31T23:00:29Z",
+        "schema_name": "detailed_guide",
+        "title": "Pay no import duty or VAT on visual and auditory goods",
+        "web_url": "https://www.gov.uk/guidance/pay-no-import-duty-or-vat-on-visual-and-auditory-goods",
+        "withdrawn": false
+      }
+    ],
+    "taxons": [
+      {
+        "api_path": "/api/content/money/business-tax-vat-exporting-goods-and-services",
+        "api_url": "https://www.gov.uk/api/content/money/business-tax-vat-exporting-goods-and-services",
+        "base_path": "/money/business-tax-vat-exporting-goods-and-services",
+        "content_id": "8af13fba-d969-4d87-a02e-2e71783d47be",
+        "details": {
+          "internal_name": "Exporting goods and services [T]",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/money/vat",
+              "api_url": "https://www.gov.uk/api/content/money/vat",
+              "base_path": "/money/vat",
+              "content_id": "e04c9a5c-88e8-46e5-91d9-add405e098fb",
+              "details": {
+                "internal_name": "VAT [T] (level 3, money)",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/money/business-tax",
+                    "api_url": "https://www.gov.uk/api/content/money/business-tax",
+                    "base_path": "/money/business-tax",
+                    "content_id": "28262ae3-599c-4259-ae30-3c83a5ec02a1",
+                    "details": {
+                      "internal_name": "Business tax [T] (level 2, money)",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": false
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "parent_taxons": [
+                        {
+                          "api_path": "/api/content/money",
+                          "api_url": "https://www.gov.uk/api/content/money",
+                          "base_path": "/money",
+                          "content_id": "6acc9db4-780e-4a46-92b4-1812e3c2c48a",
+                          "description": "",
+                          "details": {
+                            "internal_name": "Money",
+                            "notes_for_editors": "",
+                            "visible_to_departmental_editors": true
+                          },
+                          "document_type": "taxon",
+                          "links": {
+                            "root_taxon": [
+                              {
+                                "api_path": "/api/content/",
+                                "api_url": "https://www.gov.uk/api/content/",
+                                "base_path": "/",
+                                "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                                "document_type": "homepage",
+                                "links": {},
+                                "locale": "en",
+                                "public_updated_at": "2023-06-28T09:32:34Z",
+                                "schema_name": "homepage",
+                                "title": "GOV.UK homepage",
+                                "web_url": "https://www.gov.uk/",
+                                "withdrawn": false
+                              }
+                            ]
+                          },
+                          "locale": "en",
+                          "phase": "live",
+                          "public_updated_at": "2018-09-16T20:35:25Z",
+                          "schema_name": "taxon",
+                          "title": "Money",
+                          "web_url": "https://www.gov.uk/money",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2018-09-05T16:19:49Z",
+                    "schema_name": "taxon",
+                    "title": "Business tax",
+                    "web_url": "https://www.gov.uk/money/business-tax",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-09-05T16:19:52Z",
+              "schema_name": "taxon",
+              "title": "VAT",
+              "web_url": "https://www.gov.uk/money/vat",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-09-05T16:19:52Z",
+        "schema_name": "taxon",
+        "title": "Exporting goods and services",
+        "web_url": "https://www.gov.uk/money/business-tax-vat-exporting-goods-and-services",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/money/business-tax-vat-importing-goods-and-services",
+        "api_url": "https://www.gov.uk/api/content/money/business-tax-vat-importing-goods-and-services",
+        "base_path": "/money/business-tax-vat-importing-goods-and-services",
+        "content_id": "4788b4b8-2642-47ca-bfc2-bd7e8705a1da",
+        "details": {
+          "internal_name": "Importing goods and services [T]",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/money/vat",
+              "api_url": "https://www.gov.uk/api/content/money/vat",
+              "base_path": "/money/vat",
+              "content_id": "e04c9a5c-88e8-46e5-91d9-add405e098fb",
+              "details": {
+                "internal_name": "VAT [T] (level 3, money)",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/money/business-tax",
+                    "api_url": "https://www.gov.uk/api/content/money/business-tax",
+                    "base_path": "/money/business-tax",
+                    "content_id": "28262ae3-599c-4259-ae30-3c83a5ec02a1",
+                    "details": {
+                      "internal_name": "Business tax [T] (level 2, money)",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": false
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "parent_taxons": [
+                        {
+                          "api_path": "/api/content/money",
+                          "api_url": "https://www.gov.uk/api/content/money",
+                          "base_path": "/money",
+                          "content_id": "6acc9db4-780e-4a46-92b4-1812e3c2c48a",
+                          "description": "",
+                          "details": {
+                            "internal_name": "Money",
+                            "notes_for_editors": "",
+                            "visible_to_departmental_editors": true
+                          },
+                          "document_type": "taxon",
+                          "links": {
+                            "root_taxon": [
+                              {
+                                "api_path": "/api/content/",
+                                "api_url": "https://www.gov.uk/api/content/",
+                                "base_path": "/",
+                                "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                                "document_type": "homepage",
+                                "links": {},
+                                "locale": "en",
+                                "public_updated_at": "2023-06-28T09:32:34Z",
+                                "schema_name": "homepage",
+                                "title": "GOV.UK homepage",
+                                "web_url": "https://www.gov.uk/",
+                                "withdrawn": false
+                              }
+                            ]
+                          },
+                          "locale": "en",
+                          "phase": "live",
+                          "public_updated_at": "2018-09-16T20:35:25Z",
+                          "schema_name": "taxon",
+                          "title": "Money",
+                          "web_url": "https://www.gov.uk/money",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2018-09-05T16:19:49Z",
+                    "schema_name": "taxon",
+                    "title": "Business tax",
+                    "web_url": "https://www.gov.uk/money/business-tax",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-09-05T16:19:52Z",
+              "schema_name": "taxon",
+              "title": "VAT",
+              "web_url": "https://www.gov.uk/money/vat",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-09-05T16:19:52Z",
+        "schema_name": "taxon",
+        "title": "Importing goods and services",
+        "web_url": "https://www.gov.uk/money/business-tax-vat-importing-goods-and-services",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/business-and-industry/customs-declarations-duties-tariffs",
+        "api_url": "https://www.gov.uk/api/content/business-and-industry/customs-declarations-duties-tariffs",
+        "base_path": "/business-and-industry/customs-declarations-duties-tariffs",
+        "content_id": "5984199c-d85c-4ffc-b13a-c5f2482d2258",
+        "description": "",
+        "details": {
+          "internal_name": "Customs declarations, duties and tariffs (import and export)",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/business-and-industry/trade-and-investment",
+              "api_url": "https://www.gov.uk/api/content/business-and-industry/trade-and-investment",
+              "base_path": "/business-and-industry/trade-and-investment",
+              "content_id": "ed2ca1f7-5463-4eda-9324-b597e269e242",
+              "details": {
+                "internal_name": "Trade and investment",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/business-and-industry",
+                    "api_url": "https://www.gov.uk/api/content/business-and-industry",
+                    "base_path": "/business-and-industry",
+                    "content_id": "495afdb6-47be-4df1-8b38-91c8adb1eefc",
+                    "description": "",
+                    "details": {
+                      "internal_name": "Business and industry",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": true
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "root_taxon": [
+                        {
+                          "api_path": "/api/content/",
+                          "api_url": "https://www.gov.uk/api/content/",
+                          "base_path": "/",
+                          "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                          "document_type": "homepage",
+                          "links": {},
+                          "locale": "en",
+                          "public_updated_at": "2023-06-28T09:32:34Z",
+                          "schema_name": "homepage",
+                          "title": "GOV.UK homepage",
+                          "web_url": "https://www.gov.uk/",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2018-09-03T15:41:02Z",
+                    "schema_name": "taxon",
+                    "title": "Business and industry",
+                    "web_url": "https://www.gov.uk/business-and-industry",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-09-03T15:41:05Z",
+              "schema_name": "taxon",
+              "title": "Trade and investment",
+              "web_url": "https://www.gov.uk/business-and-industry/trade-and-investment",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-09-07T09:44:16Z",
+        "schema_name": "taxon",
+        "title": "Customs declarations, duties and tariffs (import and export)",
+        "web_url": "https://www.gov.uk/business-and-industry/customs-declarations-duties-tariffs",
+        "withdrawn": false
+      },
+      {
+        "api_path": "/api/content/money/vat",
+        "api_url": "https://www.gov.uk/api/content/money/vat",
+        "base_path": "/money/vat",
+        "content_id": "e04c9a5c-88e8-46e5-91d9-add405e098fb",
+        "details": {
+          "internal_name": "VAT [T] (level 3, money)",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/money/business-tax",
+              "api_url": "https://www.gov.uk/api/content/money/business-tax",
+              "base_path": "/money/business-tax",
+              "content_id": "28262ae3-599c-4259-ae30-3c83a5ec02a1",
+              "details": {
+                "internal_name": "Business tax [T] (level 2, money)",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/money",
+                    "api_url": "https://www.gov.uk/api/content/money",
+                    "base_path": "/money",
+                    "content_id": "6acc9db4-780e-4a46-92b4-1812e3c2c48a",
+                    "description": "",
+                    "details": {
+                      "internal_name": "Money",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": true
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "root_taxon": [
+                        {
+                          "api_path": "/api/content/",
+                          "api_url": "https://www.gov.uk/api/content/",
+                          "base_path": "/",
+                          "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                          "document_type": "homepage",
+                          "links": {},
+                          "locale": "en",
+                          "public_updated_at": "2023-06-28T09:32:34Z",
+                          "schema_name": "homepage",
+                          "title": "GOV.UK homepage",
+                          "web_url": "https://www.gov.uk/",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2018-09-16T20:35:25Z",
+                    "schema_name": "taxon",
+                    "title": "Money",
+                    "web_url": "https://www.gov.uk/money",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-09-05T16:19:49Z",
+              "schema_name": "taxon",
+              "title": "Business tax",
+              "web_url": "https://www.gov.uk/money/business-tax",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-09-05T16:19:52Z",
+        "schema_name": "taxon",
+        "title": "VAT",
+        "web_url": "https://www.gov.uk/money/vat",
+        "withdrawn": false
+      }
+    ]
+  }
+}

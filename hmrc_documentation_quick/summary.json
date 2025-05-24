@@ -1,0 +1,157 @@
+{
+  "total_discovered": 276,
+  "total_downloaded": 10,
+  "total_failed": 0,
+  "content_types": {
+    "guidance": 9,
+    "internal_manual": 1
+  },
+  "tax_categories": {
+    "national_insurance": 1,
+    "general": 1,
+    "research_development_reliefs": 1,
+    "service_availability": 1,
+    "corporation_tax": 1,
+    "vat": 3,
+    "inheritance_tax": 1,
+    "environmental_taxes": 1
+  },
+  "authority_levels": {
+    "5": 9,
+    "4": 1
+  },
+  "entity_coverage": {
+    "individuals": 6,
+    "companies": 4,
+    "trusts": 2,
+    "partnerships": 1
+  },
+  "file_stats": {
+    "text_files": 10,
+    "html_files": 0,
+    "basic_metadata_files": 10,
+    "enhanced_metadata_files": 10,
+    "category_breakdown": {
+      "income_tax": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "corporation_tax": {
+        "documents": 1,
+        "metadata": 1
+      },
+      "capital_gains_tax": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "vat": {
+        "documents": 3,
+        "metadata": 3
+      },
+      "inheritance_tax": {
+        "documents": 1,
+        "metadata": 1
+      },
+      "stamp_duty": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "national_insurance": {
+        "documents": 1,
+        "metadata": 1
+      },
+      "paye": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "customs_duties": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "excise_duties": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "anti_avoidance": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "compliance": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "penalties": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "appeals": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "making_tax_digital": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "employee_benefits": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "fuel_duties": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "alcohol_tobacco_duties": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "customs_import_duties": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "money_laundering_supervision": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "tax_avoidance_schemes": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "research_development_reliefs": {
+        "documents": 1,
+        "metadata": 1
+      },
+      "service_availability": {
+        "documents": 1,
+        "metadata": 1
+      },
+      "digital_services": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "trade_procedures": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "economic_crime": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "tax_credits": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "business_rates": {
+        "documents": 0,
+        "metadata": 0
+      },
+      "environmental_taxes": {
+        "documents": 1,
+        "metadata": 1
+      },
+      "general": {
+        "documents": 1,
+        "metadata": 1
+      }
+    }
+  }
+}
