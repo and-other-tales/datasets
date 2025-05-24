@@ -612,9 +612,9 @@ def main():
     
     eula_text = build_eula(software_name, software_version, dev_name, dev_address, modules_info)
 
-    with open("LICENSE.md", "w", encoding="utf-8") as f:
+    with open("LICENSE", "w", encoding="utf-8") as f:
         f.write(eula_text)
-    print("\nLicense information generated and saved as LICENSE.md")
+    print("\nLicense information generated and saved as LICENSE")
 
 if __name__ == "__main__":
     main()

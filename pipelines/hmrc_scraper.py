@@ -18,23 +18,17 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from collections import deque
 import xml.etree.ElementTree as ET
-import sys
 
-# Add parent directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
-from utils.hmrc_metadata import (
-    HMRCMetadata, HMRCDocumentProcessor, save_hmrc_metadata,
-    HMRCDocumentType, TaxAuthority, TaxDomain
-)
-from utils.pipeline_controller import PipelineController, create_database_update_callback, create_dataset_creation_callback
+# Import HMRC metadata framework
+try:
+    from utils.hmrc_metadata import HMRCDocumentProcessor, HMRCMetadata, TaxDomain, save_hmrc_metadata
+except ImportError:
+    # Fallback if not in package context
+    import sys
+    sys.path.append(str(Path(__file__).parent / 'utils'))
+    from hmrc_metadata import HMRCDocumentProcessor, HMRCMetadata, TaxDomain, save_hmrc_metadata
 
 # Setup logging
-script_dir = Path(__file__).parent.parent
-log_dir = script_dir / 'logs'
-log_dir.mkdir(exist_ok=True)
-log_file = log_dir / 'hmrc_scraper.log'
-
-# Configure logging based on whether we're running in curses mode
 def setup_logging():
     """Setup logging configuration"""
     logger = logging.getLogger(__name__)
@@ -44,7 +38,7 @@ def setup_logging():
     logger.setLevel(logging.INFO)
     
     # Always add file handler
-    file_handler = logging.FileHandler(log_file)
+    file_handler = logging.FileHandler('hmrc_scraper.log')
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     logger.addHandler(file_handler)
     
@@ -61,50 +55,42 @@ def setup_logging():
 logger = setup_logging()
 
 class HMRCScraper:
-    def __init__(self, output_dir: str = "hmrc_documentation", enable_pause_controls: bool = True):
+    def __init__(self, output_dir: str = "hmrc_documentation"):
         self.base_url = "https://www.gov.uk"
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
-        
-        # Initialize pipeline controller only if requested
-        self.controller = None
-        if enable_pause_controls:
-            try:
-                self.controller = PipelineController()
-                self.controller.register_callback('database_update', create_database_update_callback(self))
-                self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
-            except Exception as e:
-                logger.warning(f"Could not initialize pause controls: {e}")
-                self.controller = None
         
         # Create subdirectories for different content types
         self.text_dir = self.output_dir / "text"
         self.html_dir = self.output_dir / "html"
         self.metadata_dir = self.output_dir / "metadata"
-        self.forms_dir = self.output_dir / "forms"
         self.enhanced_metadata_dir = self.output_dir / "enhanced_metadata"
+        self.forms_dir = self.output_dir / "forms"
         
-        for dir_path in [self.text_dir, self.html_dir, self.metadata_dir, self.forms_dir, self.enhanced_metadata_dir]:
+        # Create tax category subdirectories
+        self.category_dirs = {}
+        for domain in TaxDomain:
+            category_dir = self.output_dir / "categorized" / domain.value
+            category_dir.mkdir(parents=True, exist_ok=True)
+            self.category_dirs[domain] = category_dir
+        
+        for dir_path in [self.text_dir, self.html_dir, self.metadata_dir, 
+                        self.enhanced_metadata_dir, self.forms_dir]:
             dir_path.mkdir(exist_ok=True)
+        
+        # Initialize HMRC document processor
+        self.hmrc_processor = HMRCDocumentProcessor()
         
         # Session for connection pooling
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'HMRC-Documentation-Scraper/2.0 (Legal AI Training Dataset)'
+            'User-Agent': 'HMRC-Documentation-Scraper/1.0 (Educational/Research Purpose)'
         })
-        
-        # Initialize HMRC document processor
-        self.hmrc_processor = HMRCDocumentProcessor()
         
         # Tracking sets
         self.discovered_urls = set()
         self.downloaded_urls = set()
         self.failed_urls = set()
-        
-        # Enhanced tracking for tax metadata
-        self.processed_documents = {}
-        self.tax_domain_stats = {domain.value: 0 for domain in TaxDomain}
-        self.document_type_stats = {doc_type.value: 0 for doc_type in HMRCDocumentType}
         
         # Tax-specific keywords for filtering
         self.tax_keywords = {
@@ -142,16 +128,22 @@ class HMRCScraper:
             ]
         }
         
-        # Main search endpoints for HMRC content
-        self.search_endpoints = [
-            '/search/guidance-and-regulation?organisations%5B%5D=hm-revenue-customs',
-            '/search/research-and-statistics?organisations%5B%5D=hm-revenue-customs',
-            '/search/policy-papers-and-consultations?organisations%5B%5D=hm-revenue-customs',
-            '/search/transparency?organisations%5B%5D=hm-revenue-customs',
-            '/search/news-and-communications?organisations%5B%5D=hm-revenue-customs'
+        # GOV.UK Search API configuration
+        self.search_api_base = f"{self.base_url}/api/search.json"
+        self.batch_size = 1500  # Maximum allowed by API
+        
+        # Priority content formats for tax advice
+        self.priority_formats = [
+            'guide', 'detailed_guide', 'manual', 'answer',
+            'form', 'publication', 'consultation_outcome'
         ]
         
-        # Control message now handled by curses footer
+        # Content quality filters
+        self.quality_filters = {
+            'exclude_formats': ['press_release', 'news_story', 'speech'],
+            'min_content_length': 200,
+            'require_recent_update': False  # Set to True for only recent content
+        }
         
     def is_tax_related(self, title: str, summary: str = "") -> bool:
         """Check if content is tax-related"""
@@ -171,74 +163,105 @@ class HMRCScraper:
             'government/organisations/hm-revenue-customs' in text
         )
     
-    def discover_guidance_documents(self, max_pages: int = 300) -> Set[str]:
-        """Discover all guidance documents from HMRC"""
-        logger.info("Discovering HMRC guidance documents...")
+    def is_high_quality_tax_content(self, title: str, description: str, format_type: str, result: dict) -> bool:
+        """Enhanced quality assessment for tax advice content"""
+        # Must be tax-related first
+        if not self.is_tax_related(title, description):
+            return False
         
-        guidance_urls = set()
+        # Prioritize high-value formats
+        if format_type in self.priority_formats:
+            score = 10
+        else:
+            score = 1
         
-        for endpoint in self.search_endpoints:
-            logger.info(f"Searching endpoint: {endpoint}")
-            page = 1
-            
-            while page <= max_pages:
-                try:
-                    # Build search URL with pagination
-                    search_url = f"{self.base_url}{endpoint}"
-                    if '?' in search_url:
-                        search_url += f"&page={page}"
-                    else:
-                        search_url += f"?page={page}"
-                    
-                    response = self.session.get(search_url, timeout=30)
-                    response.raise_for_status()
-                    
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    
-                    # Find document links
-                    document_links = soup.find_all('a', href=True)
-                    found_documents = 0
-                    
-                    for link in document_links:
-                        href = link.get('href', '')
-                        title = link.get_text(strip=True)
-                        
-                        # Check if it's a guidance document
-                        if (href.startswith('/guidance/') or 
-                            href.startswith('/government/publications/') or
-                            href.startswith('/government/consultations/')):
-                            
-                            if self.is_tax_related(title, href):
-                                full_url = urljoin(self.base_url, href)
-                                if full_url not in guidance_urls:
-                                    guidance_urls.add(full_url)
-                                    found_documents += 1
-                                    logger.info(f"Found: {title}")
-                                    
-                                    # Check for pause/quit commands
-                                    if self.controller:
-                                        command = self.controller.check_for_commands()
-                                        if command == 'quit':
-                                            return guidance_urls
-                                        self.controller.wait_while_paused()
-                    
-                    if found_documents == 0:
-                        logger.info(f"No more documents found on page {page} for {endpoint}")
-                        break
-                    
-                    logger.info(f"Page {page}: Found {found_documents} documents")
-                    page += 1
-                    time.sleep(0.1)  # Rate limiting for Content API (10 req/sec)
-                    
-                except requests.RequestException as e:
-                    logger.error(f"Error fetching page {page} from {endpoint}: {e}")
+        # Exclude low-value formats
+        if format_type in self.quality_filters['exclude_formats']:
+            return False
+        
+        # Boost score for actionable tax advice indicators
+        actionable_terms = [
+            'how to', 'calculate', 'claim', 'apply', 'rate', 'allowance',
+            'deadline', 'form', 'return', 'guidance', 'rules', 'requirements'
+        ]
+        text = (title + " " + description).lower()
+        score += sum(2 for term in actionable_terms if term in text)
+        
+        # Boost for specific tax areas
+        specific_areas = [
+            'self assessment', 'corporation tax', 'vat', 'paye', 'capital gains',
+            'inheritance tax', 'stamp duty', 'making tax digital', 'tax credits'
+        ]
+        score += sum(3 for area in specific_areas if area in text)
+        
+        # Check minimum content quality threshold
+        return score >= 5
+    
+    def discover_via_search_api(self) -> Set[str]:
+        """Discover all HMRC documents using the GOV.UK Search API"""
+        logger.info("Discovering HMRC documents via Search API...")
+        
+        all_urls = set()
+        start = 0
+        
+        while True:
+            try:
+                # Build API query with pagination
+                params = {
+                    'count': self.batch_size,
+                    'start': start,
+                    'filter_organisations': 'hm-revenue-customs',
+                    'order': '-public_timestamp'  # Most recent first
+                }
+                
+                # Add format filters for quality content
+                if self.priority_formats:
+                    params['filter_any_format'] = ','.join(self.priority_formats)
+                
+                # Exclude low-quality formats
+                if self.quality_filters['exclude_formats']:
+                    for exclude_format in self.quality_filters['exclude_formats']:
+                        params[f'reject_format'] = exclude_format
+                
+                response = self.session.get(self.search_api_base, params=params, timeout=30)
+                response.raise_for_status()
+                
+                data = response.json()
+                results = data.get('results', [])
+                
+                if not results:
+                    logger.info(f"No more results found at start={start}")
                     break
-                except Exception as e:
-                    logger.error(f"Unexpected error on page {page}: {e}")
-                    break
+                
+                batch_urls = set()
+                for result in results:
+                    title = result.get('title', '')
+                    description = result.get('description', '')
+                    link = result.get('link', '')
+                    format_type = result.get('format', '')
+                    
+                    # Apply quality filters
+                    if self.is_high_quality_tax_content(title, description, format_type, result):
+                        full_url = urljoin(self.base_url, link)
+                        batch_urls.add(full_url)
+                        all_urls.add(full_url)
+                        logger.debug(f"Found: {title} ({format_type})")
+                
+                logger.info(f"Batch {start}-{start + len(results)}: Found {len(batch_urls)} relevant documents")
+                start += len(results)
+                
+                # API rate limiting
+                time.sleep(0.1)
+                    
+            except requests.RequestException as e:
+                logger.error(f"Error fetching batch starting at {start}: {e}")
+                break
+            except Exception as e:
+                logger.error(f"Unexpected error at batch {start}: {e}")
+                break
         
-        logger.info(f"Discovered {len(guidance_urls)} total guidance documents")
-        return guidance_urls
+        logger.info(f"Discovered {len(all_urls)} total relevant documents")
+        return all_urls
     
     def discover_forms(self) -> Set[str]:
         """Discover tax forms and documents"""
@@ -271,13 +294,6 @@ class HMRCScraper:
                             full_url = urljoin(self.base_url, href)
                             form_urls.add(full_url)
                             logger.info(f"Found form: {title}")
-                            
-                            # Check for pause/quit commands
-                            if self.controller:
-                                command = self.controller.check_for_commands()
-                                if command == 'quit':
-                                    return form_urls
-                                self.controller.wait_while_paused()
                 
                 time.sleep(0.1)
                 
@@ -315,13 +331,6 @@ class HMRCScraper:
                             full_url = urljoin(self.base_url, href)
                             manual_urls.add(full_url)
                             logger.info(f"Found manual: {title}")
-                            
-                            # Check for pause/quit commands
-                            if self.controller:
-                                command = self.controller.check_for_commands()
-                                if command == 'quit':
-                                    return manual_urls
-                                self.controller.wait_while_paused()
                 
                 time.sleep(0.1)
                 
@@ -340,7 +349,7 @@ class HMRCScraper:
                 path = path[1:]
             return f"{self.base_url}/api/content/{path}"
         except Exception:
-            return None
+            return ''
 
     def extract_content_from_api(self, api_url: str) -> Optional[Dict]:
         """Extract content using the GOV.UK Content API"""
@@ -505,7 +514,7 @@ class HMRCScraper:
         return html_result
     
     def download_document(self, url: str) -> bool:
-        """Download a single document with enhanced HMRC metadata processing"""
+        """Download a single document with enhanced tax categorization"""
         try:
             # Generate filename from URL
             url_path = urlparse(url).path
@@ -518,47 +527,27 @@ class HMRCScraper:
             if not doc_data:
                 return False
             
-            content = doc_data['content']
-            title = doc_data['metadata'].get('title', 'Unknown Title')
+            # Process with HMRC metadata framework
+            enhanced_metadata = self.hmrc_processor.process_hmrc_document(
+                text=doc_data['content'],
+                title=doc_data['metadata'].get('title', ''),
+                url=url,
+                manual_code=doc_data['metadata'].get('manual_code', '')
+            )
             
-            # Extract manual code if this is an HMRC manual
-            manual_code = self._extract_manual_code(url, title, content)
+            # Determine tax category
+            tax_category = enhanced_metadata.tax_domain
+            category_dir = self.category_dirs[tax_category]
             
-            # Process with HMRC-specific metadata extraction
-            try:
-                hmrc_metadata = self.hmrc_processor.process_hmrc_document(
-                    text=content,
-                    title=title,
-                    url=url,
-                    manual_code=manual_code
-                )
-                
-                # Update statistics
-                self.tax_domain_stats[hmrc_metadata.tax_domain.value] += 1
-                self.document_type_stats[hmrc_metadata.document_type.value] += 1
-                
-                # Store processed document info
-                self.processed_documents[filename] = {
-                    'url': url,
-                    'title': title,
-                    'tax_domain': hmrc_metadata.tax_domain.value,
-                    'document_type': hmrc_metadata.document_type.value,
-                    'authority_level': hmrc_metadata.authority_level.value,
-                    'manual_code': manual_code,
-                    'legislation_refs': len(hmrc_metadata.legislation_references),
-                    'hmrc_refs': len(hmrc_metadata.hmrc_cross_references)
-                }
-                
-                logger.info(f"Processed HMRC document: {title} [{hmrc_metadata.tax_domain.value}]")
-                
-            except Exception as e:
-                logger.warning(f"Failed to process HMRC metadata for {url}: {e}")
-                hmrc_metadata = None
-            
-            # Save text content
+            # Save text content (both main directory and categorized)
             text_file = self.text_dir / f"{filename}.txt"
             with open(text_file, 'w', encoding='utf-8') as f:
-                f.write(content)
+                f.write(doc_data['content'])
+            
+            # Save categorized text content
+            categorized_text_file = category_dir / f"{filename}.txt"
+            with open(categorized_text_file, 'w', encoding='utf-8') as f:
+                f.write(doc_data['content'])
             
             # Save HTML content (if available) or API data
             if 'html' in doc_data:
@@ -570,18 +559,21 @@ class HMRCScraper:
                 with open(api_file, 'w', encoding='utf-8') as f:
                     json.dump(doc_data['api_data'], f, indent=2)
             
-            # Save original metadata
+            # Save basic metadata
             metadata_file = self.metadata_dir / f"{filename}.json"
             with open(metadata_file, 'w', encoding='utf-8') as f:
                 json.dump(doc_data['metadata'], f, indent=2)
             
-            # Save enhanced HMRC metadata
-            if hmrc_metadata:
-                enhanced_metadata_file = self.enhanced_metadata_dir / f"{filename}.json"
-                save_hmrc_metadata(hmrc_metadata, enhanced_metadata_file)
+            # Save enhanced metadata
+            enhanced_metadata_file = self.enhanced_metadata_dir / f"{filename}.json"
+            save_hmrc_metadata(enhanced_metadata, enhanced_metadata_file)
+            
+            # Save enhanced metadata in category directory
+            categorized_metadata_file = category_dir / f"{filename}_metadata.json"
+            save_hmrc_metadata(enhanced_metadata, categorized_metadata_file)
             
             self.downloaded_urls.add(url)
-            logger.info(f"Downloaded: {title}")
+            logger.info(f"Downloaded and categorized: {enhanced_metadata.title} -> {tax_category.value}")
             return True
             
         except Exception as e:
@@ -589,45 +581,18 @@ class HMRCScraper:
             self.failed_urls.add(url)
             return False
     
-    def _extract_manual_code(self, url: str, title: str, content: str) -> Optional[str]:
-        """Extract HMRC manual code from URL, title, or content"""
-        # Try to extract from URL first
-        url_match = re.search(r'/([A-Z]{2,4}\d{5}[A-Z]*)(?:/|$)', url)
-        if url_match:
-            return url_match.group(1)
-        
-        # Try to extract from title
-        title_match = re.search(r'\b([A-Z]{2,4}\d{5}[A-Z]*)\b', title)
-        if title_match:
-            return title_match.group(1)
-        
-        # Try to extract from early content
-        content_match = re.search(r'\b([A-Z]{2,4}\d{5}[A-Z]*)\b', content[:500])
-        if content_match:
-            return content_match.group(1)
-        
-        return None
-    
     def run_comprehensive_discovery(self):
-        """Run comprehensive discovery of all HMRC documentation"""
-        logger.info("=== STARTING COMPREHENSIVE HMRC DISCOVERY ===")
+        """Run comprehensive discovery of all HMRC documentation using Search API"""
+        logger.info("=== STARTING COMPREHENSIVE HMRC DISCOVERY VIA SEARCH API ===")
         
         # Load existing progress
         self.load_progress()
         
-        # Discover all types of documents
-        guidance_urls = self.discover_guidance_documents()
-        form_urls = self.discover_forms()
-        manual_urls = self.discover_manuals()
-        
-        # Combine all URLs
-        all_urls = guidance_urls.union(form_urls).union(manual_urls)
+        # Use the new Search API method
+        all_urls = self.discover_via_search_api()
         self.discovered_urls = all_urls
         
-        logger.info(f"Total unique documents discovered: {len(all_urls)}")
-        logger.info(f"Guidance documents: {len(guidance_urls)}")
-        logger.info(f"Forms: {len(form_urls)}")
-        logger.info(f"Manuals: {len(manual_urls)}")
+        logger.info(f"Total high-quality tax documents discovered: {len(all_urls)}")
         
         # Save discovery results
         self.save_progress()
@@ -635,58 +600,92 @@ class HMRCScraper:
         # Save discovered URLs for reference
         with open(self.output_dir / "discovered_urls.json", 'w') as f:
             json.dump({
-                'guidance': list(guidance_urls),
-                'forms': list(form_urls),
-                'manuals': list(manual_urls),
-                'total': len(all_urls)
+                'api_discovered': list(all_urls),
+                'total': len(all_urls),
+                'discovery_method': 'search_api',
+                'filters_applied': {
+                    'priority_formats': self.priority_formats,
+                    'quality_filters': self.quality_filters
+                }
             }, f, indent=2)
     
     def download_all_documents(self, max_documents: Optional[int] = None):
-        """Download all discovered documents"""
+        """Download all discovered documents with resume capability"""
         if not self.discovered_urls:
             logger.warning("No documents discovered. Running discovery first...")
             self.run_comprehensive_discovery()
         
+        # Filter out already downloaded documents
         urls_to_download = list(self.discovered_urls - self.downloaded_urls)
         
-        if max_documents:
-            urls_to_download = urls_to_download[:max_documents]
+        # Verify existing downloads to catch incomplete ones
+        logger.info("Verifying integrity of existing downloads...")
+        incomplete_downloads = []
+        verified_count = 0
         
-        logger.info(f"Starting download of {len(urls_to_download)} documents...")
-        
-        for i, url in enumerate(urls_to_download, 1):
-            logger.info(f"Progress: {i}/{len(urls_to_download)}")
-            
-            # Check for pause/quit commands before downloading
-            if self.controller:
-                command = self.controller.check_for_commands()
-                if command == 'quit':
-                    break
-                self.controller.wait_while_paused()
-                
-                # Set current phase for pause state tracking
-                self.controller.set_current_phase(f"Downloading documents", {
-                    'current_document': i,
-                    'total_documents': len(urls_to_download),
-                    'current_url': url
-                })
-            
-            success = self.download_document(url)
-            
-            if success:
-                logger.info(f"Successfully downloaded {i}/{len(urls_to_download)}")
+        for url in list(self.downloaded_urls):
+            if not self.verify_download_integrity(url):
+                incomplete_downloads.append(url)
+                self.downloaded_urls.discard(url)  # Remove from downloaded set
+                logger.warning(f"Incomplete download detected, will retry: {url}")
             else:
-                logger.warning(f"Failed to download {i}/{len(urls_to_download)}")
-            
-            # Rate limiting for Content API (10 req/sec)
-            time.sleep(0.1)
-            
-            # Save progress periodically
-            if i % 50 == 0:
-                self.save_progress()
+                verified_count += 1
         
-        self.save_progress()
-        logger.info(f"Download complete. Success: {len(self.downloaded_urls)}, Failed: {len(self.failed_urls)}")
+        logger.info(f"Verified {verified_count} complete downloads, found {len(incomplete_downloads)} incomplete")
+        
+        # Add incomplete downloads back to the download queue
+        urls_to_download.extend(incomplete_downloads)
+        urls_to_download = list(set(urls_to_download))  # Remove duplicates
+        
+        if max_documents:
+            # If resuming, consider already downloaded count
+            remaining_to_download = max_documents - len(self.downloaded_urls)
+            if remaining_to_download <= 0:
+                logger.info(f"Already downloaded {len(self.downloaded_urls)} documents, max_documents ({max_documents}) reached")
+                return
+            urls_to_download = urls_to_download[:remaining_to_download]
+        
+        if not urls_to_download:
+            logger.info("No new documents to download. All discovered documents already downloaded.")
+            return
+        
+        total_target = len(self.downloaded_urls) + len(urls_to_download)
+        logger.info(f"Resuming download: {len(self.downloaded_urls)} already downloaded, {len(urls_to_download)} remaining")
+        logger.info(f"Target total: {total_target} documents")
+        
+        try:
+            for i, url in enumerate(urls_to_download, 1):
+                current_total = len(self.downloaded_urls) + i
+                logger.info(f"Progress: {current_total}/{total_target} (downloading {i}/{len(urls_to_download)}) - {url}")
+                
+                try:
+                    success = self.download_document(url)
+                    
+                    if success:
+                        logger.info(f"Successfully downloaded {current_total}/{total_target}")
+                    else:
+                        logger.warning(f"Failed to download {current_total}/{total_target}")
+                        
+                except Exception as e:
+                    logger.error(f"Error downloading document {i}: {e}")
+                    self.failed_urls.add(url)
+                
+                # Rate limiting for Content API (10 req/sec)
+                time.sleep(0.1)
+                
+                # Save progress more frequently for large downloads
+                if i % 25 == 0:  # Save every 25 documents instead of 50
+                    logger.info(f"Saving progress at document {current_total}/{total_target}")
+                    self.save_progress()
+            
+            # Final save and summary
+            self.save_progress()
+            logger.info(f"Download phase complete. Total downloaded: {len(self.downloaded_urls)}, Failed: {len(self.failed_urls)}")
+            
+        except Exception as e:
+            logger.error(f"Critical error during download process: {e}")
+            self.save_progress()
+            raise
     
     def save_progress(self):
         """Save current progress"""
@@ -703,8 +702,10 @@ class HMRCScraper:
             json.dump(progress, f, indent=2)
     
     def load_progress(self):
-        """Load previous progress"""
+        """Load previous progress and scan existing files"""
         progress_file = self.output_dir / "progress.json"
+        
+        # Load from progress file if it exists
         if progress_file.exists():
             with open(progress_file, 'r') as f:
                 progress = json.load(f)
@@ -713,98 +714,206 @@ class HMRCScraper:
             self.downloaded_urls = set(progress.get('downloaded_urls', []))
             self.failed_urls = set(progress.get('failed_urls', []))
             
-            logger.info(f"Loaded progress: {len(self.downloaded_urls)} downloaded, {len(self.failed_urls)} failed")
+            logger.info(f"Loaded progress from file: {len(self.downloaded_urls)} downloaded, {len(self.failed_urls)} failed")
+        
+        # Scan existing files to detect what's already been downloaded
+        existing_downloads = self.scan_existing_downloads()
+        
+        # Merge existing downloads with loaded progress
+        if existing_downloads:
+            original_count = len(self.downloaded_urls)
+            self.downloaded_urls.update(existing_downloads)
+            new_count = len(self.downloaded_urls) - original_count
+            
+            if new_count > 0:
+                logger.info(f"Detected {new_count} additional completed downloads from filesystem scan")
+            
+        logger.info(f"Total progress: {len(self.downloaded_urls)} downloaded, {len(self.failed_urls)} failed")
+    
+    def scan_existing_downloads(self) -> Set[str]:
+        """Scan filesystem to detect already downloaded documents"""
+        existing_urls = set()
+        
+        # Check metadata files to reconstruct URLs
+        if self.metadata_dir.exists():
+            for metadata_file in self.metadata_dir.glob('*.json'):
+                try:
+                    with open(metadata_file, 'r', encoding='utf-8') as f:
+                        metadata = json.load(f)
+                    
+                    # Get URL from metadata
+                    url = metadata.get('url', '')
+                    if url:
+                        # Ensure it's a full URL
+                        if not url.startswith('http'):
+                            url = urljoin(self.base_url, url)
+                        existing_urls.add(url)
+                        
+                except Exception as e:
+                    logger.debug(f"Error reading metadata {metadata_file}: {e}")
+        
+        # Also check enhanced metadata
+        if self.enhanced_metadata_dir.exists():
+            for metadata_file in self.enhanced_metadata_dir.glob('*.json'):
+                try:
+                    with open(metadata_file, 'r', encoding='utf-8') as f:
+                        metadata = json.load(f)
+                    
+                    url = metadata.get('source_url', '')
+                    if url:
+                        if not url.startswith('http'):
+                            url = urljoin(self.base_url, url)
+                        existing_urls.add(url)
+                        
+                except Exception as e:
+                    logger.debug(f"Error reading enhanced metadata {metadata_file}: {e}")
+        
+        if existing_urls:
+            logger.info(f"Filesystem scan found {len(existing_urls)} existing downloads")
+        
+        return existing_urls
+    
+    def verify_download_integrity(self, url: str) -> bool:
+        """Verify that a download is complete and valid"""
+        try:
+            # Generate filename from URL
+            url_path = urlparse(url).path
+            filename = re.sub(r'[^\w\-_.]', '_', url_path.split('/')[-1])
+            if not filename or filename == '_':
+                filename = re.sub(r'[^\w\-_.]', '_', url_path)
+            
+            # Check if all required files exist
+            text_file = self.text_dir / f"{filename}.txt"
+            metadata_file = self.metadata_dir / f"{filename}.json"
+            enhanced_metadata_file = self.enhanced_metadata_dir / f"{filename}.json"
+            
+            # All three files should exist for a complete download
+            files_exist = text_file.exists() and metadata_file.exists() and enhanced_metadata_file.exists()
+            
+            if files_exist:
+                # Check if files have content
+                text_size = text_file.stat().st_size if text_file.exists() else 0
+                metadata_size = metadata_file.stat().st_size if metadata_file.exists() else 0
+                
+                # Files should have meaningful content
+                return text_size > 50 and metadata_size > 50
+            
+            return False
+            
+        except Exception as e:
+            logger.debug(f"Error verifying download integrity for {url}: {e}")
+            return False
     
     def generate_summary(self):
-        """Generate comprehensive summary of downloaded HMRC documentation"""
+        """Generate summary of downloaded HMRC documentation with tax categorization"""
         summary = {
             'total_discovered': len(self.discovered_urls),
             'total_downloaded': len(self.downloaded_urls),
             'total_failed': len(self.failed_urls),
             'content_types': {},
             'tax_categories': {},
-            'file_stats': {},
-            'enhanced_analysis': {
-                'tax_domains': self.tax_domain_stats.copy(),
-                'document_types': self.document_type_stats.copy(),
-                'processed_documents': len(self.processed_documents),
-                'manual_coverage': self._analyze_manual_coverage(),
-                'legislation_references': self._count_legislation_references(),
-                'authority_distribution': self._analyze_authority_distribution()
-            }
+            'authority_levels': {},
+            'entity_coverage': {
+                'individuals': 0,
+                'companies': 0,
+                'trusts': 0,
+                'partnerships': 0
+            },
+            'file_stats': {}
         }
         
-        # Analyze downloaded content
-        for metadata_file in self.metadata_dir.glob('*.json'):
-            with open(metadata_file, 'r') as f:
-                metadata = json.load(f)
-            
-            content_type = metadata.get('content_type', 'unknown')
-            summary['content_types'][content_type] = summary['content_types'].get(content_type, 0) + 1
+        # Analyze enhanced metadata
+        for metadata_file in self.enhanced_metadata_dir.glob('*.json'):
+            try:
+                with open(metadata_file, 'r') as f:
+                    metadata = json.load(f)
+                
+                # Count by tax domain
+                tax_domain = metadata.get('tax_domain', 'unknown')
+                summary['tax_categories'][tax_domain] = summary['tax_categories'].get(tax_domain, 0) + 1
+                
+                # Count by document type
+                doc_type = metadata.get('document_type', 'unknown')
+                summary['content_types'][doc_type] = summary['content_types'].get(doc_type, 0) + 1
+                
+                # Count by authority level
+                authority = metadata.get('authority_level', 'unknown')
+                summary['authority_levels'][authority] = summary['authority_levels'].get(authority, 0) + 1
+                
+                # Count entity coverage
+                if metadata.get('affects_individuals', False):
+                    summary['entity_coverage']['individuals'] += 1
+                if metadata.get('affects_companies', False):
+                    summary['entity_coverage']['companies'] += 1
+                if metadata.get('affects_trusts', False):
+                    summary['entity_coverage']['trusts'] += 1
+                if metadata.get('affects_partnerships', False):
+                    summary['entity_coverage']['partnerships'] += 1
+                    
+            except Exception as e:
+                logger.warning(f"Error reading enhanced metadata {metadata_file}: {e}")
         
-        # Count files
+        # Count files by category
+        category_stats = {}
+        for domain, category_dir in self.category_dirs.items():
+            txt_count = len(list(category_dir.glob('*.txt')))
+            meta_count = len(list(category_dir.glob('*_metadata.json')))
+            category_stats[domain.value] = {
+                'documents': txt_count,
+                'metadata': meta_count
+            }
+        
         summary['file_stats'] = {
             'text_files': len(list(self.text_dir.glob('*.txt'))),
             'html_files': len(list(self.html_dir.glob('*.html'))),
-            'metadata_files': len(list(self.metadata_dir.glob('*.json'))),
-            'enhanced_metadata_files': len(list(self.enhanced_metadata_dir.glob('*.json')))
+            'basic_metadata_files': len(list(self.metadata_dir.glob('*.json'))),
+            'enhanced_metadata_files': len(list(self.enhanced_metadata_dir.glob('*.json'))),
+            'category_breakdown': category_stats
         }
         
         # Save summary
         with open(self.output_dir / "summary.json", 'w') as f:
             json.dump(summary, f, indent=2)
         
-        # Save enhanced processing report
-        from datetime import datetime
-        processing_report = {
-            'processed_documents': self.processed_documents,
-            'statistics': summary['enhanced_analysis'],
-            'generated_at': datetime.now().isoformat()
-        }
-        
-        with open(self.output_dir / "hmrc_processing_report.json", 'w') as f:
-            json.dump(processing_report, f, indent=2, ensure_ascii=False)
-        
         return summary
     
-    def _analyze_manual_coverage(self) -> Dict[str, int]:
-        """Analyze coverage of different HMRC manuals"""
-        manual_coverage = {}
-        
-        for doc_info in self.processed_documents.values():
-            manual_code = doc_info.get('manual_code')
-            if manual_code:
-                # Extract manual prefix (e.g., "CG" from "CG12345")
-                prefix_match = re.match(r'^([A-Z]+)', manual_code)
-                if prefix_match:
-                    prefix = prefix_match.group(1)
-                    manual_coverage[prefix] = manual_coverage.get(prefix, 0) + 1
-        
-        return manual_coverage
-    
-    def _count_legislation_references(self) -> Dict[str, int]:
-        """Count total legislation references across all documents"""
-        total_refs = 0
-        unique_acts = set()
-        
-        for doc_info in self.processed_documents.values():
-            total_refs += doc_info.get('legislation_refs', 0)
-        
-        # Could be enhanced to track specific acts referenced
-        return {
-            'total_references': total_refs,
-            'average_per_document': total_refs / len(self.processed_documents) if self.processed_documents else 0
-        }
-    
-    def _analyze_authority_distribution(self) -> Dict[str, int]:
-        """Analyze distribution of authority levels"""
-        authority_dist = {}
-        
-        for doc_info in self.processed_documents.values():
-            authority = doc_info.get('authority_level', 'unknown')
-            authority_dist[authority] = authority_dist.get(authority, 0) + 1
-        
-        return authority_dist
+    def create_training_datasets(self):
+        """Create training datasets from downloaded HMRC content"""
+        try:
+            from utils.dataset_creator import DatasetCreator
+            
+            logger.info("Creating training datasets from HMRC content...")
+            
+            # Initialize dataset creator
+            dataset_creator = DatasetCreator(
+                input_dir=str(self.output_dir),
+                output_dir=str(self.output_dir / "datasets")
+            )
+            
+            # Create datasets by tax category
+            for domain, category_dir in self.category_dirs.items():
+                if len(list(category_dir.glob('*.txt'))) > 0:
+                    logger.info(f"Creating dataset for {domain.value}...")
+                    
+                    dataset_creator.create_tax_category_dataset(
+                        category=domain.value,
+                        category_dir=str(category_dir),
+                        min_documents=5  # Only create if we have at least 5 documents
+                    )
+            
+            # Create comprehensive dataset
+            logger.info("Creating comprehensive HMRC dataset...")
+            dataset_creator.create_comprehensive_hmrc_dataset(
+                enhanced_metadata_dir=str(self.enhanced_metadata_dir),
+                text_dir=str(self.text_dir)
+            )
+            
+            logger.info("Training dataset creation complete!")
+            
+        except ImportError:
+            logger.warning("DatasetCreator not available. Skipping dataset creation.")
+        except Exception as e:
+            logger.error(f"Error creating training datasets: {e}")
 
 def main():
     """Main function to run the HMRC scraper"""
@@ -817,19 +926,39 @@ def main():
                        help='Maximum number of documents to download')
     parser.add_argument('--discover-only', action='store_true',
                        help='Only discover URLs, do not download content')
+    parser.add_argument('--resume', action='store_true',
+                       help='Resume previous download (scan existing files and continue)')
+    parser.add_argument('--verify-integrity', action='store_true',
+                       help='Verify integrity of existing downloads and re-download incomplete ones')
     
     args = parser.parse_args()
     
     scraper = HMRCScraper(args.output_dir)
     
-    # Show keyboard controls
-    print("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
-    
     try:
         if args.discover_only:
             scraper.run_comprehensive_discovery()
             print(f"Discovered {len(scraper.discovered_urls)} HMRC documents")
+        elif args.verify_integrity:
+            print("=== VERIFYING DOWNLOAD INTEGRITY ===")
+            scraper.load_progress()  # This will scan existing files
+            
+            # Check all downloaded URLs for integrity
+            incomplete_urls = []
+            for url in list(scraper.downloaded_urls):
+                if not scraper.verify_download_integrity(url):
+                    incomplete_urls.append(url)
+                    
+            print(f"Found {len(incomplete_urls)} incomplete downloads")
+            if incomplete_urls:
+                for url in incomplete_urls:
+                    print(f"  - {url}")
         else:
+            if args.resume:
+                print("=== RESUMING PREVIOUS DOWNLOAD ===")
+            else:
+                print("=== STARTING FRESH DOWNLOAD ===")
+                
             scraper.run_comprehensive_discovery()
             scraper.download_all_documents(args.max_documents)
             summary = scraper.generate_summary()
@@ -839,7 +968,14 @@ def main():
             print(f"Total documents downloaded: {summary['total_downloaded']}")
             print(f"Total failed downloads: {summary['total_failed']}")
             print(f"Content types: {summary['content_types']}")
+            print(f"Tax categories: {summary['tax_categories']}")
             print(f"Output directory: {args.output_dir}")
+            
+            # Auto-create datasets from downloaded content
+            if summary['total_downloaded'] > 0:
+                print(f"\n=== CREATING DATASETS FROM DOWNLOADED CONTENT ===")
+                scraper.create_training_datasets()
+                print("Dataset creation complete!")
             
     except KeyboardInterrupt:
         logger.info("Scraping interrupted by user")
@@ -847,10 +983,6 @@ def main():
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
         scraper.save_progress()
-    finally:
-        # Cleanup controller
-        if scraper.controller:
-            scraper.controller.cleanup()
 
 if __name__ == "__main__":
     main()
