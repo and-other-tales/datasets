@@ -155,9 +155,23 @@ class LegalLlamaHousingLawPipeline:
         
         logger.info("=== STARTING HOUSING CASE LAW SCRAPING PHASE ===")
         
+        # Check for pause/quit commands
+        if self.controller:
+            command = self.controller.check_for_commands()
+            if command == 'quit':
+                return False
+            self.controller.wait_while_paused()
+            self.controller.set_current_phase("Scraping housing case law", {})
+        
         try:
             # Scrape housing cases
             logger.info(f"Scraping up to {self.max_cases} housing cases...")
+            if self.controller:
+                command = self.controller.check_for_commands()
+                if command == 'quit':
+                    return False
+                self.controller.wait_while_paused()
+            
             cases = self.case_law_scraper.scrape_all_housing_cases(self.max_cases)
             
             # Save cases
@@ -186,6 +200,14 @@ class LegalLlamaHousingLawPipeline:
         
         logger.info("=== STARTING HOUSING Q&A GENERATION PHASE ===")
         
+        # Check for pause/quit commands
+        if self.controller:
+            command = self.controller.check_for_commands()
+            if command == 'quit':
+                return False
+            self.controller.wait_while_paused()
+            self.controller.set_current_phase("Generating housing Q&A pairs", {})
+        
         try:
             # Check for source files
             legislation_path = Path(self.legislation_dir)
@@ -196,6 +218,12 @@ class LegalLlamaHousingLawPipeline:
                 return False
             
             # Generate Q&A pairs
+            if self.controller:
+                command = self.controller.check_for_commands()
+                if command == 'quit':
+                    return False
+                self.controller.wait_while_paused()
+            
             qa_output_file = Path(self.dataset_dir) / "housing_qa_dataset.json"
             qa_pairs = self.qa_generator.process_all_housing_sources(
                 self.legislation_dir,
@@ -227,6 +255,14 @@ class LegalLlamaHousingLawPipeline:
         
         logger.info("=== STARTING HOUSING DATASET CREATION PHASE ===")
         
+        # Check for pause/quit commands
+        if self.controller:
+            command = self.controller.check_for_commands()
+            if command == 'quit':
+                return False
+            self.controller.wait_while_paused()
+            self.controller.set_current_phase("Creating housing datasets", {})
+        
         try:
             # Check if source data exists
             source_path = Path(self.legislation_dir)
@@ -236,6 +272,12 @@ class LegalLlamaHousingLawPipeline:
             
             # Create datasets
             logger.info("Creating housing datasets...")
+            if self.controller:
+                command = self.controller.check_for_commands()
+                if command == 'quit':
+                    return False
+                self.controller.wait_while_paused()
+            
             datasets = self.dataset_creator.create_all_datasets()
             
             logger.info("Housing dataset creation phase completed!")
