@@ -35,7 +35,6 @@ class LegalReasoningEnhancer:
         self.controller.register_callback('database_update', create_database_update_callback(self))
         self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
         
-        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         # Legal reasoning templates for enhanced training
         self.reasoning_templates = {

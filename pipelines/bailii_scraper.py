@@ -68,6 +68,7 @@ class BailiiScraper:
                 self.controller = PipelineController()
                 self.controller.register_callback('database_update', create_database_update_callback(self))
                 self.controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
+                # Control message now handled by curses footer
             except Exception as e:
                 logger.warning(f"Could not initialize pause controls: {e}")
                 self.controller = None
@@ -297,8 +298,7 @@ def main():
     """Main execution function for comprehensive BAILII scraping"""
     scraper = BailiiScraper(max_depth=3, delay=1.0)
     
-    # Show keyboard controls
-    print("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
+    # Control message now handled by curses footer
     
     try:
         logger.info("Starting comprehensive BAILII case discovery...")

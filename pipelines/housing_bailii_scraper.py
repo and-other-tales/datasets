@@ -31,7 +31,6 @@ class HousingBailiiScraper(BailiiScraper):
         self.housing_controller.register_callback('database_update', create_database_update_callback(self))
         self.housing_controller.register_callback('dataset_creation', create_dataset_creation_callback(self))
         
-        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         # Housing-specific case law keywords
         self.housing_keywords = {
@@ -273,35 +272,58 @@ class HousingBailiiScraper(BailiiScraper):
     
     def scrape_all_housing_cases(self, max_cases: int = 500) -> List[Dict]:
         """Scrape all discovered housing cases"""
-        # Discover cases first
-        housing_cases = self.discover_housing_cases()
+        logger.info("=== STARTING HOUSING CASE LAW SCRAPING ===")
         
-        if not housing_cases:
-            logger.warning("No housing cases discovered")
-            return []
-        
-        # Limit number of cases
-        housing_cases = housing_cases[:max_cases]
-        
-        logger.info(f"Scraping {len(housing_cases)} housing cases...")
-        
-        scraped_cases = []
-        
-        for i, case_info in enumerate(housing_cases):
-            logger.info(f"Scraping case {i+1}/{len(housing_cases)}: {case_info['title']}")
+        try:
+            # Phase 1: Discover housing cases
+            logger.info("Phase 1: Discovering housing cases...")
+            self.housing_controller.set_current_phase('case_discovery', {'step': 'housing_search'})
+            self.housing_controller.check_for_commands()
+            self.housing_controller.wait_while_paused()
             
-            case_data = self.scrape_housing_case(case_info)
-            if case_data:
-                scraped_cases.append(case_data)
+            housing_cases = self.discover_housing_cases()
             
-            # Progress logging
-            if (i + 1) % 10 == 0:
-                logger.info(f"Scraped {len(scraped_cases)}/{i+1} successful cases")
+            if not housing_cases:
+                logger.warning("No housing cases discovered")
+                return []
             
-            time.sleep(2)  # Rate limiting
-        
-        logger.info(f"Successfully scraped {len(scraped_cases)} housing cases")
-        return scraped_cases
+            # Limit number of cases
+            housing_cases = housing_cases[:max_cases]
+            
+            # Phase 2: Scrape case content
+            logger.info(f"Phase 2: Scraping {len(housing_cases)} housing cases...")
+            self.housing_controller.set_current_phase('case_scraping', {'step': 'content_extraction'})
+            self.housing_controller.check_for_commands()
+            self.housing_controller.wait_while_paused()
+            
+            scraped_cases = []
+            
+            for i, case_info in enumerate(housing_cases):
+                # Check for pause commands periodically
+                self.housing_controller.check_for_commands()
+                self.housing_controller.wait_while_paused()
+                
+                logger.info(f"Scraping case {i+1}/{len(housing_cases)}: {case_info['title']}")
+                
+                case_data = self.scrape_housing_case(case_info)
+                if case_data:
+                    scraped_cases.append(case_data)
+                
+                # Progress logging
+                if (i + 1) % 10 == 0:
+                    logger.info(f"Scraped {len(scraped_cases)}/{i+1} successful cases")
+                
+                time.sleep(2)  # Rate limiting
+            
+            logger.info(f"Successfully scraped {len(scraped_cases)} housing cases")
+            return scraped_cases
+            
+        except Exception as e:
+            logger.error(f"Housing case scraping failed: {e}")
+            raise
+        finally:
+            # Cleanup controller
+            self.housing_controller.cleanup()
     
     def save_housing_cases(self, cases: List[Dict], filename: str = "housing_cases.json"):
         """Save housing cases to file"""

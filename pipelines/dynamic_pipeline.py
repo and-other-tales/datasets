@@ -77,7 +77,6 @@ class DynamicDatasetPipeline:
         }
         
         logger.info(f"othertales Dynamic Pipeline initialised for {target_url}")
-        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
     
     def _initialize_anthropic_client(self) -> Optional[anthropic.Anthropic]:
         """Initialize Anthropic client for API access"""

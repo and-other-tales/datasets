@@ -90,7 +90,6 @@ class CopyrightLawPipeline:
         logger.info(f"Legislation directory: {self.legislation_dir}")
         logger.info(f"Case law directory: {self.case_law_dir}")
         logger.info(f"Datasets directory: {self.datasets_dir}")
-        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
     
     def download_copyright_legislation(self) -> bool:
         """Download copyright-specific UK legislation using ParaLlama utilities"""

@@ -56,7 +56,6 @@ class EnhancedLegalPipeline:
         self.compliance_reports_dir = self.output_dir / "compliance_reports"
         self.rag_system_dir = self.output_dir / "rag_system"
         
-        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
         
         for dir_path in [
             self.enhanced_metadata_dir, self.citation_graphs_dir, self.faiss_indices_dir,
