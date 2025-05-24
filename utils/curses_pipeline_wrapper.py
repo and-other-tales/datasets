@@ -25,8 +25,20 @@ class CursesPipelineWrapper:
         try:
             curses.wrapper(self._curses_main, pipeline_function, *args, **kwargs)
         except Exception as e:
-            print(f"Pipeline execution failed: {e}")
-            sys.exit(1)
+            # Check if it's a curses-specific error
+            if "addwstr() returned ERR" in str(e) or "addstr() returned ERR" in str(e):
+                print(f"Curses interface error: {e}")
+                print("Falling back to command-line execution...")
+                # Run without curses interface
+                try:
+                    result = pipeline_function(*args, **kwargs)
+                    print(f"✅ {self.pipeline_name} completed successfully!")
+                except Exception as pipeline_e:
+                    print(f"❌ {self.pipeline_name} failed: {pipeline_e}")
+                    sys.exit(1)
+            else:
+                print(f"Pipeline execution failed: {e}")
+                sys.exit(1)
     
     def _curses_main(self, stdscr, pipeline_function: Callable, *args, **kwargs):
         """Main curses interface"""
@@ -88,17 +100,28 @@ class CursesPipelineWrapper:
         try:
             result = pipeline_function(*args, **kwargs)
             self._draw_status("Pipeline completed successfully", success=True)
-            self.log_window.addstr(f"\n✅ {self.pipeline_name} completed successfully!\n")
-            self.log_window.refresh()
+            try:
+                self.log_window.addstr(f"\n[✓] {self.pipeline_name} completed successfully!\n")
+                self.log_window.refresh()
+            except curses.error:
+                pass
         except Exception as e:
             self._draw_status(f"Pipeline failed: {e}", error=True)
-            self.log_window.addstr(f"\n❌ {self.pipeline_name} failed: {e}\n")
-            self.log_window.refresh()
+            try:
+                self.log_window.addstr(f"\n[X] {self.pipeline_name} failed: {e}\n")
+                self.log_window.refresh()
+            except curses.error:
+                pass
         
         # Wait for key press
-        self.log_window.addstr("\nPress any key to return to main menu...")
-        self.log_window.refresh()
-        stdscr.getch()
+        try:
+            self.log_window.addstr("\nPress any key to return to main menu...")
+            self.log_window.refresh()
+            stdscr.getch()
+        except curses.error:
+            # If curses fails, just wait briefly and return
+            import time
+            time.sleep(2)
     
     def _draw_header(self, header_win):
         """Draw the header"""
@@ -109,11 +132,21 @@ class CursesPipelineWrapper:
         
         # Title
         title = f"othertales Datasets Tools - {self.pipeline_name}"
-        header_win.addstr(0, (width - len(title)) // 2, title, 
-                         curses.color_pair(1) | curses.A_BOLD)
+        try:
+            header_win.addstr(0, (width - len(title)) // 2, title, 
+                             curses.color_pair(1) | curses.A_BOLD)
+        except curses.error:
+            # Fallback without color/formatting
+            try:
+                header_win.addstr(0, (width - len(title)) // 2, title)
+            except curses.error:
+                pass
         
         # Border
-        header_win.addstr(2, 0, "─" * width)
+        try:
+            header_win.addstr(2, 0, "-" * width)
+        except curses.error:
+            pass
         
         header_win.refresh()
     
@@ -125,11 +158,23 @@ class CursesPipelineWrapper:
         self.status_window.clear()
         
         # Status title
-        self.status_window.addstr(0, 0, "Status:", curses.A_BOLD)
+        try:
+            self.status_window.addstr(0, 0, "Status:", curses.A_BOLD)
+        except curses.error:
+            try:
+                self.status_window.addstr(0, 0, "Status:")
+            except curses.error:
+                pass
         
         # Status text with appropriate color
-        color = curses.color_pair(2) if success else curses.color_pair(4) if error else curses.color_pair(3)
-        self.status_window.addstr(1, 2, status, color)
+        try:
+            color = curses.color_pair(2) if success else curses.color_pair(4) if error else curses.color_pair(3)
+            self.status_window.addstr(1, 2, status, color)
+        except curses.error:
+            try:
+                self.status_window.addstr(1, 2, status)
+            except curses.error:
+                pass
         
         # Current phase (if available)
         # This would be updated by the PipelineController
@@ -150,7 +195,13 @@ class CursesPipelineWrapper:
         # Center the controls
         x = (width - len(controls)) // 2
         if x > 0:
-            self.footer_window.addstr(0, x, controls, curses.color_pair(5))
+            try:
+                self.footer_window.addstr(0, x, controls, curses.color_pair(5))
+            except curses.error:
+                try:
+                    self.footer_window.addstr(0, x, controls)
+                except curses.error:
+                    pass
         
         self.footer_window.refresh()
     
