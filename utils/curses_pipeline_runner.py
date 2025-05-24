@@ -232,10 +232,28 @@ class CursesPipelineRunner:
     
     def _setup_logging(self):
         """Setup logging to capture pipeline output"""
-        # Add our handler to root logger
+        # Remove all existing handlers from root logger to prevent conflicts
         root_logger = logging.getLogger()
+        existing_handlers = root_logger.handlers[:]
+        for handler in existing_handlers:
+            if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                root_logger.removeHandler(handler)
+        
+        # Add our handler to root logger
         root_logger.addHandler(self.log_handler)
         root_logger.setLevel(logging.INFO)
+        
+        # Also intercept module-specific loggers
+        for name in ['__main__', 'pipelines.hmrc_scraper', 'hmrc_scraper']:
+            module_logger = logging.getLogger(name)
+            # Remove StreamHandlers but keep FileHandlers
+            module_handlers = module_logger.handlers[:]
+            for handler in module_handlers:
+                if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                    module_logger.removeHandler(handler)
+            # Ensure our handler is added
+            if self.log_handler not in module_logger.handlers:
+                module_logger.addHandler(self.log_handler)
         
         # Start log display thread
         self.log_thread = threading.Thread(target=self._log_display_thread, daemon=True)

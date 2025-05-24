@@ -29,15 +29,30 @@ except ImportError:
     from hmrc_metadata import HMRCDocumentProcessor, HMRCMetadata, TaxDomain, save_hmrc_metadata
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('hmrc_scraper.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+def setup_logging():
+    """Setup logging configuration"""
+    logger = logging.getLogger(__name__)
+    
+    # Clear any existing handlers to avoid duplicates
+    logger.handlers.clear()
+    logger.setLevel(logging.INFO)
+    
+    # Always add file handler
+    file_handler = logging.FileHandler('hmrc_scraper.log')
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(file_handler)
+    
+    # Only add StreamHandler if not running under curses
+    # Curses environments will add their own handlers
+    if not any('curses' in str(handler) for handler in logging.root.handlers):
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        logger.addHandler(stream_handler)
+    
+    return logger
+
+# Initialize logger
+logger = setup_logging()
 
 class HMRCScraper:
     def __init__(self, output_dir: str = "hmrc_documentation"):

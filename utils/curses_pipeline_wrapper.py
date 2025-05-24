@@ -300,14 +300,32 @@ class CursesPipelineWrapper:
                 
                 return safe_text
         
+        # Remove all existing handlers from root logger to prevent conflicts
+        root_logger = logging.getLogger()
+        existing_handlers = root_logger.handlers[:]
+        for handler in existing_handlers:
+            if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                root_logger.removeHandler(handler)
+        
         # Add the curses handler to the root logger
         curses_handler = CursesLogHandler(self.log_window)
         curses_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
         
         # Get the logger for our pipelines
-        pipeline_logger = logging.getLogger()
-        pipeline_logger.addHandler(curses_handler)
-        pipeline_logger.setLevel(logging.INFO)
+        root_logger.addHandler(curses_handler)
+        root_logger.setLevel(logging.INFO)
+        
+        # Also intercept module-specific loggers
+        for name in ['__main__', 'pipelines.hmrc_scraper', 'hmrc_scraper']:
+            module_logger = logging.getLogger(name)
+            # Remove StreamHandlers but keep FileHandlers
+            module_handlers = module_logger.handlers[:]
+            for handler in module_handlers:
+                if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                    module_logger.removeHandler(handler)
+            # Ensure our handler is added
+            if curses_handler not in module_logger.handlers:
+                module_logger.addHandler(curses_handler)
 
 def run_pipeline_with_curses(pipeline_name: str, pipeline_function: Callable, *args, **kwargs):
     """Convenience function to run a pipeline with curses interface"""
