@@ -96,13 +96,35 @@ def run_hmrc_scraper(args):
             output_dir = args.output_dir or 'generated/hmrc_documentation'
             scraper = HMRCScraper(output_dir)
             
-            if args.discover_only:
-                scraper.run_comprehensive_discovery()
-            else:
-                scraper.run_comprehensive_discovery()
-                scraper.download_all_documents(args.max_documents)
-                scraper.generate_summary()
-                scraper.create_training_datasets()
+            try:
+                if args.discover_only:
+                    scraper.run_comprehensive_discovery()
+                    # Return result for discover-only mode
+                    return {
+                        'status': 'success',
+                        'discovered': len(scraper.discovered_urls),
+                        'downloaded': 0,
+                        'failed': 0
+                    }
+                else:
+                    scraper.run_comprehensive_discovery()
+                    scraper.download_all_documents(args.max_documents)
+                    summary = scraper.generate_summary()
+                    scraper.create_training_datasets()
+                    
+                    # Return summary for the curses wrapper to know it completed
+                    return {
+                        'status': 'success',
+                        'discovered': summary['total_discovered'],
+                        'downloaded': summary['total_downloaded'],
+                        'failed': summary['total_failed']
+                    }
+            except Exception as e:
+                # Return error status
+                return {
+                    'status': 'error',
+                    'error': str(e)
+                }
         
         run_hmrc_scraper_with_curses(hmrc_wrapper)
 

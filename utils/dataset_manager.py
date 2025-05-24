@@ -21,10 +21,17 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Union, Any, Tuple
 from datetime import datetime
-import pandas as pd
 from datasets import Dataset, DatasetDict, load_dataset, load_from_disk, disable_caching, enable_caching
 import pyarrow as pa
 import pyarrow.parquet as pq
+
+# Try to import pandas, but make it optional
+try:
+    import pandas as pd
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
+    logger.warning("Pandas not available. Some functionality may be limited.")
 
 # Setup logging
 logging.basicConfig(

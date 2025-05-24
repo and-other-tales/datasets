@@ -41,8 +41,7 @@ class TestHMRCScraper(unittest.TestCase):
     def test_init_with_custom_parameters(self):
         """Test HMRCScraper initialisation with custom parameters"""
         scraper = HMRCScraper(
-            output_dir=self.test_dir,
-            enable_pause_controls=False
+            output_dir=self.test_dir
         )
         
         self.assertEqual(scraper.base_url, "https://www.gov.uk")
@@ -220,9 +219,9 @@ class TestHMRCScraperIntegration(unittest.TestCase):
         self.assertIsNotNone(scraper.hmrc_processor)
         
         # Check that tracking structures are initialized
-        self.assertIsInstance(scraper.processed_documents, dict)
-        self.assertIsInstance(scraper.tax_domain_stats, dict)
-        self.assertIsInstance(scraper.document_type_stats, dict)
+        self.assertIsInstance(scraper.discovered_urls, set)
+        self.assertIsInstance(scraper.downloaded_urls, set)
+        self.assertIsInstance(scraper.failed_urls, set)
 
 
 if __name__ == '__main__':

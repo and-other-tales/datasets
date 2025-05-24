@@ -436,9 +436,26 @@ class HMRCCursesWrapper:
         try:
             self._update_status("Running HMRC Scraper...")
             result = pipeline_func(*args, **kwargs)
-            self._update_status("Completed Successfully!", is_error=False)
+            
+            # Check result and update status accordingly
+            if isinstance(result, dict):
+                if result.get('status') == 'success':
+                    discovered = result.get('discovered', 0)
+                    downloaded = result.get('downloaded', 0)
+                    self._update_status(f"Completed Successfully! Downloaded {downloaded}/{discovered} documents", is_error=False)
+                elif result.get('status') == 'error':
+                    self._update_status(f"Failed: {result.get('error', 'Unknown error')}", is_error=True)
+                else:
+                    self._update_status("Completed Successfully!", is_error=False)
+            else:
+                self._update_status("Completed Successfully!", is_error=False)
         except Exception as e:
-            self._update_status(f"Failed: {str(e)}", is_error=True)
+            import traceback
+            error_msg = f"Failed: {str(e)}"
+            # Log the full traceback to file for debugging
+            with open('hmrc_scraper_error.log', 'w') as f:
+                f.write(traceback.format_exc())
+            self._update_status(error_msg, is_error=True)
     
     def _event_loop(self, pipeline_thread):
         """Main event loop handling user input"""

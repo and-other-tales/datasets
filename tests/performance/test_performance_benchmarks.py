@@ -17,9 +17,9 @@ import psutil
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from pipelines.dynamic_pipeline import DynamicPipeline
+from pipelines.dynamic_pipeline import DynamicDatasetPipeline
 from pipelines.hmrc_scraper import HMRCScraper
-from utils.llama_training_optimizer import LlamaTrainingOptimizer
+from utils.llama_training_optimizer import ParaLlamaTrainingOptimizer
 
 
 class TestPerformanceBenchmarks(unittest.TestCase):
