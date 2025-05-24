@@ -134,82 +134,101 @@ class CursesPipelineWrapper:
             time.sleep(2)
     
     def _draw_header(self, header_win):
-        """Draw the header"""
+        """Draw the header with bounds checking"""
         height, width = header_win.getmaxyx()
         
         # Clear header
         header_win.clear()
         
-        # Title
+        # Title with bounds checking
         title = f"othertales Datasets Tools - {self.pipeline_name}"
+        if len(title) > width - 2:
+            title = title[:width - 5] + "..."
+        
         try:
-            header_win.addstr(0, (width - len(title)) // 2, title, 
-                             curses.color_pair(1) | curses.A_BOLD)
+            x = max(0, (width - len(title)) // 2)
+            if x + len(title) < width and height > 0:
+                header_win.addstr(0, x, title, curses.color_pair(1) | curses.A_BOLD)
         except curses.error:
             # Fallback without color/formatting
             try:
-                header_win.addstr(0, (width - len(title)) // 2, title)
+                x = max(0, (width - len(title)) // 2)
+                if x + len(title) < width and height > 0:
+                    header_win.addstr(0, x, title)
             except curses.error:
                 pass
         
-        # Border
+        # Border with bounds checking
         try:
-            header_win.addstr(2, 0, "-" * width)
+            if height > 2 and width > 0:
+                border = "-" * min(width - 1, width)
+                header_win.addstr(2, 0, border)
         except curses.error:
             pass
         
         header_win.refresh()
     
     def _draw_status(self, status: str, success: bool = False, error: bool = False):
-        """Draw the status window"""
+        """Draw the status window with bounds checking"""
         if not self.status_window:
             return
         
+        height, width = self.status_window.getmaxyx()
         self.status_window.clear()
         
-        # Status title
+        # Status title with bounds checking
         try:
-            self.status_window.addstr(0, 0, "Status:", curses.A_BOLD)
+            if height > 0 and width > 8:
+                self.status_window.addstr(0, 0, "Status:", curses.A_BOLD)
         except curses.error:
             try:
-                self.status_window.addstr(0, 0, "Status:")
+                if height > 0 and width > 8:
+                    self.status_window.addstr(0, 0, "Status:")
             except curses.error:
                 pass
         
-        # Status text with appropriate color
+        # Status text with appropriate color and bounds checking
+        if status and len(status) > width - 4:
+            status = status[:width - 7] + "..."
+        
         try:
-            color = curses.color_pair(2) if success else curses.color_pair(4) if error else curses.color_pair(3)
-            self.status_window.addstr(1, 2, status, color)
+            if height > 1 and width > 4 and status:
+                color = curses.color_pair(2) if success else curses.color_pair(4) if error else curses.color_pair(3)
+                self.status_window.addstr(1, 2, status, color)
         except curses.error:
             try:
-                self.status_window.addstr(1, 2, status)
+                if height > 1 and width > 4 and status:
+                    self.status_window.addstr(1, 2, status)
             except curses.error:
                 pass
-        
-        # Current phase (if available)
-        # This would be updated by the PipelineController
         
         self.status_window.refresh()
     
     def _draw_footer(self):
-        """Draw the footer with controls"""
+        """Draw the footer with controls and bounds checking"""
         if not self.footer_window:
             return
         
+        height, width = self.footer_window.getmaxyx()
         self.footer_window.clear()
         
-        # Control text
+        # Control text with bounds checking
         controls = "P:Pause/Resume | A:Update DB | D:Create Dataset | Q:Quit"
-        width = self.footer_window.getmaxyx()[1]
+        if len(controls) > width - 2:
+            controls = "P:Pause | A:Update | D:Dataset | Q:Quit"
+        if len(controls) > width - 2:
+            controls = "P:Pause | Q:Quit"
         
-        # Center the controls
-        x = (width - len(controls)) // 2
-        if x > 0:
+        # Center the controls with bounds checking
+        if height > 0 and width > len(controls):
+            x = max(0, (width - len(controls)) // 2)
             try:
-                self.footer_window.addstr(0, x, controls, curses.color_pair(5))
+                if x + len(controls) < width:
+                    self.footer_window.addstr(0, x, controls, curses.color_pair(5))
             except curses.error:
                 try:
-                    self.footer_window.addstr(0, x, controls)
+                    if x + len(controls) < width:
+                        self.footer_window.addstr(0, x, controls)
                 except curses.error:
                     pass
         
@@ -231,18 +250,24 @@ class CursesPipelineWrapper:
                     
                     # Check window size and handle scrolling
                     max_y, max_x = self.log_window.getmaxyx()
+                    if max_y <= 0 or max_x <= 0:
+                        return
+                    
                     cur_y, cur_x = self.log_window.getyx()
                     
                     if cur_y >= max_y - 1:
                         self.log_window.scroll()
-                        self.log_window.move(max_y - 2, 0)
+                        self.log_window.move(max(0, max_y - 2), 0)
                     
                     # Truncate if too long
                     if len(safe_msg) > max_x - 1:
-                        safe_msg = safe_msg[:max_x - 4] + "..."
+                        safe_msg = safe_msg[:max(1, max_x - 4)] + "..."
                     
-                    self.log_window.addstr(f"{safe_msg}\n")
-                    self.log_window.refresh()
+                    # Bounds check before adding string
+                    current_y, current_x = self.log_window.getyx()
+                    if current_y < max_y - 1 and len(safe_msg) > 0:
+                        self.log_window.addstr(f"{safe_msg}\n")
+                        self.log_window.refresh()
                 except Exception:
                     pass
             

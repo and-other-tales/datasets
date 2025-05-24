@@ -586,104 +586,138 @@ def _run_with_menu_args(pipeline_func, pipeline_name):
         # Special handling for Dynamic Pipeline
         if pipeline_name == "Dynamic Pipeline":
             try:
-                input_win.addstr(y_pos, 2, "Enter URL to create datasets from:", curses.color_pair(4))
-                y_pos += 1
-                input_win.addstr(y_pos, 2, "URL: ")
-                input_win.refresh()
+                max_y, max_x = input_win.getmaxyx()
+                if y_pos < max_y - 2 and max_x > 40:
+                    input_win.addstr(y_pos, 2, "Enter URL to create datasets from:"[:max_x-4])
+                    y_pos += 1
+                    input_win.addstr(y_pos, 2, "URL: ")
+                    input_win.refresh()
             except curses.error:
                 # Fallback without colors if there's an issue
-                input_win.addstr(y_pos, 2, "Enter URL to create datasets from:")
-                y_pos += 1
-                input_win.addstr(y_pos, 2, "URL: ")
-                input_win.refresh()
+                max_y, max_x = input_win.getmaxyx()
+                if y_pos < max_y - 2 and max_x > 10:
+                    input_win.addstr(y_pos, 2, "Enter URL:"[:max_x-4])
+                    y_pos += 1
+                    input_win.addstr(y_pos, 2, "URL: ")
+                    input_win.refresh()
             
-            # Get URL input
-            curses.echo()
-            url = input_win.getstr(y_pos, 7, 50).decode('utf-8').strip()
-            curses.noecho()
-            
-            if not url:
-                raise ValueError("URL is required for dynamic pipeline")
-            args.url = url
-            y_pos += 2
-            
+            # Get URL input with bounds checking
             try:
-                input_win.addstr(y_pos, 2, "Output directory (press Enter for default):")
-                y_pos += 1
-                input_win.addstr(y_pos, 2, "Dir: ")
-                input_win.refresh()
-            except curses.error:
-                # Fallback if there's an issue
-                input_win.addstr(y_pos, 2, "Output dir:")
-                y_pos += 1
-                input_win.addstr(y_pos, 2, "Dir: ")
-                input_win.refresh()
+                curses.echo()
+                max_y, max_x = input_win.getmaxyx()
+                if y_pos < max_y - 1 and max_x > 10:
+                    url = input_win.getstr(y_pos, 7, min(50, max_x - 10)).decode('utf-8').strip()
+                else:
+                    url = ""
+                curses.noecho()
+                
+                if not url:
+                    raise ValueError("URL is required for dynamic pipeline")
+                args.url = url
+                y_pos += 2
+            except (curses.error, ValueError) as e:
+                curses.noecho()
+                raise e
             
-            curses.echo()
-            output_dir = input_win.getstr(y_pos, 7, 30).decode('utf-8').strip()
-            curses.noecho()
+            # Output directory input with bounds checking
+            try:
+                max_y, max_x = input_win.getmaxyx()
+                if y_pos < max_y - 2 and max_x > 20:
+                    input_win.addstr(y_pos, 2, "Output dir (Enter=default):"[:max_x-4])
+                    y_pos += 1
+                    input_win.addstr(y_pos, 2, "Dir: ")
+                    input_win.refresh()
+                    
+                    curses.echo()
+                    output_dir = input_win.getstr(y_pos, 7, min(30, max_x - 10)).decode('utf-8').strip()
+                    curses.noecho()
+                else:
+                    output_dir = ""
+            except curses.error:
+                curses.noecho()
+                output_dir = ""
             
             if output_dir:
                 args.output_dir = output_dir
         
         else:
-            # Get common arguments
+            # Get common arguments with bounds checking
             if pipeline_name in ["HMRC Scraper", "Housing Pipeline", "BAILII Scraper", "Complete Pipeline", "Copyright Pipeline"]:
-                input_win.addstr(y_pos, 2, "Maximum documents (press Enter for all):")
-                y_pos += 1
-                input_win.addstr(y_pos, 2, "Max: ")
-                input_win.refresh()
-                
-                curses.echo()
-                max_docs = input_win.getstr(y_pos, 7, 10).decode('utf-8').strip()
-                curses.noecho()
-                
-                if max_docs:
-                    try:
-                        args.max_documents = int(max_docs)
-                    except ValueError:
-                        pass  # Use default
-                y_pos += 2
+                try:
+                    max_y, max_x = input_win.getmaxyx()
+                    if y_pos < max_y - 2 and max_x > 25:
+                        input_win.addstr(y_pos, 2, "Max documents (Enter=all):"[:max_x-4])
+                        y_pos += 1
+                        input_win.addstr(y_pos, 2, "Max: ")
+                        input_win.refresh()
+                        
+                        curses.echo()
+                        max_docs = input_win.getstr(y_pos, 7, min(10, max_x - 10)).decode('utf-8').strip()
+                        curses.noecho()
+                        
+                        if max_docs:
+                            try:
+                                args.max_documents = int(max_docs)
+                            except ValueError:
+                                pass  # Use default
+                        y_pos += 2
+                except curses.error:
+                    pass
                 
                 if pipeline_name == "HMRC Scraper":
-                    input_win.addstr(y_pos, 2, "Discovery only? (y/N):")
+                    try:
+                        max_y, max_x = input_win.getmaxyx()
+                        if y_pos < max_y - 2 and max_x > 20:
+                            input_win.addstr(y_pos, 2, "Discovery only? (y/N):"[:max_x-4])
+                            y_pos += 1
+                            input_win.addstr(y_pos, 2, "Discover: ")
+                            input_win.refresh()
+                            
+                            curses.echo()
+                            discover = input_win.getstr(y_pos, 11, 1).decode('utf-8').strip().lower()
+                            curses.noecho()
+                            
+                            args.discover_only = discover == 'y'
+                            y_pos += 2
+                    except curses.error:
+                        pass
+            
+            # Output directory with bounds checking
+            try:
+                max_y, max_x = input_win.getmaxyx()
+                if y_pos < max_y - 2 and max_x > 20:
+                    input_win.addstr(y_pos, 2, "Output dir (Enter=default):"[:max_x-4])
                     y_pos += 1
-                    input_win.addstr(y_pos, 2, "Discover: ")
+                    input_win.addstr(y_pos, 2, "Output: ")
                     input_win.refresh()
                     
                     curses.echo()
-                    discover = input_win.getstr(y_pos, 11, 1).decode('utf-8').strip().lower()
+                    output_dir = input_win.getstr(y_pos, 9, min(30, max_x - 12)).decode('utf-8').strip()
                     curses.noecho()
                     
-                    args.discover_only = discover == 'y'
+                    if output_dir:
+                        args.output_dir = output_dir
                     y_pos += 2
+            except curses.error:
+                pass
             
-            # Output directory
-            input_win.addstr(y_pos, 2, "Output directory (press Enter for default):")
-            y_pos += 1
-            input_win.addstr(y_pos, 2, "Output: ")
-            input_win.refresh()
-            
-            curses.echo()
-            output_dir = input_win.getstr(y_pos, 9, 30).decode('utf-8').strip()
-            curses.noecho()
-            
-            if output_dir:
-                args.output_dir = output_dir
-            y_pos += 2
-            
-            # Input directory
-            input_win.addstr(y_pos, 2, "Input directory (press Enter for default):")
-            y_pos += 1
-            input_win.addstr(y_pos, 2, "Input: ")
-            input_win.refresh()
-            
-            curses.echo()
-            input_dir = input_win.getstr(y_pos, 8, 30).decode('utf-8').strip()
-            curses.noecho()
-            
-            if input_dir:
-                args.input_dir = input_dir
+            # Input directory with bounds checking
+            try:
+                max_y, max_x = input_win.getmaxyx()
+                if y_pos < max_y - 2 and max_x > 20:
+                    input_win.addstr(y_pos, 2, "Input dir (Enter=default):"[:max_x-4])
+                    y_pos += 1
+                    input_win.addstr(y_pos, 2, "Input: ")
+                    input_win.refresh()
+                    
+                    curses.echo()
+                    input_dir = input_win.getstr(y_pos, 8, min(30, max_x - 11)).decode('utf-8').strip()
+                    curses.noecho()
+                    
+                    if input_dir:
+                        args.input_dir = input_dir
+            except curses.error:
+                pass
         
         curses.curs_set(0)  # Hide cursor
         return args
