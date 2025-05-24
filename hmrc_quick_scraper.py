@@ -5,12 +5,14 @@ Quick HMRC Scraper - Limited discovery for faster results
 
 import sys
 import logging
+import os
 from pathlib import Path
 
 # Add the parent directory to the path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from pipelines.hmrc_scraper import HMRCScraper
+# Import from the fixed curses wrapper implementation
 from utils.hmrc_curses_wrapper import run_hmrc_scraper_with_curses
 from utils.rate_limiter import RateLimiter
 

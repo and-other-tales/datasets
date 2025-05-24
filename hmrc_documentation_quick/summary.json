@@ -1,5 +1,5 @@
 {
-  "total_discovered": 276,
+  "total_discovered": 122,
   "total_downloaded": 10,
   "total_failed": 0,
   "content_types": {
@@ -7,14 +7,14 @@
     "internal_manual": 1
   },
   "tax_categories": {
-    "national_insurance": 1,
-    "general": 1,
-    "research_development_reliefs": 1,
-    "service_availability": 1,
-    "corporation_tax": 1,
+    "environmental_taxes": 1,
     "vat": 3,
+    "research_development_reliefs": 1,
+    "corporation_tax": 1,
+    "general": 1,
     "inheritance_tax": 1,
-    "environmental_taxes": 1
+    "service_availability": 1,
+    "national_insurance": 1
   },
   "authority_levels": {
     "5": 9,

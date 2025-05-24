@@ -330,6 +330,7 @@ curses.init_pair(5, curses.COLOR_RED, -1)                    # Exit items
 - **Visual Feedback**: Selection highlighting and category separation
 - **Responsive Design**: Automatic scrolling and window size adaptation
 - **Context Help**: Real-time description display for menu items
+- **Character Encoding**: Robust handling for special characters (see [CURSES_INTERFACE_FIXES.md](CURSES_INTERFACE_FIXES.md))
 
 ### 5.2 Credential Management Interface
 

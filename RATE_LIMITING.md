@@ -50,6 +50,13 @@ For housing-specific Bailii scraping, an even more conservative approach is used
 
 - 5 requests per minute with a 2-second delay between requests
 
+## Related Improvements
+
+The implementation of rate limiting has been accompanied by improvements to the display interface:
+
+- **Curses Interface Fixes**: The terminal display has been improved to prevent character corruption and display issues. See [CURSES_INTERFACE_FIXES.md](CURSES_INTERFACE_FIXES.md) for more details.
+- **Display Throttling**: The user interface now implements its own rate limiting for screen updates to reduce flickering and improve performance.
+
 ### Other Web Requests
 
 Other utilities that make web requests (like mdgen.py) implement their own rate limiting using a similar approach:
