@@ -125,7 +125,6 @@ class PipelineController:
     def _handle_pause(self):
         """Handle pause/unpause functionality"""
         self.is_paused = not self.is_paused
-        self._update_footer()  # Update footer to show new status
         
         if self.is_paused:
             # Force output to be visible
@@ -224,67 +223,20 @@ class PipelineController:
     
     def _setup_curses_footer(self):
         """Setup curses footer for persistent display"""
-        try:
-            # Only initialize if we're in a terminal
-            if sys.stdin.isatty() and sys.stdout.isatty():
-                # Try to initialize curses without taking over the screen
-                self.stdscr = curses.initscr()
-                curses.start_color()
-                curses.use_default_colors()
-                
-                # Define color pairs
-                curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)  # Footer
-                curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # Phase
-                curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)   # Active
-                curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)     # Paused
-                
-                curses.curs_set(0)  # Hide cursor
-                self.footer_displayed = True
-                self._update_footer()
-        except Exception as e:
-            # Fallback to normal operation if curses fails
-            self.footer_displayed = False
-            logger.debug(f"Could not initialize curses footer: {e}")
+        # For now, disable curses footer to avoid conflicts with normal terminal output
+        # The main menu already provides curses interface
+        self.footer_displayed = False
+        logger.info("🔶 Pipeline Control: Press P to pause/resume, A to update databases (when paused), D to create dataset (when paused), Q to quit")
     
     def _update_footer(self):
-        """Update the curses footer display"""
-        if not self.footer_displayed or not self.stdscr:
-            return
+        """Update the footer display"""
+        # Display phase and status updates via normal logging
+        status = "PAUSED" if self.is_paused else "RUNNING"
+        phase_info = f"Phase: {self.current_phase}"
+        if self.current_step:
+            phase_info += f" - {self.current_step}"
         
-        try:
-            height, width = self.stdscr.getmaxyx()
-            footer_y = height - 1
-            
-            # Clear footer line
-            self.stdscr.move(footer_y, 0)
-            self.stdscr.clrtoeol()
-            
-            # Create footer content
-            phase_text = f"Phase: {self.current_phase}"
-            if self.current_step:
-                phase_text += f" - {self.current_step}"
-            
-            controls_text = "P:Pause/Resume | A:Update DB | D:Create Dataset | Q:Quit"
-            status_text = "PAUSED" if self.is_paused else "RUNNING"
-            
-            # Display phase (left side)
-            if len(phase_text) < width // 3:
-                self.stdscr.addstr(footer_y, 0, phase_text, curses.color_pair(2))
-            
-            # Display controls (center)
-            controls_x = (width - len(controls_text)) // 2
-            if controls_x > 0 and controls_x + len(controls_text) < width:
-                self.stdscr.addstr(footer_y, controls_x, controls_text, curses.color_pair(1))
-            
-            # Display status (right side)
-            status_x = width - len(status_text) - 1
-            if status_x > 0:
-                color = curses.color_pair(4) if self.is_paused else curses.color_pair(3)
-                self.stdscr.addstr(footer_y, status_x, status_text, color)
-            
-            self.stdscr.refresh()
-        except Exception as e:
-            logger.debug(f"Could not update footer: {e}")
+        logger.info(f"📊 {phase_info} | Status: {status}")
     
     def set_current_phase(self, phase: str, progress: Dict[str, Any] = None):
         """Set current pipeline phase for pause state tracking"""
@@ -297,14 +249,6 @@ class PipelineController:
     def cleanup(self):
         """Cleanup controller resources"""
         self.is_running = False
-        
-        # Cleanup curses
-        if self.footer_displayed and self.stdscr:
-            try:
-                curses.endwin()
-            except Exception:
-                pass
-        
         self._restore_terminal()
         
         # Wait for input thread to finish
