@@ -130,7 +130,7 @@ class HMRCScraper:
         
         # GOV.UK Search API configuration
         self.search_api_base = f"{self.base_url}/api/search.json"
-        self.batch_size = 1500  # Maximum allowed by API
+        self.batch_size = 100  # Reduced for reliability
         
         # Priority content formats for tax advice
         self.priority_formats = [
@@ -165,8 +165,12 @@ class HMRCScraper:
     
     def is_high_quality_tax_content(self, title: str, description: str, format_type: str, result: dict) -> bool:
         """Enhanced quality assessment for tax advice content"""
+        # Log what we're checking
+        logger.debug(f"Checking quality for: {title} (format: {format_type})")
+        
         # Must be tax-related first
         if not self.is_tax_related(title, description):
+            logger.debug(f"Not tax-related: {title}")
             return False
         
         # Prioritize high-value formats
@@ -177,6 +181,7 @@ class HMRCScraper:
         
         # Exclude low-value formats
         if format_type in self.quality_filters['exclude_formats']:
+            logger.debug(f"Excluded format {format_type}: {title}")
             return False
         
         # Boost score for actionable tax advice indicators
@@ -194,8 +199,10 @@ class HMRCScraper:
         ]
         score += sum(3 for area in specific_areas if area in text)
         
-        # Check minimum content quality threshold
-        return score >= 5
+        # Check minimum content quality threshold - reduced from 5 to 3
+        passed = score >= 3
+        logger.debug(f"Quality score for '{title}': {score} (passed: {passed})")
+        return passed
     
     def discover_via_search_api(self) -> Set[str]:
         """Discover all HMRC documents using the GOV.UK Search API"""
@@ -214,31 +221,51 @@ class HMRCScraper:
                     'order': '-public_timestamp'  # Most recent first
                 }
                 
-                # Add format filters for quality content
-                if self.priority_formats:
-                    params['filter_any_format'] = ','.join(self.priority_formats)
+                # Note: The GOV.UK API doesn't support filter_any_format or reject_format
+                # We'll filter results manually after retrieval
                 
-                # Exclude low-quality formats
-                if self.quality_filters['exclude_formats']:
-                    for exclude_format in self.quality_filters['exclude_formats']:
-                        params[f'reject_format'] = exclude_format
-                
+                logger.info(f"Making API request to {self.search_api_base} with params: {params}")
                 response = self.session.get(self.search_api_base, params=params, timeout=30)
                 response.raise_for_status()
                 
-                data = response.json()
+                # Log response status and headers
+                logger.info(f"API Response status: {response.status_code}")
+                logger.debug(f"API Response headers: {dict(response.headers)}")
+                
+                # Ensure we wait for complete response
+                response_text = response.text
+                if not response_text:
+                    logger.error("Empty response from API")
+                    break
+                    
+                try:
+                    data = response.json()
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse JSON response: {e}")
+                    logger.debug(f"Response text: {response_text[:500]}")
+                    break
+                
                 results = data.get('results', [])
+                total_results = data.get('total', 0)
+                
+                logger.info(f"API returned {len(results)} results out of {total_results} total")
                 
                 if not results:
                     logger.info(f"No more results found at start={start}")
                     break
                 
                 batch_urls = set()
+                all_results_count = 0
                 for result in results:
+                    all_results_count += 1
                     title = result.get('title', '')
                     description = result.get('description', '')
                     link = result.get('link', '')
                     format_type = result.get('format', '')
+                    
+                    # Log first few results to debug
+                    if all_results_count <= 3:
+                        logger.info(f"Sample result: title='{title}', format='{format_type}', link='{link}'")
                     
                     # Apply quality filters
                     if self.is_high_quality_tax_content(title, description, format_type, result):
@@ -247,7 +274,7 @@ class HMRCScraper:
                         all_urls.add(full_url)
                         logger.debug(f"Found: {title} ({format_type})")
                 
-                logger.info(f"Batch {start}-{start + len(results)}: Found {len(batch_urls)} relevant documents")
+                logger.info(f"Batch {start}-{start + len(results)}: Found {len(batch_urls)} relevant documents out of {len(results)} total")
                 start += len(results)
                 
                 # API rate limiting
@@ -261,6 +288,55 @@ class HMRCScraper:
                 break
         
         logger.info(f"Discovered {len(all_urls)} total relevant documents")
+        
+        # If no results found, try simpler search without organization filter
+        if len(all_urls) == 0:
+            logger.warning("No results found with HMRC filter. Trying alternative search...")
+            all_urls = self.discover_via_search_alternative()
+        
+        return all_urls
+    
+    def discover_via_search_alternative(self) -> Set[str]:
+        """Alternative discovery method using search terms"""
+        logger.info("Using alternative search method...")
+        
+        all_urls = set()
+        
+        # Search for HMRC-specific content using keywords
+        search_terms = ['HMRC tax', 'income tax uk', 'vat return', 'self assessment', 'corporation tax uk']
+        
+        for search_term in search_terms:
+            try:
+                params = {
+                    'q': search_term,
+                    'count': 50,
+                    'start': 0
+                }
+                
+                logger.info(f"Searching for: {search_term}")
+                response = self.session.get(self.search_api_base, params=params, timeout=30)
+                response.raise_for_status()
+                
+                data = response.json()
+                results = data.get('results', [])
+                
+                for result in results:
+                    link = result.get('link', '')
+                    title = result.get('title', '')
+                    
+                    # Filter for HMRC content
+                    if link and ('hmrc' in link.lower() or 'hm-revenue-customs' in link or 
+                                'tax' in title.lower() or 'vat' in title.lower()):
+                        full_url = urljoin(self.base_url, link)
+                        all_urls.add(full_url)
+                        logger.info(f"Found via search: {title}")
+                
+                time.sleep(0.1)
+                
+            except Exception as e:
+                logger.error(f"Error in alternative search for '{search_term}': {e}")
+        
+        logger.info(f"Alternative search discovered {len(all_urls)} documents")
         return all_urls
     
     def discover_forms(self) -> Set[str]:
