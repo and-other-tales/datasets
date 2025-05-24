@@ -58,31 +58,53 @@ def run_dynamic_pipeline(args):
 
 def run_hmrc_scraper(args):
     """Run ParaLlama HMRC tax documentation scraper"""
-    from pipelines.hmrc_scraper import main as hmrc_main
-    
-    # Ensure output directory exists
-    output_dir = args.output_dir or 'generated/hmrc_documentation'
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Set up arguments for hmrc_scraper
-    hmrc_args = [
-        '--output-dir', output_dir
-    ]
-    
-    if args.max_documents:
-        hmrc_args.extend(['--max-documents', str(args.max_documents)])
-    
-    if args.discover_only:
-        hmrc_args.append('--discover-only')
-    
-    # Override sys.argv for the hmrc_scraper
-    original_argv = sys.argv
-    sys.argv = ['hmrc_scraper.py'] + hmrc_args
-    
-    try:
-        hmrc_main()
-    finally:
-        sys.argv = original_argv
+    # Check if we're already in a curses context
+    import sys
+    if hasattr(sys, '_curses_active') and sys._curses_active:
+        # We're already in curses, use the standard main
+        from pipelines.hmrc_scraper import main as hmrc_main
+        
+        # Ensure output directory exists
+        output_dir = args.output_dir or 'generated/hmrc_documentation'
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Set up arguments for hmrc_scraper
+        hmrc_args = [
+            '--output-dir', output_dir
+        ]
+        
+        if args.max_documents:
+            hmrc_args.extend(['--max-documents', str(args.max_documents)])
+        
+        if args.discover_only:
+            hmrc_args.append('--discover-only')
+        
+        # Override sys.argv for the hmrc_scraper
+        original_argv = sys.argv
+        sys.argv = ['hmrc_scraper.py'] + hmrc_args
+        
+        try:
+            hmrc_main()
+        finally:
+            sys.argv = original_argv
+    else:
+        # Use the enhanced HMRC curses wrapper
+        from utils.hmrc_curses_wrapper import run_hmrc_scraper_with_curses
+        from pipelines.hmrc_scraper import HMRCScraper
+        
+        def hmrc_wrapper():
+            output_dir = args.output_dir or 'generated/hmrc_documentation'
+            scraper = HMRCScraper(output_dir)
+            
+            if args.discover_only:
+                scraper.run_comprehensive_discovery()
+            else:
+                scraper.run_comprehensive_discovery()
+                scraper.download_all_documents(args.max_documents)
+                scraper.generate_summary()
+                scraper.create_training_datasets()
+        
+        run_hmrc_scraper_with_curses(hmrc_wrapper)
 
 def run_housing_pipeline(args):
     """Run housing legislation and case law pipeline"""
@@ -880,7 +902,13 @@ def _show_text_menu_fallback():
 
 def _run_with_menu_args(pipeline_func, pipeline_name):
     """Run a pipeline with interactive argument collection in curses"""
-    from utils.curses_pipeline_runner import run_pipeline_in_curses
+    # Special handling for HMRC scraper
+    if pipeline_name == "HMRC Tax Documentation Scraper":
+        # Set flag to indicate we're in curses
+        sys._curses_active = True
+        from utils.curses_pipeline_runner import run_pipeline_in_curses
+    else:
+        from utils.curses_pipeline_runner import run_pipeline_in_curses
     
     def args_collector(input_win):
         """Collect arguments within curses interface"""

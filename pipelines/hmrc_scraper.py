@@ -274,7 +274,10 @@ class HMRCScraper:
                         all_urls.add(full_url)
                         logger.debug(f"Found: {title} ({format_type})")
                 
-                logger.info(f"Batch {start}-{start + len(results)}: Found {len(batch_urls)} relevant documents out of {len(results)} total")
+                # Log batch info with current/total context
+                batch_end = start + len(results)
+                progress_pct = (batch_end / total_results * 100) if total_results > 0 else 0
+                logger.info(f"Batch {start:06d}-{batch_end:06d}: Found {len(batch_urls)} relevant documents out of {len(results)} total ({progress_pct:.1f}% complete)")
                 start += len(results)
                 
                 # API rate limiting
