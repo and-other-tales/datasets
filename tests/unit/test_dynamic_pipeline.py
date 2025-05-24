@@ -46,7 +46,7 @@ class TestDynamicPipeline(unittest.TestCase):
         """Test that initialisation creates output directory if it doesn't exist"""
         non_existent_dir = os.path.join(self.test_dir, "new_dir")
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=non_existent_dir
         )
@@ -62,7 +62,7 @@ class TestDynamicPipeline(unittest.TestCase):
         mock_response.headers = {'content-type': 'text/html'}
         mock_get.return_value = mock_response
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -78,7 +78,7 @@ class TestDynamicPipeline(unittest.TestCase):
         """Test content fetching failure handling"""
         mock_get.side_effect = Exception("Network error")
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -91,7 +91,7 @@ class TestDynamicPipeline(unittest.TestCase):
         """Test domain detection for legal content"""
         legal_content = "contract law statute regulation court case legal"
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -104,7 +104,7 @@ class TestDynamicPipeline(unittest.TestCase):
         """Test domain detection for tax content"""
         tax_content = "HMRC tax deduction allowance income tax corporation tax"
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -117,7 +117,7 @@ class TestDynamicPipeline(unittest.TestCase):
         """Test domain detection for general content"""
         general_content = "general information about various topics"
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -131,7 +131,7 @@ class TestDynamicPipeline(unittest.TestCase):
         test_content = "The Consumer Rights Act 2015 protects consumers."
         domain = "legal"
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -151,7 +151,7 @@ class TestDynamicPipeline(unittest.TestCase):
         test_content = "Legal precedent analysis requires examining case law."
         domain = "legal"
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -172,7 +172,7 @@ class TestDynamicPipeline(unittest.TestCase):
         test_content = "Complex legal cases require expert analysis."
         domain = "legal"
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -193,7 +193,7 @@ class TestDynamicPipeline(unittest.TestCase):
         test_content = "Edge cases in legal reasoning."
         domain = "legal"
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -217,7 +217,7 @@ class TestDynamicPipeline(unittest.TestCase):
         ]
         filename = "test_dataset.json"
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -234,7 +234,7 @@ class TestDynamicPipeline(unittest.TestCase):
     
     def test_generate_llama_config(self):
         """Test Llama training configuration generation"""
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -250,13 +250,13 @@ class TestDynamicPipeline(unittest.TestCase):
         self.assertEqual(config['dataset_size'], 1000)
     
     @patch('subprocess.run')
-    @patch.object(DynamicPipeline, 'fetch_content')
+    @patch.object(DynamicDatasetPipeline, 'fetch_content')
     def test_run_pipeline_success(self, mock_fetch, mock_subprocess):
         """Test successful pipeline execution"""
         mock_fetch.return_value = "Legal content about contracts and statutes"
         mock_subprocess.return_value = Mock(returncode=0, stdout="Claude analysis result")
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -266,12 +266,12 @@ class TestDynamicPipeline(unittest.TestCase):
         self.assertTrue(result)
         mock_fetch.assert_called_once_with(self.test_url)
     
-    @patch.object(DynamicPipeline, 'fetch_content')
+    @patch.object(DynamicDatasetPipeline, 'fetch_content')
     def test_run_pipeline_fetch_failure(self, mock_fetch):
         """Test pipeline execution with fetch failure"""
         mock_fetch.return_value = None
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )
@@ -301,7 +301,7 @@ class TestDynamicPipelineIntegration(unittest.TestCase):
         It covers contract law, sale of goods, and digital content rights.
         """
         
-        pipeline = DynamicPipeline(
+        pipeline = DynamicDatasetPipeline(
             anthropic_api_key=self.mock_api_key,
             output_dir=self.test_dir
         )

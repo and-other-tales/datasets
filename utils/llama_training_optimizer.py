@@ -14,14 +14,37 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple
 import random
 from datetime import datetime
-from datasets import Dataset, DatasetDict, load_dataset
-import pandas as pd
+
+try:
+    from datasets import Dataset, DatasetDict, load_dataset
+    DATASETS_AVAILABLE = True
+except ImportError:
+    # Create stub classes for testing
+    class Dataset:
+        pass
+    class DatasetDict:
+        pass
+    def load_dataset(*args, **kwargs):
+        return None
+    DATASETS_AVAILABLE = False
+
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    pd = None
+    PANDAS_AVAILABLE = False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class ParaLlamaTrainingOptimizer:
     def __init__(self, input_dir: str, output_dir: str = "generated/llama_training"):
+        if not DATASETS_AVAILABLE:
+            logger.warning("datasets library not available - some functionality will be limited")
+        if not PANDAS_AVAILABLE:
+            logger.warning("pandas library not available - some functionality will be limited")
+            
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)

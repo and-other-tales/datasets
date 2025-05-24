@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from utils.llama_training_optimizer import LlamaTrainingOptimizer
+from utils.llama_training_optimizer import ParaLlamaTrainingOptimizer
 
 
 class TestLlamaTrainingOptimizer(unittest.TestCase):
@@ -32,15 +32,14 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_init_with_default_parameters(self):
         """Test LlamaTrainingOptimizer initialisation with default parameters"""
-        optimizer = LlamaTrainingOptimizer()
+        optimizer = ParaLlamaTrainingOptimizer(input_dir=self.test_dir)
         
-        self.assertEqual(optimizer.model_size, "70b")
-        self.assertEqual(optimizer.base_model, "meta-llama/Llama-2-70b-chat-hf")
-        self.assertEqual(optimizer.training_phases, 4)
+        self.assertIsNotNone(optimizer.input_dir)
+        self.assertIsNotNone(optimizer.output_dir)
     
     def test_init_with_custom_parameters(self):
         """Test LlamaTrainingOptimizer initialisation with custom parameters"""
-        optimizer = LlamaTrainingOptimizer(
+        optimizer = ParaLlamaTrainingOptimizer(
             domain=self.test_domain,
             model_size="13b",
             base_model="meta-llama/Llama-2-13b-chat-hf"
@@ -52,7 +51,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_create_lora_config(self):
         """Test LoRA configuration creation"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         
         lora_config = optimizer.create_lora_config()
         
@@ -69,7 +68,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_create_lora_config_custom_rank(self):
         """Test LoRA configuration with custom rank"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         custom_rank = 32
         
         lora_config = optimizer.create_lora_config(rank=custom_rank)
@@ -79,7 +78,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_create_training_config(self):
         """Test training configuration creation"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         
         training_config = optimizer.create_training_config()
         
@@ -100,7 +99,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_create_training_config_custom_params(self):
         """Test training configuration with custom parameters"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         custom_lr = 5e-4
         custom_epochs = 2
         
@@ -114,7 +113,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_create_autotrain_config(self):
         """Test AutoTrain configuration creation"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         dataset_path = "/path/to/dataset"
         
         autotrain_config = optimizer.create_autotrain_config(dataset_path)
@@ -145,7 +144,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_create_autotrain_config_custom_specialisation(self):
         """Test AutoTrain configuration with custom specialisation"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         dataset_path = "/path/to/dataset"
         specialisation = "defendant_arguments"
         
@@ -174,7 +173,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
             }
         ]
         
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         
         optimized_dataset = optimizer.optimize_dataset_for_llama(test_dataset)
         
@@ -197,7 +196,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
             'adversarial': [{'challenge': 'Edge case', 'response': 'Solution', 'domain': 'legal'}]
         }
         
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         
         phases = optimizer.create_progressive_training_phases(test_datasets)
         
@@ -213,7 +212,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_generate_model_card(self):
         """Test model card generation"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         
         model_card = optimizer.generate_model_card(
             specialization="contract_analysis",
@@ -229,7 +228,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_estimate_training_time(self):
         """Test training time estimation"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         
         # Test with different dataset sizes
         small_time = optimizer.estimate_training_time(1000)
@@ -245,7 +244,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_save_config(self):
         """Test configuration saving"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         config = {"test": "config", "domain": self.test_domain}
         filename = "test_config.json"
         
@@ -261,7 +260,7 @@ class TestLlamaTrainingOptimizer(unittest.TestCase):
     
     def test_validate_dataset_format(self):
         """Test dataset format validation"""
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         
         # Valid dataset
         valid_dataset = [
@@ -313,7 +312,7 @@ class TestLlamaTrainingOptimizerIntegration(unittest.TestCase):
             ]
         }
         
-        optimizer = LlamaTrainingOptimizer(domain=self.test_domain)
+        optimizer = ParaLlamaTrainingOptimizer(domain=self.test_domain)
         
         # Create progressive training phases
         phases = optimizer.create_progressive_training_phases(test_datasets)

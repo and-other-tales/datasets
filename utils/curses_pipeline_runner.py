@@ -90,9 +90,13 @@ class CursesPipelineRunner:
                         args = None
                     
                     result = pipeline_func(args) if args else pipeline_func()
+                    print(f"\n{'='*60}")
                     print(f"[✓] {self.pipeline_name} completed successfully!")
+                    print(f"{'='*60}")
                 except Exception as pipeline_e:
+                    print(f"\n{'='*60}")
                     print(f"[X] {self.pipeline_name} failed: {pipeline_e}")
+                    print(f"{'='*60}")
             else:
                 print(f"Pipeline execution failed: {e}")
     
@@ -171,14 +175,14 @@ class CursesPipelineRunner:
         
         # Main title
         title = "othertales Datasets Tools"
-        self.header_win.addstr(0, (width - len(title)) // 2, title, curses.color_pair(2) | curses.A_BOLD)
+        self._safe_addstr(self.header_win, 0, (width - len(title)) // 2, title, curses.color_pair(2) | curses.A_BOLD)
         
         # Pipeline name
         subtitle = f"Running: {self.pipeline_name}"
-        self.header_win.addstr(1, (width - len(subtitle)) // 2, subtitle, curses.color_pair(4))
+        self._safe_addstr(self.header_win, 1, (width - len(subtitle)) // 2, subtitle, curses.color_pair(4))
         
         # Separator
-        self.header_win.addstr(3, 0, "─" * width, curses.color_pair(2))
+        self._safe_addstr(self.header_win, 3, 0, "─" * (width - 1), curses.color_pair(2))
         
         self.header_win.refresh()
     
@@ -191,20 +195,20 @@ class CursesPipelineRunner:
         self.status_win.clear()
         
         # Status info
-        self.status_win.addstr(0, 2, "Status:", curses.A_BOLD)
+        self._safe_addstr(self.status_win, 0, 2, "Status:", curses.A_BOLD)
         
         # Current phase
         phase_text = f"Phase: {self.current_phase}"
-        self.status_win.addstr(1, 4, phase_text, curses.color_pair(3))
+        self._safe_addstr(self.status_win, 1, 4, phase_text, curses.color_pair(3))
         
         # Current status
         status_color = curses.color_pair(5) if self.is_paused else curses.color_pair(3)
         status_text = f"Status: {self.current_status}"
-        self.status_win.addstr(2, 4, status_text, status_color)
+        self._safe_addstr(self.status_win, 2, 4, status_text, status_color)
         
         # Pipeline control reminder
-        self.status_win.addstr(4, 2, "Controls: P=Pause/Resume, A=Update DB, D=Create Dataset, Q=Quit", 
-                              curses.color_pair(4))
+        self._safe_addstr(self.status_win, 4, 2, "Controls: P=Pause/Resume, A=Update DB, D=Create Dataset, Q=Quit", 
+                         curses.color_pair(4))
         
         self.status_win.refresh()
     
@@ -222,7 +226,7 @@ class CursesPipelineRunner:
         # Center the controls
         x = (width - len(controls)) // 2
         if x > 0 and x + len(controls) < width:
-            self.footer_win.addstr(0, x, controls, curses.color_pair(6))
+            self._safe_addstr(self.footer_win, 0, x, controls, curses.color_pair(6))
         
         self.footer_win.refresh()
     
@@ -266,6 +270,33 @@ class CursesPipelineRunner:
         
         return safe_text
     
+    def _safe_addstr(self, window, y, x, text, attr=0):
+        """Safely add string to window with bounds checking"""
+        if not window or not text:
+            return False
+        
+        try:
+            max_y, max_x = window.getmaxyx()
+            
+            # Check bounds
+            if y >= max_y or x >= max_x or y < 0 or x < 0:
+                return False
+            
+            # Truncate text if it would exceed window width
+            available_width = max_x - x - 1  # Leave space for cursor
+            if available_width <= 0:
+                return False
+            
+            safe_text = self._sanitize_text_for_curses(text)
+            if len(safe_text) > available_width:
+                safe_text = safe_text[:available_width - 3] + "..."
+            
+            window.addstr(y, x, safe_text, attr)
+            return True
+            
+        except curses.error:
+            return False
+    
     def _log_display_thread(self):
         """Thread to display logs in curses window"""
         while True:
@@ -301,7 +332,13 @@ class CursesPipelineRunner:
                         if len(safe_msg) > max_x - 1:
                             safe_msg = safe_msg[:max_x - 4] + "..."
                         
-                        self.log_win.addstr(safe_msg + "\n", color)
+                        # Use safe addstr method
+                        current_y, current_x = self.log_win.getyx()
+                        self._safe_addstr(self.log_win, current_y, current_x, safe_msg, color)
+                        
+                        # Move to next line if we're not at the bottom
+                        if current_y < max_y - 1:
+                            self.log_win.move(current_y + 1, 0)
                         self.log_win.refresh()
                     except curses.error:
                         # Window might be too small or character issues, ignore
@@ -323,7 +360,7 @@ class CursesPipelineRunner:
         
         # Title
         title = f"Configure {self.pipeline_name}"
-        input_win.addstr(0, (width - 4 - len(title)) // 2, f" {title} ", curses.color_pair(1))
+        self._safe_addstr(input_win, 0, (width - 4 - len(title)) // 2, f" {title} ", curses.color_pair(1))
         
         try:
             # Call the args collector with the input window
@@ -331,8 +368,8 @@ class CursesPipelineRunner:
             return args
         except Exception as e:
             # Show error and return None
-            input_win.addstr(self.input_height - 2, 2, f"Error: {e}", curses.color_pair(5))
-            input_win.addstr(self.input_height - 1, 2, "Press any key to continue...", curses.color_pair(4))
+            self._safe_addstr(input_win, self.input_height - 2, 2, f"Error: {e}", curses.color_pair(5))
+            self._safe_addstr(input_win, self.input_height - 1, 2, "Press any key to continue...", curses.color_pair(4))
             input_win.refresh()
             input_win.getch()
             return None
@@ -359,16 +396,25 @@ class CursesPipelineRunner:
             
             # Log the error
             if self.log_win:
-                self.log_win.addstr(f"\n❌ Pipeline failed: {e}\n", curses.color_pair(5))
-                self.log_win.refresh()
+                current_y, current_x = self.log_win.getyx()
+                max_y, max_x = self.log_win.getmaxyx()
+                
+                if current_y < max_y - 2:
+                    self._safe_addstr(self.log_win, current_y, 0, f"[X] Pipeline failed: {e}", curses.color_pair(5))
+                    self.log_win.move(current_y + 1, 0)
+                    self.log_win.refresh()
     
     def _show_completion(self):
         """Show completion message and wait for user"""
         if self.log_win:
-            self.log_win.addstr(f"\n{'='*50}\n", curses.color_pair(2))
-            self.log_win.addstr(f"Pipeline execution completed.\n", curses.color_pair(3))
-            self.log_win.addstr(f"Press any key to return to main menu...\n", curses.color_pair(4))
-            self.log_win.refresh()
+            current_y, current_x = self.log_win.getyx()
+            max_y, max_x = self.log_win.getmaxyx()
+            
+            if current_y < max_y - 4:
+                self._safe_addstr(self.log_win, current_y, 0, "="*50, curses.color_pair(2))
+                self._safe_addstr(self.log_win, current_y + 1, 0, "Pipeline execution completed.", curses.color_pair(3))
+                self._safe_addstr(self.log_win, current_y + 2, 0, "Press any key to return to main menu...", curses.color_pair(4))
+                self.log_win.refresh()
         
         # Wait for key press
         self.stdscr.getch()
