@@ -92,14 +92,22 @@ class HMRCScraper:
             ]
         }
         
-        # Main search endpoints for HMRC content
-        self.search_endpoints = [
-            '/search/guidance-and-regulation?organisations%5B%5D=hm-revenue-customs',
-            '/search/research-and-statistics?organisations%5B%5D=hm-revenue-customs',
-            '/search/policy-papers-and-consultations?organisations%5B%5D=hm-revenue-customs',
-            '/search/transparency?organisations%5B%5D=hm-revenue-customs',
-            '/search/news-and-communications?organisations%5B%5D=hm-revenue-customs'
+        # GOV.UK Search API configuration
+        self.search_api_base = f"{self.base_url}/api/search.json"
+        self.batch_size = 1500  # Maximum allowed by API
+        
+        # Priority content formats for tax advice
+        self.priority_formats = [
+            'guide', 'detailed_guide', 'manual', 'answer',
+            'form', 'publication', 'consultation_outcome'
         ]
+        
+        # Content quality filters
+        self.quality_filters = {
+            'exclude_formats': ['press_release', 'news_story', 'speech'],
+            'min_content_length': 200,
+            'require_recent_update': False  # Set to True for only recent content
+        }
         
     def is_tax_related(self, title: str, summary: str = "") -> bool:
         """Check if content is tax-related"""
@@ -119,67 +127,105 @@ class HMRCScraper:
             'government/organisations/hm-revenue-customs' in text
         )
     
-    def discover_guidance_documents(self, max_pages: int = 300) -> Set[str]:
-        """Discover all guidance documents from HMRC"""
-        logger.info("Discovering HMRC guidance documents...")
+    def is_high_quality_tax_content(self, title: str, description: str, format_type: str, result: dict) -> bool:
+        """Enhanced quality assessment for tax advice content"""
+        # Must be tax-related first
+        if not self.is_tax_related(title, description):
+            return False
         
-        guidance_urls = set()
+        # Prioritize high-value formats
+        if format_type in self.priority_formats:
+            score = 10
+        else:
+            score = 1
         
-        for endpoint in self.search_endpoints:
-            logger.info(f"Searching endpoint: {endpoint}")
-            page = 1
-            
-            while page <= max_pages:
-                try:
-                    # Build search URL with pagination
-                    search_url = f"{self.base_url}{endpoint}"
-                    if '?' in search_url:
-                        search_url += f"&page={page}"
-                    else:
-                        search_url += f"?page={page}"
-                    
-                    response = self.session.get(search_url, timeout=30)
-                    response.raise_for_status()
-                    
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    
-                    # Find document links
-                    document_links = soup.find_all('a', href=True)
-                    found_documents = 0
-                    
-                    for link in document_links:
-                        href = link.get('href', '')
-                        title = link.get_text(strip=True)
-                        
-                        # Check if it's a guidance document
-                        if (href.startswith('/guidance/') or 
-                            href.startswith('/government/publications/') or
-                            href.startswith('/government/consultations/')):
-                            
-                            if self.is_tax_related(title, href):
-                                full_url = urljoin(self.base_url, href)
-                                if full_url not in guidance_urls:
-                                    guidance_urls.add(full_url)
-                                    found_documents += 1
-                                    logger.info(f"Found: {title}")
-                    
-                    if found_documents == 0:
-                        logger.info(f"No more documents found on page {page} for {endpoint}")
-                        break
-                    
-                    logger.info(f"Page {page}: Found {found_documents} documents")
-                    page += 1
-                    time.sleep(0.1)  # Rate limiting for Content API (10 req/sec)
-                    
-                except requests.RequestException as e:
-                    logger.error(f"Error fetching page {page} from {endpoint}: {e}")
+        # Exclude low-value formats
+        if format_type in self.quality_filters['exclude_formats']:
+            return False
+        
+        # Boost score for actionable tax advice indicators
+        actionable_terms = [
+            'how to', 'calculate', 'claim', 'apply', 'rate', 'allowance',
+            'deadline', 'form', 'return', 'guidance', 'rules', 'requirements'
+        ]
+        text = (title + " " + description).lower()
+        score += sum(2 for term in actionable_terms if term in text)
+        
+        # Boost for specific tax areas
+        specific_areas = [
+            'self assessment', 'corporation tax', 'vat', 'paye', 'capital gains',
+            'inheritance tax', 'stamp duty', 'making tax digital', 'tax credits'
+        ]
+        score += sum(3 for area in specific_areas if area in text)
+        
+        # Check minimum content quality threshold
+        return score >= 5
+    
+    def discover_via_search_api(self) -> Set[str]:
+        """Discover all HMRC documents using the GOV.UK Search API"""
+        logger.info("Discovering HMRC documents via Search API...")
+        
+        all_urls = set()
+        start = 0
+        
+        while True:
+            try:
+                # Build API query with pagination
+                params = {
+                    'count': self.batch_size,
+                    'start': start,
+                    'filter_organisations': 'hm-revenue-customs',
+                    'order': '-public_timestamp'  # Most recent first
+                }
+                
+                # Add format filters for quality content
+                if self.priority_formats:
+                    params['filter_any_format'] = ','.join(self.priority_formats)
+                
+                # Exclude low-quality formats
+                if self.quality_filters['exclude_formats']:
+                    for exclude_format in self.quality_filters['exclude_formats']:
+                        params[f'reject_format'] = exclude_format
+                
+                response = self.session.get(self.search_api_base, params=params, timeout=30)
+                response.raise_for_status()
+                
+                data = response.json()
+                results = data.get('results', [])
+                
+                if not results:
+                    logger.info(f"No more results found at start={start}")
                     break
-                except Exception as e:
-                    logger.error(f"Unexpected error on page {page}: {e}")
-                    break
+                
+                batch_urls = set()
+                for result in results:
+                    title = result.get('title', '')
+                    description = result.get('description', '')
+                    link = result.get('link', '')
+                    format_type = result.get('format', '')
+                    
+                    # Apply quality filters
+                    if self.is_high_quality_tax_content(title, description, format_type, result):
+                        full_url = urljoin(self.base_url, link)
+                        batch_urls.add(full_url)
+                        all_urls.add(full_url)
+                        logger.debug(f"Found: {title} ({format_type})")
+                
+                logger.info(f"Batch {start}-{start + len(results)}: Found {len(batch_urls)} relevant documents")
+                start += len(results)
+                
+                # API rate limiting
+                time.sleep(0.1)
+                    
+            except requests.RequestException as e:
+                logger.error(f"Error fetching batch starting at {start}: {e}")
+                break
+            except Exception as e:
+                logger.error(f"Unexpected error at batch {start}: {e}")
+                break
         
-        logger.info(f"Discovered {len(guidance_urls)} total guidance documents")
-        return guidance_urls
+        logger.info(f"Discovered {len(all_urls)} total relevant documents")
+        return all_urls
     
     def discover_forms(self) -> Set[str]:
         """Discover tax forms and documents"""
@@ -475,25 +521,17 @@ class HMRCScraper:
             return False
     
     def run_comprehensive_discovery(self):
-        """Run comprehensive discovery of all HMRC documentation"""
-        logger.info("=== STARTING COMPREHENSIVE HMRC DISCOVERY ===")
+        """Run comprehensive discovery of all HMRC documentation using Search API"""
+        logger.info("=== STARTING COMPREHENSIVE HMRC DISCOVERY VIA SEARCH API ===")
         
         # Load existing progress
         self.load_progress()
         
-        # Discover all types of documents
-        guidance_urls = self.discover_guidance_documents()
-        form_urls = self.discover_forms()
-        manual_urls = self.discover_manuals()
-        
-        # Combine all URLs
-        all_urls = guidance_urls.union(form_urls).union(manual_urls)
+        # Use the new Search API method
+        all_urls = self.discover_via_search_api()
         self.discovered_urls = all_urls
         
-        logger.info(f"Total unique documents discovered: {len(all_urls)}")
-        logger.info(f"Guidance documents: {len(guidance_urls)}")
-        logger.info(f"Forms: {len(form_urls)}")
-        logger.info(f"Manuals: {len(manual_urls)}")
+        logger.info(f"Total high-quality tax documents discovered: {len(all_urls)}")
         
         # Save discovery results
         self.save_progress()
@@ -501,10 +539,13 @@ class HMRCScraper:
         # Save discovered URLs for reference
         with open(self.output_dir / "discovered_urls.json", 'w') as f:
             json.dump({
-                'guidance': list(guidance_urls),
-                'forms': list(form_urls),
-                'manuals': list(manual_urls),
-                'total': len(all_urls)
+                'api_discovered': list(all_urls),
+                'total': len(all_urls),
+                'discovery_method': 'search_api',
+                'filters_applied': {
+                    'priority_formats': self.priority_formats,
+                    'quality_filters': self.quality_filters
+                }
             }, f, indent=2)
     
     def download_all_documents(self, max_documents: Optional[int] = None):
