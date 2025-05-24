@@ -26,15 +26,25 @@ class CursesPipelineWrapper:
             curses.wrapper(self._curses_main, pipeline_function, *args, **kwargs)
         except Exception as e:
             # Check if it's a curses-specific error
-            if "addwstr() returned ERR" in str(e) or "addstr() returned ERR" in str(e):
+            error_str = str(e)
+            curses_errors = [
+                "addwstr() returned ERR",
+                "addstr() returned ERR", 
+                "nocbreak() returned ERR",
+                "nodelay() returned ERR",
+                "keypad() returned ERR",
+                "curs_set() returned ERR"
+            ]
+            
+            if any(err in error_str for err in curses_errors):
                 print(f"Curses interface error: {e}")
                 print("Falling back to command-line execution...")
                 # Run without curses interface
                 try:
                     result = pipeline_function(*args, **kwargs)
-                    print(f"✅ {self.pipeline_name} completed successfully!")
+                    print(f"[✓] {self.pipeline_name} completed successfully!")
                 except Exception as pipeline_e:
-                    print(f"❌ {self.pipeline_name} failed: {pipeline_e}")
+                    print(f"[X] {self.pipeline_name} failed: {pipeline_e}")
                     sys.exit(1)
             else:
                 print(f"Pipeline execution failed: {e}")
