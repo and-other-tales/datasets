@@ -237,10 +237,16 @@ class CursesPipelineWrapper:
     def _setup_curses_logging(self):
         """Setup logging to display in curses window"""
         # Create a custom logging handler that writes to the curses window
+        import threading
+        import time
+        
         class CursesLogHandler(logging.Handler):
             def __init__(self, log_window):
                 super().__init__()
                 self.log_window = log_window
+                self.lock = threading.Lock()
+                self.last_update_time = 0
+                self.update_interval = 0.05  # Minimum time between updates (50ms)
             
             def emit(self, record):
                 try:
@@ -248,25 +254,49 @@ class CursesPipelineWrapper:
                     # Sanitize message for curses display
                     safe_msg = self._sanitize_text_for_curses(msg)
                     
-                    # Check window size and handle scrolling
-                    max_y, max_x = self.log_window.getmaxyx()
-                    if max_y <= 0 or max_x <= 0:
-                        return
+                    # Rate limiting to prevent display issues
+                    current_time = time.time()
+                    time_since_last = current_time - self.last_update_time
+                    if time_since_last < self.update_interval:
+                        time.sleep(self.update_interval - time_since_last)
                     
-                    cur_y, cur_x = self.log_window.getyx()
-                    
-                    if cur_y >= max_y - 1:
-                        self.log_window.scroll()
-                        self.log_window.move(max(0, max_y - 2), 0)
-                    
-                    # Truncate if too long
-                    if len(safe_msg) > max_x - 1:
-                        safe_msg = safe_msg[:max(1, max_x - 4)] + "..."
-                    
-                    # Bounds check before adding string
-                    current_y, current_x = self.log_window.getyx()
-                    if current_y < max_y - 1 and len(safe_msg) > 0:
-                        self.log_window.addstr(f"{safe_msg}\n")
+                    with self.lock:  # Thread-safe curses operations
+                        self.last_update_time = time.time()
+                        # Check window size and handle scrolling
+                        max_y, max_x = self.log_window.getmaxyx()
+                        if max_y <= 0 or max_x <= 0:
+                            return
+                        
+                        # Truncate if too long
+                        if len(safe_msg) > max_x - 1:
+                            safe_msg = safe_msg[:max(1, max_x - 4)] + "..."
+                        
+                        # Get current position
+                        cur_y, cur_x = self.log_window.getyx()
+                        
+                        # Handle scrolling if at bottom
+                        if cur_y >= max_y - 1:
+                            self.log_window.scroll()
+                            cur_y = max_y - 2
+                        
+                        # Clear the current line first to prevent overlay
+                        self.log_window.move(cur_y, 0)
+                        self.log_window.clrtoeol()
+                        
+                        # Add the new text
+                        if len(safe_msg) > 0:
+                            try:
+                                self.log_window.addstr(cur_y, 0, safe_msg)
+                                # Move to next line
+                                if cur_y < max_y - 2:
+                                    self.log_window.move(cur_y + 1, 0)
+                            except curses.error:
+                                # If addstr fails, try without positioning
+                                try:
+                                    self.log_window.addstr(safe_msg + "\n")
+                                except curses.error:
+                                    pass
+                        
                         self.log_window.refresh()
                 except Exception:
                     pass
