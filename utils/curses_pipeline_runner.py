@@ -59,7 +59,42 @@ class CursesPipelineRunner:
         except KeyboardInterrupt:
             print("\nPipeline interrupted by user")
         except Exception as e:
-            print(f"Pipeline execution failed: {e}")
+            # Check if it's a curses-specific error
+            error_str = str(e)
+            curses_errors = [
+                "addwstr() returned ERR",
+                "addstr() returned ERR", 
+                "nocbreak() returned ERR",
+                "nodelay() returned ERR",
+                "keypad() returned ERR",
+                "curs_set() returned ERR"
+            ]
+            
+            if any(err in error_str for err in curses_errors):
+                print(f"Curses interface error: {e}")
+                print("Falling back to command-line execution...")
+                # Run without curses interface
+                try:
+                    # Create minimal args object if needed
+                    if args_collector:
+                        class Args:
+                            def __init__(self):
+                                self.output_dir = None
+                                self.max_documents = None
+                                self.discover_only = False
+                                self.url = None
+                        
+                        args = Args()
+                        print("Using default arguments for fallback execution.")
+                    else:
+                        args = None
+                    
+                    result = pipeline_func(args) if args else pipeline_func()
+                    print(f"[✓] {self.pipeline_name} completed successfully!")
+                except Exception as pipeline_e:
+                    print(f"[X] {self.pipeline_name} failed: {pipeline_e}")
+            else:
+                print(f"Pipeline execution failed: {e}")
     
     def _main_interface(self, stdscr, pipeline_func: Callable, args_collector: Callable = None):
         """Main curses interface"""
