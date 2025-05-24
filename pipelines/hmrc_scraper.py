@@ -37,6 +37,9 @@ def setup_logging():
     
     # Clear any existing handlers to avoid duplicates
     logger.handlers.clear()
+    # Also clear root logger handlers to prevent duplication
+    logging.root.handlers.clear()
+    
     logger.setLevel(logging.INFO)
     
     # Always add file handler
@@ -86,11 +89,12 @@ class HMRCScraper:
         # Initialize HMRC document processor
         self.hmrc_processor = HMRCDocumentProcessor()
         
-        # Initialize rate limiter for GOV.UK API (5 requests per minute)
-        self.api_rate_limiter = RateLimiter(max_requests=5, time_window=60, delay_between_requests=1.0)
+        # Initialize rate limiter for GOV.UK API - optimized for faster processing
+        # GOV.UK API allows up to 10 requests per second with a burst of 20
+        self.api_rate_limiter = RateLimiter(max_requests=10, time_window=10, delay_between_requests=0.2)
         
-        # Initialize separate rate limiter for web scraping (3 requests per minute)
-        self.web_rate_limiter = RateLimiter(max_requests=3, time_window=60, delay_between_requests=2.0)
+        # Initialize separate rate limiter for web scraping - slightly faster
+        self.web_rate_limiter = RateLimiter(max_requests=5, time_window=10, delay_between_requests=0.5)
         
         # Session for connection pooling
         self.session = requests.Session()
@@ -320,8 +324,7 @@ class HMRCScraper:
                 start += len(results)
                 batch_count += 1
                 
-                # API rate limiting
-                time.sleep(0.1)
+                # No additional sleep needed since rate limiter handles this
                     
             except requests.RequestException as e:
                 logger.error(f"Error fetching batch starting at {start}: {e}")

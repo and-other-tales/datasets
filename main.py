@@ -30,13 +30,21 @@ class CursesMenu:
         self.menu_items = []
         self.current_row = 0
         
-        # Initialize colors if available
-        if curses.has_colors():
-            curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Selected item
-            curses.init_pair(2, curses.COLOR_CYAN, -1)                   # Category headers
-            curses.init_pair(3, curses.COLOR_GREEN, -1)                  # Active items
-            curses.init_pair(4, curses.COLOR_YELLOW, -1)                 # Descriptions
-            curses.init_pair(5, curses.COLOR_RED, -1)                    # Exit items
+        # Initialize colors if available - with safe fallback
+        try:
+            if curses.has_colors():
+                curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Selected item
+                curses.init_pair(2, curses.COLOR_CYAN, -1)                   # Category headers
+                curses.init_pair(3, curses.COLOR_GREEN, -1)                  # Active items
+                curses.init_pair(4, curses.COLOR_YELLOW, -1)                 # Descriptions
+                curses.init_pair(5, curses.COLOR_RED, -1)                    # Exit items
+        except Exception as e:
+            # Log curses error but continue without colors
+            try:
+                self.stdscr.addstr(0, 0, f"Menu error: {e}")
+                self.stdscr.refresh()
+            except:
+                pass
     
     def add_item(self, title, description, action):
         """Add a menu item"""
