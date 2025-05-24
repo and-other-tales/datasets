@@ -60,11 +60,25 @@ def fetch_github_repo(package_name):
         response = requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=5)
         response.raise_for_status()
         data = response.json()
-        repo_url = data['info']['project_urls'].get('Source', '') or data['info'].get('home_page', '')
-        if "github.com" in repo_url:
-            parts = repo_url.split("github.com/")[-1].split("/")
-            owner, repo = parts[0], parts[1]
-            return f"{owner}/{repo}".strip("/")
+        
+        # Try multiple sources for GitHub URL
+        possible_urls = [
+            data['info'].get('project_urls', {}).get('Source', ''),
+            data['info'].get('project_urls', {}).get('Homepage', ''),
+            data['info'].get('project_urls', {}).get('Repository', ''),
+            data['info'].get('home_page', ''),
+            data['info'].get('download_url', ''),
+        ]
+        
+        for repo_url in possible_urls:
+            if repo_url and "github.com" in repo_url:
+                # Clean up URL and extract owner/repo
+                repo_url = repo_url.replace('https://', '').replace('http://', '')
+                repo_url = repo_url.replace('www.', '').replace('.git', '')
+                parts = repo_url.split("github.com/")[-1].split("/")
+                if len(parts) >= 2:
+                    owner, repo = parts[0], parts[1]
+                    return f"{owner}/{repo}".strip("/")
     except Exception:
         return None
     return None
@@ -83,12 +97,46 @@ def fetch_github_license(repo):
         return None, None
     return None, None
 
+def fetch_pypi_license(package_name):
+    """Fetch license information directly from PyPI."""
+    try:
+        response = requests.get(f"https://pypi.org/pypi/{package_name}/json", timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        
+        info = data['info']
+        license_text = info.get('license', '')
+        
+        # Extract license type from classifiers
+        license_type = 'Unknown'
+        classifiers = info.get('classifiers', [])
+        for classifier in classifiers:
+            if classifier.startswith('License ::'):
+                # Extract license name from classifier
+                parts = classifier.split(' :: ')
+                if len(parts) >= 3:
+                    license_type = parts[2]
+                    break
+        
+        # If no license text but have classifier, use classifier
+        if not license_text.strip() and license_type != 'Unknown':
+            license_text = f"Licensed under {license_type}"
+        
+        # Skip if no useful license information
+        if not license_text.strip() or license_text.strip().upper() in ['UNKNOWN', 'NONE', '']:
+            return None, None
+            
+        return license_type, license_text
+        
+    except Exception:
+        return None, None
+
 def build_eula(software_name, software_version, developer_name, developer_address, modules_info):
     current_year = datetime.now().year
     eula = f"""
-END USER LICENSE AGREEMENT FOR {software_name.upper()} v{software_version}
+END USER LICENSE AGREEMENT FOR {software_name.upper()}
 
-IMPORTANT - READ CAREFULLY: This {software_name} v{software_version} End User License Agreement ("EULA") is a legal agreement between you and {developer_name}.
+IMPORTANT - READ CAREFULLY: This {software_name} End User License Agreement ("EULA") is a legal agreement between you and {developer_name}.
 
 COPYRIGHT (C) {current_year} {developer_name}, {developer_address}
 All rights reserved.
@@ -106,6 +154,9 @@ Open Source Components
             eula += f"\nComponent: {mod}\nLicense: {license_name}\n\n"
             eula += license_text
             eula += "\n" + "="*50 + "\n"
+    
+    # Add version at the end
+    eula += f"\nVersion: {software_version}\n"
     return eula
 
 def main():
@@ -117,17 +168,35 @@ def main():
     print(f"\nFetching license information for {len(third_party_modules)} modules...")
     for i, module in enumerate(third_party_modules, 1):
         print(f"  [{i}/{len(third_party_modules)}] Checking {module}...")
+        
+        # First try GitHub
         repo = fetch_github_repo(module)
+        license_name, license_text = None, None
+        
         if repo:
             print(f"    Found GitHub repo: {repo}")
             license_name, license_text = fetch_github_license(repo)
             if license_name and license_text:
-                print(f"    License found: {license_name}")
-                modules_info[module] = (license_name, license_text, repo)
+                print(f"    GitHub license found: {license_name}")
+                modules_info[module] = (license_name, license_text, f"GitHub: {repo}")
+            else:
+                print(f"    GitHub license not accessible, trying PyPI...")
+                # Fallback to PyPI
+                license_name, license_text = fetch_pypi_license(module)
+                if license_name and license_text:
+                    print(f"    PyPI license found: {license_name}")
+                    modules_info[module] = (license_name, license_text, f"PyPI package")
+                else:
+                    print(f"    No license information available")
+        else:
+            print(f"    No GitHub repository found, trying PyPI...")
+            # Try PyPI directly
+            license_name, license_text = fetch_pypi_license(module)
+            if license_name and license_text:
+                print(f"    PyPI license found: {license_name}")
+                modules_info[module] = (license_name, license_text, f"PyPI package")
             else:
                 print(f"    No license information available")
-        else:
-            print(f"    No GitHub repository found")
     
     print(f"\n{len(modules_info)} third-party components found with known licenses.")
     eula_text = build_eula(software_name, software_version, dev_name, dev_address, modules_info)
