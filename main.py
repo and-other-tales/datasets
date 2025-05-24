@@ -17,6 +17,8 @@ from typing import Dict, Optional, List, Tuple, Callable
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+from utils.version import get_version_info, print_version_info
+
 def run_dynamic_pipeline(args):
     """Run othertales Dynamic Pipeline for any URL"""
     from pipelines.dynamic_pipeline import DynamicDatasetPipeline
@@ -1079,8 +1081,15 @@ Examples:
         """
     )
     
+    # Add version argument
+    parser.add_argument('--version', action='version', version=f'Legal Llama Datasets {get_version_info()["version"]}')
+    
     # Subcommands
     subparsers = parser.add_subparsers(dest='pipeline', help='Pipeline to run')
+    
+    # Version subcommand for detailed info
+    version_parser = subparsers.add_parser('version', help='Show detailed version information')
+    version_parser.add_argument('--json', action='store_true', help='Output version info as JSON')
     
     # Data collection pipelines
     dynamic_parser = subparsers.add_parser('dynamic', help='Run othertales Dynamic Pipeline for any URL')
@@ -1160,7 +1169,14 @@ Examples:
     os.makedirs('generated', exist_ok=True)
     
     # Route to appropriate pipeline
-    if args.pipeline == 'dynamic':
+    if args.pipeline == 'version':
+        if args.json:
+            import json
+            print(json.dumps(get_version_info(), indent=2))
+        else:
+            print_version_info()
+        return
+    elif args.pipeline == 'dynamic':
         run_dynamic_pipeline(args)
     elif args.pipeline == 'hmrc':
         run_hmrc_scraper(args)
