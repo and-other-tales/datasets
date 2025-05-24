@@ -563,60 +563,117 @@ def _show_text_menu_fallback():
             print(f"Error: {e}")
 
 def _run_with_menu_args(pipeline_func, pipeline_name):
-    """Run a pipeline with interactive argument collection"""
-    print(f"\n=== Running {pipeline_name} ===")
+    """Run a pipeline with interactive argument collection in curses"""
+    from utils.curses_pipeline_runner import run_pipeline_in_curses
     
-    # Create args object with common options
-    class Args:
-        def __init__(self):
-            self.input_dir = None
-            self.output_dir = None
-            self.max_documents = None
-            self.discover_only = False
-            self.url = None
-    
-    args = Args()
-    
-    # Special handling for Dynamic Pipeline
-    if pipeline_name == "othertales Dynamic Pipeline":
-        url = input("Enter URL to create datasets from: ").strip()
-        if not url:
-            print("URL is required for dynamic pipeline")
-            return
-        args.url = url
+    def args_collector(input_win):
+        """Collect arguments within curses interface"""
+        curses.curs_set(1)  # Show cursor for input
         
-        output_dir = input("Output directory (press Enter for default): ").strip()
-        if output_dir:
-            args.output_dir = output_dir
-    else:
-        # Get common arguments interactively
-        if pipeline_name in ["HMRC Scraper", "Housing Pipeline", "BAILII Scraper", "Complete Pipeline", "Copyright Pipeline"]:
-            max_docs = input("Maximum documents to download (press Enter for all): ").strip()
-            if max_docs:
-                try:
-                    args.max_documents = int(max_docs)
-                except ValueError:
-                    print("Invalid number, using default")
+        class Args:
+            def __init__(self):
+                self.input_dir = None
+                self.output_dir = None
+                self.max_documents = None
+                self.discover_only = False
+                self.url = None
+        
+        args = Args()
+        y_pos = 2
+        
+        # Special handling for Dynamic Pipeline
+        if pipeline_name == "Dynamic Pipeline":
+            input_win.addstr(y_pos, 2, "Enter URL to create datasets from:", curses.color_pair(4))
+            y_pos += 1
+            input_win.addstr(y_pos, 2, "URL: ")
+            input_win.refresh()
             
-            if pipeline_name == "HMRC Scraper":
-                discover = input("Discovery only? (y/N): ").strip().lower()
-                args.discover_only = discover == 'y'
+            # Get URL input
+            curses.echo()
+            url = input_win.getstr(y_pos, 7, 50).decode('utf-8').strip()
+            curses.noecho()
+            
+            if not url:
+                raise ValueError("URL is required for dynamic pipeline")
+            args.url = url
+            y_pos += 2
+            
+            input_win.addstr(y_pos, 2, "Output directory (press Enter for default):")
+            y_pos += 1
+            input_win.addstr(y_pos, 2, "Dir: ")
+            input_win.refresh()
+            
+            curses.echo()
+            output_dir = input_win.getstr(y_pos, 7, 30).decode('utf-8').strip()
+            curses.noecho()
+            
+            if output_dir:
+                args.output_dir = output_dir
         
-        output_dir = input(f"Output directory (press Enter for default): ").strip()
-        if output_dir:
-            args.output_dir = output_dir
+        else:
+            # Get common arguments
+            if pipeline_name in ["HMRC Scraper", "Housing Pipeline", "BAILII Scraper", "Complete Pipeline", "Copyright Pipeline"]:
+                input_win.addstr(y_pos, 2, "Maximum documents (press Enter for all):")
+                y_pos += 1
+                input_win.addstr(y_pos, 2, "Max: ")
+                input_win.refresh()
+                
+                curses.echo()
+                max_docs = input_win.getstr(y_pos, 7, 10).decode('utf-8').strip()
+                curses.noecho()
+                
+                if max_docs:
+                    try:
+                        args.max_documents = int(max_docs)
+                    except ValueError:
+                        pass  # Use default
+                y_pos += 2
+                
+                if pipeline_name == "HMRC Scraper":
+                    input_win.addstr(y_pos, 2, "Discovery only? (y/N):")
+                    y_pos += 1
+                    input_win.addstr(y_pos, 2, "Discover: ")
+                    input_win.refresh()
+                    
+                    curses.echo()
+                    discover = input_win.getstr(y_pos, 11, 1).decode('utf-8').strip().lower()
+                    curses.noecho()
+                    
+                    args.discover_only = discover == 'y'
+                    y_pos += 2
+            
+            # Output directory
+            input_win.addstr(y_pos, 2, "Output directory (press Enter for default):")
+            y_pos += 1
+            input_win.addstr(y_pos, 2, "Output: ")
+            input_win.refresh()
+            
+            curses.echo()
+            output_dir = input_win.getstr(y_pos, 9, 30).decode('utf-8').strip()
+            curses.noecho()
+            
+            if output_dir:
+                args.output_dir = output_dir
+            y_pos += 2
+            
+            # Input directory
+            input_win.addstr(y_pos, 2, "Input directory (press Enter for default):")
+            y_pos += 1
+            input_win.addstr(y_pos, 2, "Input: ")
+            input_win.refresh()
+            
+            curses.echo()
+            input_dir = input_win.getstr(y_pos, 8, 30).decode('utf-8').strip()
+            curses.noecho()
+            
+            if input_dir:
+                args.input_dir = input_dir
         
-        input_dir = input(f"Input directory (press Enter for default): ").strip()
-        if input_dir:
-            args.input_dir = input_dir
+        curses.curs_set(0)  # Hide cursor
+        return args
     
-    try:
-        pipeline_func(args)
-        print(f"\n{pipeline_name} completed successfully!")
-    except Exception as e:
-        print(f"\nError running {pipeline_name}: {e}")
-    
-    input("\nPress Enter to continue...")
+    # Run the pipeline in curses
+    run_pipeline_in_curses(pipeline_name, pipeline_func, args_collector)
 
 def _show_pipeline_status():
     """Show status of data directories"""
